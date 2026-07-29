@@ -215,5 +215,5 @@ server/
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/your-username/careerlaunch.git
+git clone https://github.com/Prakashsharma72/CareerLaunch
 cd careerlaunch
