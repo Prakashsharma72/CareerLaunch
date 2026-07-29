@@ -1,120 +1,100 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 // Layouts
-import MainLayout from "./layouts/MainLayout";
+import MainLayout    from "./layouts/MainLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
-import AdminLayout from "./layouts/AdminLayout";
-
-// Auth Hook
-import useAuth from "./hooks/useAuth";
+import AdminLayout   from "./layouts/AdminLayout";
 
 // Pages - Auth
-import Login from "./pages/auth/Login";
+import Login    from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
-// Pages - Public / Main
-import Home from "./pages/Home";
+// Pages - Public
+import Home     from "./pages/Home";
 import NotFound from "./pages/NotFound";
 
 // Pages - Student
-import Dashboard from "./pages/student/Dashboard";
-import Profile from "./pages/student/Profile";
-import Jobs from "./pages/student/Jobs";
-import JobDetails from "./pages/student/JobDetails";
-import Resources from "./pages/student/Resources";
-import SavedJobs from "./pages/student/SavedJobs";
+import Dashboard      from "./pages/student/Dashboard";
+import Profile        from "./pages/student/Profile";
+import Jobs           from "./pages/student/Jobs";
+import JobDetails     from "./pages/student/JobDetails";
+import Resources      from "./pages/student/Resources";
+import SavedJobs      from "./pages/student/SavedJobs";
 import ResumeAnalyzer from "./pages/student/ResumeAnalyzer";
 import RoadmapGenerator from "./pages/student/RoadmapGenerator";
-import MockInterview from "./pages/student/MockInterview";
+import MockInterview  from "./pages/student/MockInterview";
 
 // Pages - Admin
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import ManageJobs from "./pages/admin/ManageJobs";
+import AdminDashboard  from "./pages/admin/AdminDashboard";
+import ManageJobs      from "./pages/admin/ManageJobs";
 import ManageResources from "./pages/admin/ManageResources";
-import ManageUsers from "./pages/admin/ManageUsers";
+import ManageUsers     from "./pages/admin/ManageUsers";
 
 /**
- * Protected Route Wrapper
+ * ProtectedRoute
+ * Reads from Redux, which is rehydrated from localStorage in main.jsx
+ * BEFORE the first render — so there is no flash-redirect on refresh.
  */
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
+  const { isAuthenticated } = useSelector((s) => s.auth);
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
 /**
- * Role-based Route (basic structure for future scaling)
+ * AdminRoute
+ * Same pattern; additionally checks role === "admin".
  */
 const AdminRoute = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (user?.role !== "admin") {
-    return <Navigate to="/" replace />;
-  }
-
+  const { isAuthenticated, user } = useSelector((s) => s.auth);
+  if (!isAuthenticated)        return <Navigate to="/login"  replace />;
+  if (user?.role !== "admin")  return <Navigate to="/"       replace />;
   return children;
 };
 
-const App = () => {
-  return (
-    <Routes>
-      {/* ================= PUBLIC AUTH ================= */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+const App = () => (
+  <Routes>
+    {/* ── Public auth ── */}
+    <Route path="/login"    element={<Login />} />
+    <Route path="/register" element={<Register />} />
 
-      {/* ================= MAIN LAYOUT ================= */}
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<Home />} />
-      </Route>
+    {/* ── Public main ── */}
+    <Route path="/" element={<MainLayout />}>
+      <Route index element={<Home />} />
+    </Route>
 
-      {/* ================= STUDENT DASHBOARD ================= */}
-      <Route
-        path="/student"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="jobs" element={<Jobs />} />
-        <Route path="jobs/:id" element={<JobDetails />} />
-        <Route path="resources" element={<Resources />} />
-        <Route path="saved-jobs" element={<SavedJobs />} />
-        <Route path="resume-analyzer" element={<ResumeAnalyzer />} />
-        <Route path="roadmap" element={<RoadmapGenerator />} />
-        <Route path="mock-interview" element={<MockInterview />} />
-      </Route>
+    {/* ── Student dashboard (protected) ── */}
+    <Route
+      path="/student"
+      element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}
+    >
+      <Route path="dashboard"       element={<Dashboard />} />
+      <Route path="profile"         element={<Profile />} />
+      <Route path="jobs"            element={<Jobs />} />
+      <Route path="jobs/:id"        element={<JobDetails />} />
+      <Route path="resources"       element={<Resources />} />
+      <Route path="saved-jobs"      element={<SavedJobs />} />
+      <Route path="resume-analyzer" element={<ResumeAnalyzer />} />
+      {/* fixed: was "roadmap", now matches DashboardLayout link "/student/roadmap-generator" */}
+      <Route path="roadmap-generator" element={<RoadmapGenerator />} />
+      <Route path="mock-interview"  element={<MockInterview />} />
+    </Route>
 
-      {/* ================= ADMIN DASHBOARD ================= */}
-      <Route
-        path="/admin"
-        element={
-          <AdminRoute>
-            <AdminLayout />
-          </AdminRoute>
-        }
-      >
-        <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="jobs" element={<ManageJobs />} />
-        <Route path="resources" element={<ManageResources />} />
-        <Route path="users" element={<ManageUsers />} />
-      </Route>
+    {/* ── Admin dashboard (protected + role-gated) ── */}
+    <Route
+      path="/admin"
+      element={<AdminRoute><AdminLayout /></AdminRoute>}
+    >
+      <Route path="dashboard" element={<AdminDashboard />} />
+      <Route path="jobs"      element={<ManageJobs />} />
+      <Route path="resources" element={<ManageResources />} />
+      <Route path="users"     element={<ManageUsers />} />
+    </Route>
 
-      {/* ================= FALLBACK ================= */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
-};
+    {/* ── Fallback ── */}
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
 
 export default App;
