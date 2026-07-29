@@ -1,5 +1,60 @@
-node_modules
-# Keep environment variables out of version control
-.env
+# Dependencies
+node_modules/
 
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+careerlaunch.sqlite
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime / OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build output
+dist/
+build/
+
+# Prisma generated
 /generated/prisma
+
+# Uploads / user-generated files
+uploads/
+tmp/
+
+# Coverage & testing
+coverage/
+.nyc_output/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Package manager locks (keep only one — remove the line for whichever you use)
+# package-lock.json
+# yarn.lock
+
+# Misc
+*.pem
+*.key
+*.cert
