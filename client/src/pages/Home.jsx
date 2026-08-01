@@ -204,9 +204,10 @@ export default function Home() {
     const fetch=async()=>{
       try{
         setLoadingJobs(true);
-        const res=await getAllJobs();
-        setJobs(res.data.slice(0,20));
-        setFilteredJobs(res.data.slice(0,20));
+        const res=await getAllJobs({ limit: 20 });
+        const jobList = res.data.jobs ?? res.data ?? [];
+        setJobs(jobList);
+        setFilteredJobs(jobList);
       }catch(e){ console.error("Failed to fetch jobs:",e); }
       finally{ setLoadingJobs(false); }
     };

@@ -12,6 +12,7 @@ const InterviewSession = db.define(
     userId: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      field: "user_id",
     },
     role: {
       type: DataTypes.STRING,

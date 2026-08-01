@@ -5,7 +5,7 @@ import {
   FaTachometerAlt, FaUser, FaBriefcase, FaBook,
   FaBookmark, FaFileAlt, FaRoad, FaRobot,
   FaSignOutAlt, FaBars, FaTimes, FaRocket,
-  FaChevronLeft, FaBell,
+  FaChevronLeft, FaBell, FaBuilding,
 } from "react-icons/fa";
 import { useSelector } from "react-redux";
 
@@ -15,8 +15,10 @@ const menuItems = [
   { name: "Dashboard",        icon: FaTachometerAlt, path: "/student/dashboard" },
   { name: "Profile",          icon: FaUser,          path: "/student/profile" },
   { name: "Jobs",             icon: FaBriefcase,     path: "/student/jobs" },
+  { name: "Companies",        icon: FaBuilding,      path: "/student/companies" },
   { name: "Resources",        icon: FaBook,          path: "/student/resources" },
   { name: "Saved Jobs",       icon: FaBookmark,      path: "/student/saved-jobs" },
+  { name: "Saved Companies",  icon: FaBuilding,      path: "/student/saved-companies" },
   { name: "Resume Analyzer",  icon: FaFileAlt,       path: "/student/resume-analyzer" },
   { name: "Roadmap",          icon: FaRoad,          path: "/student/roadmap-generator" },
   { name: "Mock Interview",   icon: FaRobot,         path: "/student/mock-interview" },
