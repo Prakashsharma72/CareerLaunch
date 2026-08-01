@@ -1,20 +1,29 @@
 import api from "./api";
 
 /**
- * Authentication API calls
+ * POST /api/auth/register
  */
-export const loginUser = (data) => {
-  return api.post("/auth/login", data);
-};
+export const registerUser = (data) => api.post("/auth/register", data);
 
-export const registerUser = (data) => {
-  return api.post("/auth/register", data);
-};
+/**
+ * POST /api/auth/login
+ */
+export const loginUser = (data) => api.post("/auth/login", data);
 
-export const getProfile = () => {
-  return api.get("/auth/profile");
-};
+/**
+ * GET /api/users/profile
+ * Always fetches fresh profile from MySQL — call this on app start
+ * and whenever the user object needs to be trusted.
+ */
+export const fetchProfile = () => api.get("/users/profile");
 
-export const logoutUser = () => {
-  localStorage.removeItem("token");
-};
+/**
+ * PUT /api/users/profile
+ */
+export const updateProfile = (data) => api.put("/users/profile", data);
+
+/**
+ * GET /api/users/stats
+ * Dashboard stats: appliedJobs, savedJobs, interviews, resumeScore …
+ */
+export const fetchStats = () => api.get("/users/stats");

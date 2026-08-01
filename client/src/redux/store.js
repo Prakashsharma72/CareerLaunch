@@ -1,16 +1,18 @@
 import { configureStore } from "@reduxjs/toolkit";
 
-import authReducer from "./authSlice";
-import jobReducer from "./jobSlice";
+import authReducer    from "./authSlice";
+import jobReducer     from "./jobSlice";
 import resourceReducer from "./resourceSlice";
-import aiReducer from "./aiSlice";
+import aiReducer      from "./aiSlice";
+import companyReducer from "./companySlice";
 
 const store = configureStore({
   reducer: {
-    auth: authReducer,
-    jobs: jobReducer,
+    auth:      authReducer,
+    jobs:      jobReducer,
     resources: resourceReducer,
-    ai: aiReducer,
+    ai:        aiReducer,
+    companies: companyReducer,
   },
 
   middleware: (getDefaultMiddleware) =>

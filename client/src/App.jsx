@@ -16,15 +16,17 @@ import Home     from "./pages/Home";
 import NotFound from "./pages/NotFound";
 
 // Pages - Student
-import Dashboard      from "./pages/student/Dashboard";
-import Profile        from "./pages/student/Profile";
-import Jobs           from "./pages/student/Jobs";
-import JobDetails     from "./pages/student/JobDetails";
-import Resources      from "./pages/student/Resources";
-import SavedJobs      from "./pages/student/SavedJobs";
-import ResumeAnalyzer from "./pages/student/ResumeAnalyzer";
+import Dashboard        from "./pages/student/Dashboard";
+import Profile          from "./pages/student/Profile";
+import Jobs             from "./pages/student/Jobs";
+import JobDetails       from "./pages/student/JobDetails";
+import Resources        from "./pages/student/Resources";
+import SavedJobs        from "./pages/student/SavedJobs";
+import ResumeAnalyzer   from "./pages/student/ResumeAnalyzer";
 import RoadmapGenerator from "./pages/student/RoadmapGenerator";
-import MockInterview  from "./pages/student/MockInterview";
+import MockInterview    from "./pages/student/MockInterview";
+import CompanySearch    from "./pages/student/CompanySearch";
+import SavedCompanies   from "./pages/student/SavedCompanies";
 
 // Pages - Admin
 import AdminDashboard  from "./pages/admin/AdminDashboard";
@@ -69,16 +71,18 @@ const App = () => (
       path="/student"
       element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}
     >
-      <Route path="dashboard"       element={<Dashboard />} />
-      <Route path="profile"         element={<Profile />} />
-      <Route path="jobs"            element={<Jobs />} />
-      <Route path="jobs/:id"        element={<JobDetails />} />
-      <Route path="resources"       element={<Resources />} />
-      <Route path="saved-jobs"      element={<SavedJobs />} />
-      <Route path="resume-analyzer" element={<ResumeAnalyzer />} />
+      <Route path="dashboard"         element={<Dashboard />} />
+      <Route path="profile"           element={<Profile />} />
+      <Route path="jobs"              element={<Jobs />} />
+      <Route path="jobs/:id"          element={<JobDetails />} />
+      <Route path="resources"         element={<Resources />} />
+      <Route path="saved-jobs"        element={<SavedJobs />} />
+      <Route path="resume-analyzer"   element={<ResumeAnalyzer />} />
       {/* fixed: was "roadmap", now matches DashboardLayout link "/student/roadmap-generator" */}
       <Route path="roadmap-generator" element={<RoadmapGenerator />} />
-      <Route path="mock-interview"  element={<MockInterview />} />
+      <Route path="mock-interview"    element={<MockInterview />} />
+      <Route path="companies"         element={<CompanySearch />} />
+      <Route path="saved-companies"   element={<SavedCompanies />} />
     </Route>
 
     {/* ── Admin dashboard (protected + role-gated) ── */}

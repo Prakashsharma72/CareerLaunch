@@ -27,7 +27,7 @@ function Navbar() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
-  const { user } = useSelector((s) => s.auth);
+  const { user, bootstrapping } = useSelector((s) => s.auth);
 
   const [scrolled,   setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -70,7 +70,10 @@ function Navbar() {
     setDropOpen(false);
   };
 
-  const userInitial = user?.name?.charAt(0).toUpperCase() ?? "U";
+  const userInitial  = user?.name?.charAt(0).toUpperCase() ?? "U";
+  const userFullName = user?.name  ?? "User";
+  const userEmail    = user?.email ?? "";
+  const userAvatar   = user?.profileImage ?? null;
 
   return (
     <>
@@ -167,12 +170,14 @@ function Navbar() {
                       className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border
                         border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5
                         hover:border-primary-300 dark:hover:border-primary-500/40 transition-all">
-                      <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
-                        style={{ background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" }}>
-                        {userInitial}
+                      <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden"
+                        style={!userAvatar ? { background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" } : {}}>
+                        {userAvatar
+                          ? <img src={userAvatar} alt="avatar" className="w-full h-full object-cover" />
+                          : userInitial}
                       </div>
                       <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200 max-w-20 truncate">
-                        {user.name?.split(" ")[0] ?? "User"}
+                        {userFullName.split(" ")[0]}
                       </span>
                       <motion.span animate={{ rotate: dropOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
                         <FaChevronDown className="text-[10px] text-neutral-400" />
@@ -192,8 +197,8 @@ function Navbar() {
                             rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)]
                             overflow-hidden p-1.5 z-50">
                           <div className="px-3 py-2.5 mb-1 border-b border-neutral-100 dark:border-white/8">
-                            <p className="text-sm font-bold text-neutral-900 dark:text-white truncate">{user.name}</p>
-                            <p className="text-xs text-neutral-400 truncate">{user.email}</p>
+                            <p className="text-sm font-bold text-neutral-900 dark:text-white truncate">{userFullName}</p>
+                            <p className="text-xs text-neutral-400 truncate">{userEmail}</p>
                           </div>
                           {USER_MENU.map(({ icon: Icon, label, to }) => (
                             <Link key={to} to={to} onClick={() => setDropOpen(false)}
@@ -296,13 +301,15 @@ function Navbar() {
               {/* user info */}
               {user && (
                 <div className="px-5 py-4 border-b border-neutral-100 dark:border-white/8 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shrink-0"
-                    style={{ background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" }}>
-                    {userInitial}
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
+                    style={!userAvatar ? { background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" } : {}}>
+                    {userAvatar
+                      ? <img src={userAvatar} alt="avatar" className="w-full h-full object-cover" />
+                      : userInitial}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-neutral-900 dark:text-white truncate">{user.name}</p>
-                    <p className="text-xs text-neutral-400 truncate">{user.email}</p>
+                    <p className="text-sm font-bold text-neutral-900 dark:text-white truncate">{userFullName}</p>
+                    <p className="text-xs text-neutral-400 truncate">{userEmail}</p>
                   </div>
                 </div>
               )}

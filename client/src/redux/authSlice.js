@@ -1,41 +1,63 @@
-import { createSlice } from "@reduxjs/toolkit";
-import { getValidToken, decodeToken } from "../utils/jwt";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { getValidToken } from "../utils/jwt";
 
-/* ── Rehydrate from localStorage on module load ── */
-function loadPersistedAuth() {
-  const token = getValidToken(); // returns null if missing/expired
-  if (!token) return { user: null, token: null, isAuthenticated: false };
+/* ─────────────────────────────────────────────────────────────────────────
+   Async thunks
+   These are the ONLY places that touch localStorage / network.
+───────────────────────────────────────────────────────────────────────── */
 
-  // Try to restore user object saved alongside the token
-  try {
-    const raw = localStorage.getItem("user");
-    const user = raw ? JSON.parse(raw) : null;
+/**
+ * Called on every app start (main.jsx).
+ * If a valid JWT is in localStorage, fetch the latest profile from MySQL
+ * so the in-memory user object is never stale.
+ */
+export const bootstrapAuth = createAsyncThunk(
+  "auth/bootstrap",
+  async (_, { rejectWithValue }) => {
+    const token = getValidToken();
+    if (!token) return rejectWithValue("no_token");
 
-    // Fallback: pull basic fields from the JWT payload itself
-    if (!user) {
-      const payload = decodeToken(token);
-      return {
-        user: payload
-          ? { id: payload.id ?? payload.sub, email: payload.email, role: payload.role, name: payload.name }
-          : null,
-        token,
-        isAuthenticated: true,
-      };
+    try {
+      // Dynamic import avoids circular dependency with store
+      const { default: api } = await import("../services/api");
+      const { data } = await api.get("/users/profile");
+      return { user: data, token };
+    } catch {
+      // Token is invalid server-side — clear it
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      return rejectWithValue("invalid_token");
     }
-
-    return { user, token, isAuthenticated: true };
-  } catch {
-    return { user: null, token: null, isAuthenticated: false };
   }
-}
+);
 
-const persisted = loadPersistedAuth();
+/**
+ * Re-fetch the user profile from MySQL and update Redux state.
+ * Call after a successful profile update.
+ */
+export const refreshProfile = createAsyncThunk(
+  "auth/refreshProfile",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { default: api } = await import("../services/api");
+      const { data } = await api.get("/users/profile");
+      return data;
+    } catch (err) {
+      return rejectWithValue(err?.response?.data?.message || "Failed to refresh profile");
+    }
+  }
+);
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Slice
+───────────────────────────────────────────────────────────────────────── */
 
 const initialState = {
-  user:            persisted.user,
-  token:           persisted.token,
-  isAuthenticated: persisted.isAuthenticated,
-  loading:         false,
+  user:            null,
+  token:           null,
+  isAuthenticated: false,
+  loading:         false,       // login / register in-progress
+  bootstrapping:   true,        // app-start check in-progress
   error:           null,
 };
 
@@ -43,46 +65,69 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    loginStart: (state) => {
+    /** Called by Login / Register pages after a successful API response. */
+    loginSuccess(state, action) {
+      state.loading        = false;
+      state.error          = null;
+      state.isAuthenticated = true;
+      state.user           = action.payload.user;
+      state.token          = action.payload.token;
+      // Persist token so bootstrapAuth can verify it on next load
+      localStorage.setItem("token", action.payload.token);
+      localStorage.setItem("user",  JSON.stringify(action.payload.user));
+    },
+
+    loginStart(state) {
       state.loading = true;
       state.error   = null;
     },
 
-    loginSuccess: (state, action) => {
-      state.loading        = false;
-      state.user           = action.payload.user;
-      state.token          = action.payload.token;
-      state.isAuthenticated = true;
-      state.error          = null;
-      // Persist user object so rehydration works without a network call
-      localStorage.setItem("user", JSON.stringify(action.payload.user));
-    },
-
-    loginFailure: (state, action) => {
+    loginFailure(state, action) {
       state.loading = false;
       state.error   = action.payload;
     },
 
-    logout: (state) => {
+    logout(state) {
       state.user            = null;
       state.token           = null;
       state.isAuthenticated = false;
       state.error           = null;
+      state.bootstrapping   = false;
       localStorage.removeItem("token");
       localStorage.removeItem("user");
     },
 
-    /**
-     * restoreAuth — called from main.jsx on every app startup.
-     * Re-validates the token and rehydrates state (handles tab restores,
-     * token expiry between visits, etc.).
-     */
-    restoreAuth: (state) => {
-      const { user, token, isAuthenticated } = loadPersistedAuth();
-      state.user            = user;
-      state.token           = token;
-      state.isAuthenticated = isAuthenticated;
-    },
+    /** Kept for legacy callers — now a no-op; bootstrapAuth replaces it. */
+    restoreAuth() {},
+  },
+
+  extraReducers(builder) {
+    /* ── bootstrapAuth ── */
+    builder
+      .addCase(bootstrapAuth.pending, (state) => {
+        state.bootstrapping = true;
+      })
+      .addCase(bootstrapAuth.fulfilled, (state, action) => {
+        state.bootstrapping   = false;
+        state.isAuthenticated = true;
+        state.user            = action.payload.user;
+        state.token           = action.payload.token;
+        // Keep localStorage in sync with the freshest profile
+        localStorage.setItem("user", JSON.stringify(action.payload.user));
+      })
+      .addCase(bootstrapAuth.rejected, (state) => {
+        state.bootstrapping   = false;
+        state.isAuthenticated = false;
+        state.user            = null;
+        state.token           = null;
+      });
+
+    /* ── refreshProfile ── */
+    builder
+      .addCase(refreshProfile.fulfilled, (state, action) => {
+        state.user = action.payload;
+        localStorage.setItem("user", JSON.stringify(action.payload));
+      });
   },
 });
 
