@@ -10,7 +10,6 @@ import {
   FaLinkedin, FaTwitter, FaGithub, FaEnvelope,
   FaPlay, FaTimes, FaFilter,
 } from "react-icons/fa";
-import { getAllJobs } from "../services/jobService";
 
 /* ── helpers ── */
 const getGradient = (text) => {
@@ -179,9 +178,6 @@ export default function Home() {
   const navigate = useNavigate();
 
   /* ── existing state — ALL PRESERVED ── */
-  const [jobs,               setJobs]               = useState([]);
-  const [filteredJobs,       setFilteredJobs]       = useState([]);
-  const [loadingJobs,        setLoadingJobs]        = useState(false);
   const [searchQuery,        setSearchQuery]        = useState("");
   const [locationFilter,     setLocationFilter]     = useState("");
   const [sortBy,             setSortBy]             = useState("relevant");
@@ -199,32 +195,11 @@ export default function Home() {
   const [showFilters,    setShowFilters]    = useState(false);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
 
-  /* ── existing data fetching — PRESERVED ── */
-  useEffect(()=>{
-    const fetch=async()=>{
-      try{
-        setLoadingJobs(true);
-        const res=await getAllJobs({ limit: 20 });
-        const jobList = res.data.jobs ?? res.data ?? [];
-        setJobs(jobList);
-        setFilteredJobs(jobList);
-      }catch(e){ console.error("Failed to fetch jobs:",e); }
-      finally{ setLoadingJobs(false); }
-    };
-    fetch();
-  },[]);
-
-  /* ── existing filter logic — PRESERVED ── */
-  useEffect(()=>{
-    let f=[...jobs];
-    if(searchQuery.trim()) f=f.filter(j=>j.title.toLowerCase().includes(searchQuery.toLowerCase())||j.company.toLowerCase().includes(searchQuery.toLowerCase()));
-    if(locationFilter.trim()) f=f.filter(j=>j.location.toLowerCase().includes(locationFilter.toLowerCase()));
-    if(remoteOnly) f=f.filter(j=>j.location.toLowerCase().includes("remote"));
-    if(selectedCategories.length>0) f=f.filter(j=>selectedCategories.some(c=>j.title.toLowerCase().includes(c.toLowerCase().split(" ")[0]))||selectedCategories.length>0);
-    if(sortBy==="recent") f.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-    else if(sortBy==="salary") f.sort((a,b)=>parseInt(b.salary?.replace(/\D/g,"")||0)-parseInt(a.salary?.replace(/\D/g,"")||0));
-    setFilteredJobs(f);
-  },[searchQuery,locationFilter,remoteOnly,freshersOnly,sortBy,jobs,selectedCategories,selectedExperience,selectedCompanyType]);
+  /* Jobs are now on the dedicated Jobs page (Google Places).
+     Keep empty arrays so any remaining render references stay safe. */
+  const loadingJobs  = false;
+  const jobs         = [];
+  const filteredJobs = [];
 
   /* ── existing helpers — PRESERVED ── */
   const toggleJobSave=useCallback((jobId)=>{

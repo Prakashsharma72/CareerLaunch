@@ -1,39 +1,41 @@
+/**
+ * companyService.js
+ *
+ * All company data now comes from Google Places via /api/places/*.
+ * This file re-exports placesService for backward compat and adds
+ * saved-company CRUD (still stored in saved_companies table).
+ */
 import api from "./api";
 
-/**
- * Company API service
- * API key is NEVER exposed here — all Google Places calls go through the backend.
- */
+/* ── Re-export places functions used by components ─────────────────── */
+export {
+  getNearbyCompanies,
+  searchCompaniesByCity,
+  getCompanyDetails,
+} from "./placesService";
+
+/* ── Saved companies CRUD ───────────────────────────────────────────── */
 
 /**
- * Search companies via Google Places (proxied through backend)
- * GET /api/companies/search?keyword=...&city=...
- */
-export const searchCompanies = (keyword, city) =>
-  api.get("/companies/search", { params: { keyword, city } });
-
-/**
- * Get all persisted companies
- * GET /api/companies
- */
-export const getAllCompanies = () => api.get("/companies");
-
-/**
- * Save a company for the current user
  * POST /api/saved-companies
+ * Stores an inline snapshot of the company at bookmark time.
  */
-export const saveCompany = (companyId) =>
-  api.post("/saved-companies", { companyId });
+export const saveCompanyBookmark = (companyPayload) =>
+  api.post("/saved-companies", companyPayload);
 
-/**
- * Get saved companies for the current user
- * GET /api/saved-companies
- */
+/** GET /api/saved-companies — logged-in user's bookmarks */
 export const getSavedCompanies = () => api.get("/saved-companies");
 
-/**
- * Remove a saved company by saved-record id
- * DELETE /api/saved-companies/:savedId
- */
+/** DELETE /api/saved-companies/:savedId */
 export const removeSavedCompany = (savedId) =>
   api.delete(`/saved-companies/${savedId}`);
+
+/* Legacy aliases */
+export const saveCompany         = saveCompanyBookmark;
+export const searchCompanies     = (keyword, city, lat, lon) => {
+  // Backward-compat shim — delegates to the new places endpoint
+  const params = { keyword, city };
+  if (lat != null) params.lat = lat;
+  if (lon != null) params.lon = lon;
+  return api.get("/places/search", { params });
+};

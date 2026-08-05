@@ -1,52 +1,33 @@
 import api from "./api";
 
 /**
- * GET /api/jobs  — paginated, filterable
- * params: { search, location, jobType, page, limit }
+ * GET /api/jobs  — live jobs from external APIs
+ * params: { search, location, jobType, lat, lon, radius, includeRemote, page, limit }
  */
 export const getAllJobs = (params = {}) => api.get("/jobs", { params });
 
 /**
- * GET /api/jobs/:id
+ * GET /api/jobs/:id  — single live job by externalJobId
  */
 export const getJobById = (id) => api.get(`/jobs/${id}`);
 
 /**
- * POST /api/jobs  (admin)
+ * POST /api/jobs/save  — bookmark a job (stores full payload in MySQL)
+ * Pass the complete job object — the backend stores it inline, no FK.
  */
-export const createJob = (data) => api.post("/jobs", data);
+export const saveJobBookmark = (jobPayload) =>
+  api.post("/jobs/save", jobPayload);
 
 /**
- * PUT /api/jobs/:id  (admin)
+ * DELETE /api/jobs/save/:savedId  — remove a bookmark by saved_jobs.id
  */
-export const updateJob = (id, data) => api.put(`/jobs/${id}`, data);
+export const removeSavedJob = (savedId) =>
+  api.delete(`/jobs/save/${savedId}`);
 
 /**
- * DELETE /api/jobs/:id  (admin)
- */
-export const deleteJob = (id) => api.delete(`/jobs/${id}`);
-
-/**
- * POST /api/jobs/apply/:id
- */
-export const applyJob = (jobId) => api.post(`/jobs/apply/${jobId}`);
-
-/**
- * POST /api/jobs/save  — { jobId }
- */
-export const saveJob = (jobId) => api.post("/jobs/save", { jobId });
-
-/**
- * DELETE /api/jobs/save/:savedId
- */
-export const removeSavedJob = (savedId) => api.delete(`/jobs/save/${savedId}`);
-
-/**
- * GET /api/jobs/saved/list
+ * GET /api/jobs/saved/list  — get the logged-in user's saved bookmarks
  */
 export const getSavedJobs = () => api.get("/jobs/saved/list");
 
-/**
- * POST /api/jobs/import  (admin)  — { jobs: [...] }
- */
-export const importJobs = (jobs) => api.post("/jobs/import", { jobs });
+/* Legacy alias — some components may still call this */
+export const saveJob = saveJobBookmark;

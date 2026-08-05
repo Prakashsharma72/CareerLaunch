@@ -1,3 +1,13 @@
+/**
+ * user.model.js
+ *
+ * Matches the EXACT MySQL `users` table schema:
+ *   id, name, email, password, role, phone,
+ *   education, skills, resume_url, profile_image, created_at
+ *
+ * timestamps: false  — table has created_at but NO updatedAt column.
+ * createdAt is mapped to the `created_at` column via the field option.
+ */
 import { DataTypes } from "sequelize";
 import db from "../config/db.js";
 
@@ -5,60 +15,72 @@ const User = db.define(
   "User",
   {
     id: {
-      type: DataTypes.INTEGER,
+      type:          DataTypes.INTEGER,
       autoIncrement: true,
-      primaryKey: true,
+      primaryKey:    true,
     },
+
     name: {
-      type: DataTypes.STRING,
+      type:      DataTypes.STRING(255),
       allowNull: false,
     },
+
     email: {
-      type: DataTypes.STRING,
+      type:      DataTypes.STRING(255),
       allowNull: false,
-      unique: true,
-      validate: { isEmail: true },
+      unique:    true,
+      validate:  { isEmail: true },
     },
+
     password: {
-      type: DataTypes.STRING,
+      type:      DataTypes.STRING(255),
       allowNull: false,
     },
+
     role: {
-      type: DataTypes.STRING,
+      type:         DataTypes.STRING(50),
+      allowNull:    false,
       defaultValue: "student",
     },
 
-    // ── Contact ──────────────────────────────────────────────
-    phone:    { type: DataTypes.STRING(20),  allowNull: true },
-    location: { type: DataTypes.STRING(255), allowNull: true },
+    phone: {
+      type:      DataTypes.STRING(20),
+      allowNull: true,
+    },
 
-    // ── Profile ───────────────────────────────────────────────
-    bio:          { type: DataTypes.TEXT,        allowNull: true },
-    profileImage: { type: DataTypes.TEXT,        allowNull: true, field: "profile_image" },
-    dob:          { type: DataTypes.DATEONLY,    allowNull: true },
-    gender:       { type: DataTypes.STRING(50),  allowNull: true },
+    education: {
+      type:      DataTypes.TEXT,
+      allowNull: true,
+    },
 
-    // ── Education ─────────────────────────────────────────────
-    college:   { type: DataTypes.STRING(255), allowNull: true },
-    degree:    { type: DataTypes.STRING(100), allowNull: true },
-    branch:    { type: DataTypes.STRING(100), allowNull: true },
-    gradYear:  { type: DataTypes.STRING(10),  allowNull: true, field: "grad_year" },
-    education: { type: DataTypes.TEXT,        allowNull: true },   // free-text summary
+    skills: {
+      type:      DataTypes.TEXT,
+      allowNull: true,
+    },
 
-    // ── Career ────────────────────────────────────────────────
-    skills:     { type: DataTypes.TEXT, allowNull: true },         // comma-separated
-    experience: { type: DataTypes.TEXT, allowNull: true },
-    languages:  { type: DataTypes.STRING(255), allowNull: true },
+    resumeUrl: {
+      type:      DataTypes.TEXT,
+      allowNull: true,
+      field:     "resume_url",
+    },
 
-    // ── Links ─────────────────────────────────────────────────
-    resumeUrl: { type: DataTypes.TEXT,        allowNull: true, field: "resume_url"  },
-    github:    { type: DataTypes.STRING(255), allowNull: true },
-    linkedin:  { type: DataTypes.STRING(255), allowNull: true },
-    portfolio: { type: DataTypes.STRING(255), allowNull: true },
+    profileImage: {
+      type:      DataTypes.TEXT,
+      allowNull: true,
+      field:     "profile_image",
+    },
+
+    // Map JS createdAt → DB created_at
+    createdAt: {
+      type:  DataTypes.DATE,
+      field: "created_at",
+    },
   },
   {
-    tableName: "users",
+    tableName:  "users",
     timestamps: true,
+    updatedAt:  false,        // no updated_at column in MySQL table
+    createdAt:  "created_at", // tell Sequelize which column to write
   }
 );
 

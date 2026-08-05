@@ -1,168 +1,104 @@
-import { Op } from "sequelize";
-import db from "../config/db.js";
-import Job from "../models/job.model.js";
+/**
+ * job.service.js  (rebuilt — Google Places only)
+ *
+ * The Jobs page now shows nearby software companies from Google Places API.
+ * There are no external job boards, no seed jobs, no remote job APIs.
+ *
+ * Architecture:
+ *   GET /api/jobs          → delegates to places.service.getNearbyCompanies
+ *                            or searchCompaniesByCity, returns company objects
+ *                            shaped as "job cards" so the existing Redux slice works.
+ *   Saved jobs CRUD        → still stored in MySQL saved_jobs table (unchanged).
+ */
+import SavedJob from "../models/savedJob.model.js";
+import {
+  getNearbyCompanies,
+  searchCompaniesByCity,
+} from "./places.service.js";
 
-/* ── helpers ─────────────────────────────────────────────────────────────── */
+const LOG = "[job.service]";
+const log = (msg, d) =>
+  console.log(`${new Date().toISOString()} ${LOG} ${msg}`, d ?? "");
 
-function buildWhere({ search, location, jobType, status = "active" }) {
-  const where = {};
+/* ═══════════════════════════════════════════════════════════════════════
+   GET COMPANIES (jobs page data source)
+═══════════════════════════════════════════════════════════════════════ */
+/**
+ * getCompaniesForJobsPage({ lat, lon, radius, keyword, city })
+ *
+ * Returns { companies, total, source }.
+ * When lat/lon are provided uses GPS-based search.
+ * Falls back to city-based search when city is given.
+ * Returns empty list when neither is available.
+ */
+export async function getCompaniesForJobsPage({
+  lat,
+  lon,
+  radius = 15,
+  keyword = "software company",
+  city,
+} = {}) {
+  const hasCoords = lat != null && lon != null && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lon));
+  const hasCity   = city?.trim();
 
-  if (status) where.status = status;
-
-  if (search) {
-    where[Op.or] = [
-      { title:   { [Op.like]: `%${search}%` } },
-      { company: { [Op.like]: `%${search}%` } },
-    ];
+  if (hasCoords) {
+    return getNearbyCompanies({
+      lat:     parseFloat(lat),
+      lon:     parseFloat(lon),
+      radius:  parseFloat(radius) || 15,
+      keyword: keyword || "software company",
+    });
   }
 
-  if (location) {
-    where.location = { [Op.like]: `%${location}%` };
+  if (hasCity) {
+    return searchCompaniesByCity({
+      keyword: keyword || "software company",
+      city:    city.trim(),
+    });
   }
 
-  if (jobType) {
-    where.employmentType = { [Op.like]: `%${jobType}%` };
-  }
-
-  return where;
+  // No location at all — return empty so the UI shows the location prompt
+  return { companies: [], total: 0, source: "no_location" };
 }
 
-/* ── public functions ────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════
+   SAVED JOBS CRUD  (unchanged — still uses MySQL saved_jobs table)
+═══════════════════════════════════════════════════════════════════════ */
 
-/**
- * Paginated job list with optional search/filter.
- */
-export async function getJobs({ search, location, jobType, page = 1, limit = 12 } = {}) {
-  const offset = (page - 1) * limit;
-  const where  = buildWhere({ search, location, jobType });
+export async function saveJobForUser(userId, jobData) {
+  if (!jobData.externalJobId) {
+    const e = new Error("externalJobId is required");
+    e.status = 400;
+    throw e;
+  }
 
-  const { count, rows } = await Job.findAndCountAll({
-    where,
-    order: [["createdAt", "DESC"]],
-    limit: Number(limit),
-    offset,
-    attributes: { exclude: ["applicants"] },
+  const [row, created] = await SavedJob.findOrCreate({
+    where:    { userId, externalJobId: jobData.externalJobId },
+    defaults: { userId, ...jobData },
   });
 
-  return {
-    jobs:       rows,
-    total:      count,
-    page:       Number(page),
-    totalPages: Math.ceil(count / limit),
-  };
-}
-
-/**
- * Single job by primary key.
- */
-export async function getJobById(id) {
-  const job = await Job.findByPk(id);
-  if (!job) {
-    const err = new Error("Job not found");
-    err.status = 404;
-    throw err;
-  }
-  return job;
-}
-
-/**
- * Create a new job (admin / import).
- */
-export async function createJob(data) {
-  return Job.create(data);
-}
-
-/**
- * Update an existing job.
- */
-export async function updateJob(id, data) {
-  const job = await Job.findByPk(id);
-  if (!job) {
-    const err = new Error("Job not found");
-    err.status = 404;
-    throw err;
-  }
-  await job.update(data);
-  return job;
-}
-
-/**
- * Soft-delete: set status = 'inactive'.
- */
-export async function deleteJob(id) {
-  const job = await Job.findByPk(id);
-  if (!job) {
-    const err = new Error("Job not found");
-    err.status = 404;
-    throw err;
-  }
-  await job.update({ status: "inactive" });
-  return { message: "Job removed" };
-}
-
-/**
- * Bulk import — saves each job, skipping duplicates by externalJobId.
- * Returns { saved, skipped } counts.
- */
-export async function importJobs(jobsArray) {
-  let saved = 0;
-  let skipped = 0;
-
-  for (const data of jobsArray) {
-    try {
-      if (data.externalJobId) {
-        const exists = await Job.findOne({
-          where: { externalJobId: data.externalJobId },
-        });
-        if (exists) { skipped++; continue; }
-      }
-      await Job.create({ ...data, status: "active" });
-      saved++;
-    } catch {
-      skipped++;
-    }
+  if (!created) {
+    log(`Job ${jobData.externalJobId} already saved by user ${userId}`);
   }
 
-  return { saved, skipped };
+  return { savedId: row.id, created };
 }
 
-/**
- * Save a job for a user (saved_jobs table via raw query for portability).
- */
-export async function saveJobForUser(userId, jobId) {
-  // Verify job exists
-  await getJobById(jobId);
-
-  await db.query(
-    `INSERT OR IGNORE INTO saved_jobs (user_id, job_id) VALUES (:uid, :jid)`,
-    { replacements: { uid: userId, jid: jobId } }
-  );
-  return { message: "Job saved" };
+export async function unsaveJob(userId, savedId) {
+  const row = await SavedJob.findOne({ where: { id: savedId, userId } });
+  if (!row) {
+    const e = new Error("Saved job not found");
+    e.status = 404;
+    throw e;
+  }
+  await row.destroy();
+  return { deleted: true };
 }
 
-/**
- * Remove a saved job.
- */
-export async function unsaveJob(userId, savedJobId) {
-  await db.query(
-    `DELETE FROM saved_jobs WHERE id = :id AND user_id = :uid`,
-    { replacements: { id: savedJobId, uid: userId } }
-  );
-  return { message: "Removed from saved jobs" };
-}
-
-/**
- * Get all saved jobs for a user (joined with jobs table).
- */
 export async function getSavedJobs(userId) {
-  const [rows] = await db.query(
-    `SELECT sj.id AS savedId, j.*
-     FROM saved_jobs sj
-     JOIN jobs j ON j.id = sj.job_id
-     WHERE sj.user_id = :uid
-       AND j.status != 'inactive'
-     ORDER BY sj.saved_at DESC`,
-    { replacements: { uid: userId } }
-  );
-  return rows;
+  const rows = await SavedJob.findAll({
+    where:  { userId },
+    order:  [["savedAt", "DESC"]],
+  });
+  return rows.map(r => ({ ...r.toJSON(), savedId: r.id }));
 }
