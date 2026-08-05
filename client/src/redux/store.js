@@ -5,6 +5,7 @@ import jobReducer     from "./jobSlice";
 import resourceReducer from "./resourceSlice";
 import aiReducer      from "./aiSlice";
 import companyReducer from "./companySlice";
+import placesReducer  from "./placesSlice";
 
 const store = configureStore({
   reducer: {
@@ -13,6 +14,7 @@ const store = configureStore({
     resources: resourceReducer,
     ai:        aiReducer,
     companies: companyReducer,
+    places:    placesReducer,
   },
 
   middleware: (getDefaultMiddleware) =>

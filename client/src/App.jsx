@@ -26,6 +26,7 @@ import ResumeAnalyzer   from "./pages/student/ResumeAnalyzer";
 import RoadmapGenerator from "./pages/student/RoadmapGenerator";
 import MockInterview    from "./pages/student/MockInterview";
 import CompanySearch    from "./pages/student/CompanySearch";
+import CompanyDetails   from "./pages/student/CompanyDetails";
 import SavedCompanies   from "./pages/student/SavedCompanies";
 
 // Pages - Admin
@@ -36,11 +37,16 @@ import ManageUsers     from "./pages/admin/ManageUsers";
 
 /**
  * ProtectedRoute
- * Reads from Redux, which is rehydrated from localStorage in main.jsx
- * BEFORE the first render — so there is no flash-redirect on refresh.
+ * Waits for bootstrapAuth to finish before deciding to redirect.
+ * Without this guard, the redirect fires before the token is verified,
+ * causing a flash to /login on every page refresh.
  */
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useSelector((s) => s.auth);
+  const { isAuthenticated, bootstrapping } = useSelector((s) => s.auth);
+
+  // Still checking localStorage / verifying token — don't redirect yet
+  if (bootstrapping) return null;
+
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
@@ -49,9 +55,12 @@ const ProtectedRoute = ({ children }) => {
  * Same pattern; additionally checks role === "admin".
  */
 const AdminRoute = ({ children }) => {
-  const { isAuthenticated, user } = useSelector((s) => s.auth);
-  if (!isAuthenticated)        return <Navigate to="/login"  replace />;
-  if (user?.role !== "admin")  return <Navigate to="/"       replace />;
+  const { isAuthenticated, bootstrapping, user } = useSelector((s) => s.auth);
+
+  if (bootstrapping) return null;
+
+  if (!isAuthenticated)       return <Navigate to="/login"  replace />;
+  if (user?.role !== "admin") return <Navigate to="/"       replace />;
   return children;
 };
 
@@ -82,6 +91,7 @@ const App = () => (
       <Route path="roadmap-generator" element={<RoadmapGenerator />} />
       <Route path="mock-interview"    element={<MockInterview />} />
       <Route path="companies"         element={<CompanySearch />} />
+      <Route path="companies/:placeId" element={<CompanyDetails />} />
       <Route path="saved-companies"   element={<SavedCompanies />} />
     </Route>
 

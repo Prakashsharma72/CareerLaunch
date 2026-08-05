@@ -1,43 +1,63 @@
+/**
+ * job.controller.js  (rebuilt — Google Places only)
+ *
+ * GET  /api/jobs            — nearby software companies (from Google Places)
+ * GET  /api/jobs/saved/list — user's saved bookmarks from DB
+ * POST /api/jobs/save       — bookmark a company/job
+ * DELETE /api/jobs/save/:id — remove a bookmark
+ */
 import {
-  getJobs,
-  getJobById,
-  createJob,
-  updateJob,
-  deleteJob,
-  importJobs,
+  getCompaniesForJobsPage,
   saveJobForUser,
   unsaveJob,
   getSavedJobs,
 } from "../services/job.service.js";
 
-/* ── Public / student ────────────────────────────────────────────────────── */
+const LOG = "[job.ctrl]";
+const log = (msg, d) =>
+  console.log(`${new Date().toISOString()} ${LOG} ${msg}`, d ?? "");
 
+/* ── GET /api/jobs ───────────────────────────────────────────────────────
+   Params: lat, lon, radius, keyword, city
+─────────────────────────────────────────────────────────────────────────── */
 export const getAllJobs = async (req, res) => {
   try {
-    const { search, location, jobType, page, limit } = req.query;
-    const result = await getJobs({ search, location, jobType, page, limit });
-    return res.status(200).json(result);
+    const { lat, lon, radius, keyword, city } = req.query;
+    log(`GET /jobs lat=${lat ?? "–"} lon=${lon ?? "–"} city="${city ?? "–"}" keyword="${keyword ?? "–"}"`);
+
+    const result = await getCompaniesForJobsPage({ lat, lon, radius, keyword, city });
+    log(`Returning ${result.companies.length} companies`);
+    return res.status(200).json({ success: true, ...result });
   } catch (err) {
-    return res.status(err.status || 500).json({ message: err.message });
+    log("getAllJobs error:", err.message);
+    if (err.code === "API_KEY_INVALID") {
+      return res.status(503).json({
+        success: false,
+        error:   "API_KEY_INVALID",
+        reason:  "Google Maps API key is missing or invalid.",
+        hint:    "Set GOOGLE_MAPS_API_KEY in server/.env",
+      });
+    }
+    if (err.response?.data) {
+      const gErr = err.response.data.error;
+      return res.status(502).json({
+        success: false,
+        error:   gErr?.status || "GOOGLE_API_ERROR",
+        reason:  gErr?.message || "Google Places API returned an error.",
+      });
+    }
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-export const getJob = async (req, res) => {
-  try {
-    const job = await getJobById(req.params.id);
-    return res.status(200).json(job);
-  } catch (err) {
-    return res.status(err.status || 500).json({ message: err.message });
-  }
-};
-
-/* ── Saved jobs ──────────────────────────────────────────────────────────── */
+/* ── Saved bookmarks ─────────────────────────────────────────────────────── */
 
 export const saveJob = async (req, res) => {
   try {
-    const { jobId } = req.body;
-    if (!jobId) return res.status(400).json({ message: "jobId is required" });
-    const result = await saveJobForUser(req.user.id, jobId);
+    if (!req.body.externalJobId) {
+      return res.status(400).json({ message: "externalJobId is required" });
+    }
+    const result = await saveJobForUser(req.user.id, req.body);
     return res.status(201).json(result);
   } catch (err) {
     return res.status(err.status || 500).json({ message: err.message });
@@ -56,65 +76,19 @@ export const removeSavedJob = async (req, res) => {
 export const fetchSavedJobs = async (req, res) => {
   try {
     const jobs = await getSavedJobs(req.user.id);
+    log(`Saved jobs for user ${req.user.id}: ${jobs.length}`);
     return res.status(200).json(jobs);
   } catch (err) {
-    return res.status(err.status || 500).json({ message: err.message });
-  }
-};
-
-/* ── Admin ───────────────────────────────────────────────────────────────── */
-
-export const addJob = async (req, res) => {
-  try {
-    const job = await createJob({ ...req.body, postedBy: req.user.id });
-    return res.status(201).json(job);
-  } catch (err) {
-    return res.status(err.status || 500).json({ message: err.message });
-  }
-};
-
-export const editJob = async (req, res) => {
-  try {
-    const job = await updateJob(req.params.id, req.body);
-    return res.status(200).json(job);
-  } catch (err) {
-    return res.status(err.status || 500).json({ message: err.message });
-  }
-};
-
-export const removeJob = async (req, res) => {
-  try {
-    const result = await deleteJob(req.params.id);
-    return res.status(200).json(result);
-  } catch (err) {
-    return res.status(err.status || 500).json({ message: err.message });
-  }
-};
-
-export const bulkImportJobs = async (req, res) => {
-  try {
-    const { jobs } = req.body;
-    if (!Array.isArray(jobs) || jobs.length === 0) {
-      return res.status(400).json({ message: "jobs array is required" });
-    }
-    const result = await importJobs(jobs);
-    return res.status(200).json(result);
-  } catch (err) {
-    return res.status(err.status || 500).json({ message: err.message });
-  }
-};
-
-/* ── Legacy apply (kept for backward compat) ─────────────────────────────── */
-export const applyJob = async (req, res) => {
-  try {
-    const { default: db } = await import("../config/db.js");
-    await db.query(
-      `INSERT OR IGNORE INTO applications (user_id, job_id, status)
-       VALUES (:uid, :jid, 'Applied')`,
-      { replacements: { uid: req.user.id, jid: req.params.id } }
-    );
-    return res.status(200).json({ message: "Applied successfully" });
-  } catch (err) {
+    log("fetchSavedJobs error:", err.message);
     return res.status(500).json({ message: err.message });
   }
 };
+
+/* ── Stubs for routes that no longer apply ──────────────────────────────── */
+export const getJob          = (_req, res) => res.status(404).json({ message: "Individual job lookup not supported. Use /api/places/:placeId for company details." });
+export const addJob          = (_req, res) => res.status(501).json({ message: "Jobs are sourced from Google Places API." });
+export const editJob         = (_req, res) => res.status(501).json({ message: "Jobs are sourced from Google Places API." });
+export const removeJob       = (_req, res) => res.status(501).json({ message: "Jobs are sourced from Google Places API." });
+export const bulkImportJobs  = (_req, res) => res.status(501).json({ message: "Jobs are sourced from Google Places API." });
+export const applyJob        = (_req, res) => res.status(501).json({ message: "Use the company's career page to apply." });
+export const seedJobs        = (_req, res) => res.status(501).json({ message: "Seeding disabled — data comes from Google Places." });

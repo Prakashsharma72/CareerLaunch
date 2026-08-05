@@ -7,7 +7,9 @@ import {
   FaMoneyBillWave,
   FaBookmark,
   FaArrowRight,
+  FaLocationArrow,
 } from "react-icons/fa";
+import { formatKm } from "../../utils/geoUtils";
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 const GRADIENTS = [
@@ -59,7 +61,7 @@ function formatDate(dateStr) {
 }
 
 /* ── Component ───────────────────────────────────────────────────────────── */
-export default function JobCard({ job, isSaved = false, onSaveJob }) {
+export default function JobCard({ job, isSaved = false, onSaveJob, distanceKm = null }) {
   const {
     id,
     title,
@@ -72,6 +74,10 @@ export default function JobCard({ job, isSaved = false, onSaveJob }) {
     description,
     createdAt,
   } = job;
+
+  // Prefer prop over job._distKm (both routes are supported)
+  const resolvedDistKm = distanceKm ?? job._distKm ?? null;
+  const distLabel      = formatKm(resolvedDistKm);
 
   const displayType  = type || jobType || "";
   const skills       = Array.isArray(skillsRequired) ? skillsRequired : [];
@@ -136,6 +142,12 @@ export default function JobCard({ job, isSaved = false, onSaveJob }) {
             <span className="flex items-center gap-1.5">
               <FaMapMarkerAlt className="text-blue-500 text-xs shrink-0" />
               {location}
+            </span>
+          )}
+          {distLabel && (
+            <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-semibold text-xs">
+              <FaLocationArrow className="text-[10px] shrink-0" />
+              {distLabel} away
             </span>
           )}
           {salary && (

@@ -27,33 +27,20 @@ const useAuth = () => {
    * LOGIN USER
    */
   const login = async (email, password) => {
+    dispatch(loginStart());
+    setLocalLoading(true);
     try {
-      dispatch(loginStart());
-      setLocalLoading(true);
-
-      const res = await loginUser({ email, password });
-
+      const res  = await loginUser({ email, password });
       const data = res.data;
-
-      // store token locally
       localStorage.setItem("token", data.token);
-
-      dispatch(
-        loginSuccess({
-          user: data.user,
-          token: data.token,
-        })
-      );
-
-      setLocalLoading(false);
+      dispatch(loginSuccess({ user: data.user, token: data.token }));
       return data;
     } catch (err) {
+      const msg = err?.response?.data?.message || "Login failed";
+      dispatch(loginFailure(msg));
+      throw err;          // ← re-throw so Login.jsx can show the error
+    } finally {
       setLocalLoading(false);
-      dispatch(
-        loginFailure(
-          err?.response?.data?.message || "Login failed"
-        )
-      );
     }
   };
 
@@ -61,32 +48,20 @@ const useAuth = () => {
    * REGISTER USER
    */
   const register = async (userData) => {
+    dispatch(loginStart());
+    setLocalLoading(true);
     try {
-      dispatch(loginStart());
-      setLocalLoading(true);
-
-      const res = await registerUser(userData);
-
+      const res  = await registerUser(userData);
       const data = res.data;
-
       localStorage.setItem("token", data.token);
-
-      dispatch(
-        loginSuccess({
-          user: data.user,
-          token: data.token,
-        })
-      );
-
-      setLocalLoading(false);
+      dispatch(loginSuccess({ user: data.user, token: data.token }));
       return data;
     } catch (err) {
+      const msg = err?.response?.data?.message || "Registration failed";
+      dispatch(loginFailure(msg));
+      throw err;          // ← re-throw so Register.jsx can show the error
+    } finally {
       setLocalLoading(false);
-      dispatch(
-        loginFailure(
-          err?.response?.data?.message || "Registration failed"
-        )
-      );
     }
   };
 

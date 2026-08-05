@@ -125,7 +125,7 @@ function Register() {
     setLoading(true);
     try {
       const data = await register({ name: formData.name, email: formData.email, password: formData.password });
-      if (data) navigate("/login");
+      if (data) navigate("/student/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Please try again.");
     } finally {
