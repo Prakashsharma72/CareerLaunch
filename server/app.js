@@ -48,7 +48,7 @@ const ALLOWED_ORIGINS = [
   "http://127.0.0.1:5173",
   // Production frontend (Vercel)
   // Add every domain Vercel assigns (custom + generated)
-  "https://career-launch-ashy.vercel.app",
+
   "https://careerlaunch-ai.vercel.app",
   // Allow any *.vercel.app preview deployment for this project
   process.env.FRONTEND_URL,  // set this on Render for easy overrides
