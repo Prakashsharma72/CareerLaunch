@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   FaBook,
   FaExternalLinkAlt,
@@ -127,4 +128,4 @@ function ResourceCard({
   );
 }
 
-export default ResourceCard;
+export default memo(ResourceCard);

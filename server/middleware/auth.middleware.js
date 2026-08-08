@@ -98,3 +98,14 @@ export const requireRole = (...roles) => (req, res, next) => {
   }
   return next();
 };
+
+/**
+ * Alias for verifyToken (more semantic naming)
+ */
+export const authenticateToken = verifyToken;
+
+/**
+ * Middleware to require admin role
+ * Use after authenticateToken/verifyToken
+ */
+export const requireAdmin = requireRole("admin");

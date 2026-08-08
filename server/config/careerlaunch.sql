@@ -20,7 +20,6 @@ DROP TABLE IF EXISTS `interview_questions`;
 DROP TABLE IF EXISTS `interview_sessions`;
 DROP TABLE IF EXISTS `resume_analyses`;
 DROP TABLE IF EXISTS `roadmaps`;
-DROP TABLE IF EXISTS `applications`;
 DROP TABLE IF EXISTS `saved_companies`;
 DROP TABLE IF EXISTS `saved_jobs`;
 DROP TABLE IF EXISTS `chats`;
@@ -197,23 +196,6 @@ CREATE TABLE `saved_companies` (
   UNIQUE KEY `uq_saved_companies_user_ext` (`user_id`, `external_company_id`),
   KEY `idx_saved_companies_user` (`user_id`),
   CONSTRAINT `fk_saved_companies_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
--- ── APPLICATIONS ──────────────────────────────────────────────────────────────
--- model: application.model.js
--- timestamps: false
-CREATE TABLE `applications` (
-  `id`         INT            NOT NULL AUTO_INCREMENT,
-  `user_id`    INT            NOT NULL,
-  `job_id`     INT            NOT NULL,
-  `status`     VARCHAR(50)    DEFAULT 'Applied',
-  `applied_at` DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_applications_user` (`user_id`),
-  KEY `idx_applications_job`  (`job_id`),
-  CONSTRAINT `fk_applications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_applications_job`  FOREIGN KEY (`job_id`)  REFERENCES `jobs`  (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 

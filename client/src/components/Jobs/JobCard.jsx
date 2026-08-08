@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
@@ -58,7 +59,7 @@ function formatDate(dateStr) {
 }
 
 /* ── Component ───────────────────────────────────────────────────────────── */
-export default function JobCard({ job, isSaved = false, onSaveJob, distanceKm = null }) {
+function JobCard({ job, isSaved = false, onSaveJob, distanceKm = null }) {
   const {
     id,
     title,
@@ -207,3 +208,5 @@ export default function JobCard({ job, isSaved = false, onSaveJob, distanceKm = 
     </motion.div>
   );
 }
+
+export default memo(JobCard);
