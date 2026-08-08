@@ -177,16 +177,6 @@ async function runMigrations() {
     )
   `);
 
-  await createTableIfMissing("applications", `
-    CREATE TABLE applications (
-      id         ${AI},
-      user_id    INT         NOT NULL,
-      job_id     INT         NOT NULL,
-      status     VARCHAR(50) DEFAULT 'Applied',
-      applied_at DATETIME    DEFAULT ${NOW}
-    )
-  `);
-
   await createTableIfMissing("roadmaps", `
     CREATE TABLE roadmaps (
       id              ${AI},

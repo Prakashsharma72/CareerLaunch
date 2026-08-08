@@ -173,7 +173,7 @@ function Navbar() {
                       <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden"
                         style={!userAvatar ? { background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" } : {}}>
                         {userAvatar
-                          ? <img src={userAvatar} alt="avatar" className="w-full h-full object-cover" />
+                          ? <img src={userAvatar} alt="avatar" loading="lazy" className="w-full h-full object-cover" />
                           : userInitial}
                       </div>
                       <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200 max-w-20 truncate">
@@ -304,7 +304,7 @@ function Navbar() {
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
                     style={!userAvatar ? { background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" } : {}}>
                     {userAvatar
-                      ? <img src={userAvatar} alt="avatar" className="w-full h-full object-cover" />
+                      ? <img src={userAvatar} alt="avatar" loading="lazy" className="w-full h-full object-cover" />
                       : userInitial}
                   </div>
                   <div className="min-w-0">

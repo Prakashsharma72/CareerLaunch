@@ -24,7 +24,7 @@ export const updateProfile = (data) => api.put("/users/profile", data);
 
 /**
  * GET /api/users/stats
- * Dashboard stats: appliedJobs, savedJobs, interviews, resumeScore …
+ * Dashboard stats: savedJobs, savedCompanies, interviews, resumeScore …
  */
 export const fetchStats = () => api.get("/users/stats");
 

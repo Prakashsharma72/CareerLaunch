@@ -249,10 +249,10 @@ export default function Profile() {
   );
 
   const statCards = [
-    { label: "Applied",    value: stats?.appliedJobs ?? "—", icon: FaBriefcase },
-    { label: "Saved Jobs", value: stats?.savedJobs   ?? "—", icon: FaBookmark  },
-    { label: "Resume",     value: stats?.resumeScore != null ? `${stats.resumeScore}%` : "—", icon: FaFileAlt },
-    { label: "Interviews", value: stats?.interviews  ?? "—", icon: FaRobot     },
+    { label: "Saved Jobs",     value: stats?.savedJobs     ?? "—", icon: FaBookmark  },
+    { label: "Saved Companies",value: stats?.savedCompanies ?? "—", icon: FaBriefcase },
+    { label: "Resume",         value: stats?.resumeScore != null ? `${stats.resumeScore}%` : "—", icon: FaFileAlt },
+    { label: "Interviews",     value: stats?.interviews    ?? "—", icon: FaRobot     },
   ];
 
   const tabs = [
@@ -284,7 +284,7 @@ export default function Profile() {
                 ring-4 ring-white/30 flex items-center justify-center
                 text-2xl sm:text-3xl md:text-4xl font-bold text-white bg-white/20">
                 {avatarUrl
-                  ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                  ? <img src={avatarUrl} alt="avatar" loading="lazy" className="w-full h-full object-cover" />
                   : initial}
                 {/* Upload overlay */}
                 {avatarUploading && (

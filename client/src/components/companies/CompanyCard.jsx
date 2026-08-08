@@ -4,9 +4,9 @@
  * Fully responsive — equal-height flex column, truncated text,
  * wrapping badges, touch-friendly buttons.
  */
-import { useState } from "react";
-import { Link }     from "react-router-dom";
-import { motion }   from "framer-motion";
+import { memo, useState } from "react";
+import { Link }           from "react-router-dom";
+import { motion }         from "framer-motion";
 import {
   FaStar, FaMapMarkerAlt, FaGlobe, FaPhone,
   FaBookmark, FaExternalLinkAlt, FaMapMarkedAlt,
@@ -50,7 +50,7 @@ function Stars({ rating, count }) {
 }
 
 /* ── Card ─────────────────────────────────────────────────────────── */
-export default function CompanyCard({ company, isSaved = false, onSave }) {
+function CompanyCard({ company, isSaved = false, onSave }) {
   const [saving, setSaving] = useState(false);
 
   const {
@@ -245,3 +245,5 @@ export default function CompanyCard({ company, isSaved = false, onSave }) {
     </motion.div>
   );
 }
+
+export default memo(CompanyCard);
