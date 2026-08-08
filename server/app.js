@@ -44,28 +44,25 @@ const app = express();
 const ALLOWED_ORIGINS = [
   // Local development
   "http://localhost:5173",
-  "http://localhost:4173",   // vite preview
+  "http://localhost:4173",
   "http://127.0.0.1:5173",
-  // Production frontend (Vercel)
-  // Add every domain Vercel assigns (custom + generated)
-
+  // Production frontend — all Vercel domains for this project
+  "https://career-launch-ashy.vercel.app",
   "https://careerlaunch-ai.vercel.app",
-  // Allow any *.vercel.app preview deployment for this project
-  process.env.FRONTEND_URL,  // set this on Render for easy overrides
-].filter(Boolean);           // drop undefined if FRONTEND_URL not set
+  process.env.FRONTEND_URL,
+].filter(Boolean);
 
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow server-to-server calls and same-origin requests (origin is undefined)
       if (!origin) return callback(null, true);
 
       if (ALLOWED_ORIGINS.includes(origin)) {
         return callback(null, true);
       }
 
-      // Allow any Vercel preview URL for this project
-      if (/^https:\/\/careerlaunch[\w-]*\.vercel\.app$/.test(origin)) {
+      // Allow any Vercel preview deployment for this project
+      if (/^https:\/\/(career-launch|careerlaunch)[\w-]*\.vercel\.app$/.test(origin)) {
         return callback(null, true);
       }
 
@@ -75,12 +72,12 @@ app.use(
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     exposedHeaders: ["Authorization"],
-    credentials: false,   // we use Bearer tokens, not cookies — keep false
-    optionsSuccessStatus: 200,   // some legacy mobile browsers choke on 204
+    credentials: false,
+    optionsSuccessStatus: 200,
   })
 );
 
-// Handle preflight OPTIONS requests explicitly before any other middleware
+// Handle ALL preflight OPTIONS requests before any other middleware
 app.options("*", cors());
 
 app.use(express.json());
