@@ -18,7 +18,6 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ── DROP (FK-safe order: children first, parents last) ────────────────────────
 DROP TABLE IF EXISTS `interview_questions`;
 DROP TABLE IF EXISTS `interview_sessions`;
-DROP TABLE IF EXISTS `resume_analyses`;
 DROP TABLE IF EXISTS `roadmaps`;
 DROP TABLE IF EXISTS `saved_companies`;
 DROP TABLE IF EXISTS `saved_jobs`;
@@ -212,22 +211,6 @@ CREATE TABLE `roadmaps` (
   PRIMARY KEY (`id`),
   KEY `idx_roadmaps_user` (`user_id`),
   CONSTRAINT `fk_roadmaps_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
--- ── RESUME ANALYSES ───────────────────────────────────────────────────────────
--- model: resumeAnalysis.model.js
--- timestamps: false  (created_at managed manually)
-CREATE TABLE `resume_analyses` (
-  `id`         INT      NOT NULL AUTO_INCREMENT,
-  `user_id`    INT      NOT NULL,
-  `ats_score`  FLOAT    DEFAULT NULL,
-  `feedback`   TEXT     DEFAULT NULL,
-  `resume_url` TEXT     DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_resume_analyses_user` (`user_id`),
-  CONSTRAINT `fk_resume_analyses_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 

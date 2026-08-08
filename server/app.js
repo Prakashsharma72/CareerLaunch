@@ -30,7 +30,6 @@ import "./models/savedCompany.model.js";
 import "./models/interviewSession.model.js";
 import "./models/interviewQuestion.model.js";
 import "./models/roadmap.model.js";
-import "./models/resumeAnalysis.model.js";
 import "./models/savedJob.model.js";
 
 // Import associations after all models are loaded
@@ -39,7 +38,50 @@ import "./models/associations.js";
 const app = express();
 
 /* ── CORS ─────────────────────────────────────────────────────────────────── */
-app.use(cors());
+// Explicit allowlist — never use the open cors() wildcard in production.
+// On mobile browsers, a missing or wrong CORS header silently blocks the
+// request before it ever reaches the controller.
+const ALLOWED_ORIGINS = [
+  // Local development
+  "http://localhost:5173",
+  "http://localhost:4173",   // vite preview
+  "http://127.0.0.1:5173",
+  // Production frontend (Vercel)
+  // Add every domain Vercel assigns (custom + generated)
+  "https://career-launch-ashy.vercel.app",
+  "https://careerlaunch-ai.vercel.app",
+  // Allow any *.vercel.app preview deployment for this project
+  process.env.FRONTEND_URL,  // set this on Render for easy overrides
+].filter(Boolean);           // drop undefined if FRONTEND_URL not set
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow server-to-server calls and same-origin requests (origin is undefined)
+      if (!origin) return callback(null, true);
+
+      if (ALLOWED_ORIGINS.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Allow any Vercel preview URL for this project
+      if (/^https:\/\/careerlaunch[\w-]*\.vercel\.app$/.test(origin)) {
+        return callback(null, true);
+      }
+
+      console.warn(`[cors] Blocked origin: ${origin}`);
+      return callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: ["Authorization"],
+    credentials: false,   // we use Bearer tokens, not cookies — keep false
+    optionsSuccessStatus: 200,   // some legacy mobile browsers choke on 204
+  })
+);
+
+// Handle preflight OPTIONS requests explicitly before any other middleware
+app.options("*", cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

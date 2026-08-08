@@ -57,10 +57,8 @@ export async function updateUserProfile(id, body) {
  * - saved companies count
  * - interview sessions count
  * - roadmaps count
- * - latest resume analysis score
  */
 export async function getUserStats(userId) {
-  // Lazy-import models to avoid circular dependency issues
   const { default: db } = await import("../config/db.js");
 
   const [[stats]] = await db.query(
@@ -68,9 +66,7 @@ export async function getUserStats(userId) {
        (SELECT COUNT(*) FROM saved_jobs      WHERE user_id = :uid) AS saved_jobs,
        (SELECT COUNT(*) FROM saved_companies WHERE user_id = :uid) AS saved_companies,
        (SELECT COUNT(*) FROM interview_sessions WHERE user_id = :uid) AS interviews,
-       (SELECT COUNT(*) FROM roadmaps        WHERE user_id = :uid) AS roadmaps,
-       (SELECT ats_score FROM resume_analyses WHERE user_id = :uid
-        ORDER BY created_at DESC LIMIT 1)                          AS resume_score`,
+       (SELECT COUNT(*) FROM roadmaps        WHERE user_id = :uid) AS roadmaps`,
     { replacements: { uid: userId } }
   );
 
@@ -79,6 +75,5 @@ export async function getUserStats(userId) {
     savedCompanies:   Number(stats.saved_companies || 0),
     interviews:       Number(stats.interviews      || 0),
     roadmaps:         Number(stats.roadmaps        || 0),
-    resumeScore:      stats.resume_score != null ? Number(stats.resume_score) : null,
   };
 }

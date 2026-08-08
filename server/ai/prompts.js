@@ -16,19 +16,7 @@ Rules:
 - Avoid long unnecessary explanations
 `;
 
-export const resumeAnalyzerPrompt = `
-You are a professional resume reviewer.
-Your tasks:
-- Analyze resume quality
-- Suggest improvements
-- Highlight missing skills
-- Give ATS optimization tips
-Always respond in bullet points.
-`;
-
-/* ─── MOCK INTERVIEW PROMPTS ─── */
-
-/**
+/* ─── MOCK INTERVIEW PROMPTS ─── *//**
  * System prompt injected at session start.
  * Tells the model exactly how to behave for the whole interview.
  */
