@@ -188,17 +188,6 @@ async function runMigrations() {
     )
   `);
 
-  await createTableIfMissing("resume_analyses", `
-    CREATE TABLE resume_analyses (
-      id         ${AI},
-      user_id    INT  NOT NULL,
-      ats_score  FLOAT,
-      feedback   TEXT,
-      resume_url TEXT,
-      created_at DATETIME DEFAULT ${NOW}
-    )
-  `);
-
   await createTableIfMissing("interview_sessions", `
     CREATE TABLE interview_sessions (
       id                 ${AI},
@@ -357,11 +346,6 @@ async function runMigrations() {
     ["jobs", "expires_at",       "DATE"],
     ["jobs", "status",           "VARCHAR(20) DEFAULT 'active'"],
     ["jobs", "applicants",       "TEXT"],
-
-    // resume_analyses
-    ["resume_analyses", "feedback",   "TEXT"],
-    ["resume_analyses", "resume_url", "TEXT"],
-    ["resume_analyses", "ats_score",  "FLOAT"],
   ];
 
   for (const [table, column, definition] of columns) {
