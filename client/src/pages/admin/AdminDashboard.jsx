@@ -11,14 +11,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FaUsers, FaBriefcase, FaBook, FaFileAlt,
-  FaArrowUp, FaRegClock, FaPlusCircle,
+  FaUsers, FaBriefcase, FaBook,
+  FaArrowUp, FaArrowDown, FaRegClock, FaPlusCircle,
   FaUsersCog, FaExternalLinkAlt, FaChartLine,
   FaHistory,
 } from "react-icons/fa";
 import { motion } from "framer-motion";
 import DashboardCard from "../../components/dashboard/DashboardCard";
 import Loader        from "../../components/common/Loader";
+import adminService  from "../../services/adminService";
 
 /* ── animation helpers ── */
 const fadeUp  = (delay = 0) => ({
@@ -28,10 +29,9 @@ const fadeUp  = (delay = 0) => ({
 });
 
 const TYPE_DOT = {
-  user:        "bg-blue-500",
-  job:         "bg-green-500",
-  resource:    "bg-violet-500",
-  application: "bg-amber-500",
+  user:     "bg-blue-500",
+  job:      "bg-green-500",
+  resource: "bg-violet-500",
 };
 
 export default function AdminDashboard() {
@@ -40,36 +40,73 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats,   setStats]   = useState({
     totalUsers: 0, totalJobs: 0,
-    totalResources: 0, totalApplications: 0,
+    totalResources: 0,
+    growth: {
+      users: { percentage: 0, recent: 0, previous: 0 },
+      jobs: { percentage: 0, recent: 0, previous: 0 },
+    },
   });
   const [recentActivities, setRecentActivities] = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => { fetchDashboardData(); }, []);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      await new Promise(r => setTimeout(r, 600));
+      setError(null);
 
-      setStats({
-        totalUsers: 245, totalJobs: 58,
-        totalResources: 132, totalApplications: 489,
-      });
-
-      setRecentActivities([
-        { id: 1, activity: "New user registered on platform",           time: "10 mins ago",  type: "user"        },
-        { id: 2, activity: "Admin added a new MERN Developer job",      time: "30 mins ago",  type: "job"         },
-        { id: 3, activity: "New resource uploaded for React",           time: "1 hour ago",   type: "resource"    },
-        { id: 4, activity: "Student applied for Frontend Developer role",time: "2 hours ago", type: "application" },
+      // Fetch stats and activities in parallel
+      const [statsResponse, activitiesResponse] = await Promise.all([
+        adminService.getDashboardStats(),
+        adminService.getRecentActivities(10),
       ]);
+
+      if (statsResponse.success) {
+        setStats(statsResponse.data);
+      }
+
+      if (activitiesResponse.success) {
+        setRecentActivities(activitiesResponse.data);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching dashboard data:", err);
+      setError(err.response?.data?.message || "Failed to load dashboard data");
+      
+      // Set default values on error
+      setStats({
+        totalUsers: 0,
+        totalJobs: 0,
+        totalResources: 0,
+        growth: {
+          users: { percentage: 0, recent: 0, previous: 0 },
+          jobs: { percentage: 0, recent: 0, previous: 0 },
+        },
+      });
+      setRecentActivities([]);
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) return <Loader />;
+
+  // Show error message if data fetch failed
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
+          <p className="text-red-600 dark:text-red-400 font-medium">{error}</p>
+          <button
+            onClick={fetchDashboardData}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
@@ -89,9 +126,9 @@ export default function AdminDashboard() {
         </span>
       </motion.div>
 
-      {/* ── Stat cards — 1 col → 2 col → 4 col ── */}
+      {/* ── Stat cards — 1 col → 2 col → 3 col ── */}
       <motion.div {...fadeUp(0.08)}
-        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
+        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
         <DashboardCard
           title="Total Users"    value={stats.totalUsers}
           icon={<FaUsers />}     bgColor="from-blue-500 to-blue-700"
@@ -106,10 +143,6 @@ export default function AdminDashboard() {
           title="Resources"      value={stats.totalResources}
           icon={<FaBook />}      bgColor="from-violet-500 to-violet-700"
           onClick={() => navigate("/admin/resources")}
-        />
-        <DashboardCard
-          title="Applications"   value={stats.totalApplications}
-          icon={<FaFileAlt />}   bgColor="from-amber-500 to-amber-600"
         />
       </motion.div>
 
@@ -222,17 +255,31 @@ export default function AdminDashboard() {
 
           <div className="space-y-6 flex-1 flex flex-col justify-center">
             {[
-              { label: "Users Growth",  pct: 80, badge: "12%", color: "bg-blue-500"    },
-              { label: "Job Posts",     pct: 70, badge: "18%", color: "bg-emerald-500" },
-              { label: "Applications",  pct: 90, badge: "25%", color: "bg-amber-500"   },
-            ].map(({ label, pct, badge, color }) => (
+              { 
+                label: "Users Growth", 
+                pct: Math.min(Math.abs(stats.growth.users.percentage), 100), 
+                badge: `${stats.growth.users.percentage >= 0 ? '+' : ''}${stats.growth.users.percentage}%`, 
+                color: "bg-blue-500",
+                isPositive: stats.growth.users.percentage >= 0,
+              },
+              { 
+                label: "Job Posts", 
+                pct: Math.min(Math.abs(stats.growth.jobs.percentage), 100), 
+                badge: `${stats.growth.jobs.percentage >= 0 ? '+' : ''}${stats.growth.jobs.percentage}%`, 
+                color: "bg-emerald-500",
+                isPositive: stats.growth.jobs.percentage >= 0,
+              },
+            ].map(({ label, pct, badge, color, isPositive }) => (
               <div key={label}>
                 <div className="flex justify-between mb-2 items-center">
                   <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</span>
-                  <span className="flex items-center gap-1 text-xs font-bold
-                    text-emerald-600 dark:text-emerald-400
-                    bg-emerald-50 dark:bg-emerald-500/15 px-2 py-1 rounded-md">
-                    <FaArrowUp className="text-[9px]" /> {badge}
+                  <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${
+                    isPositive 
+                      ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15'
+                      : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/15'
+                  }`}>
+                    {isPositive ? <FaArrowUp className="text-[9px]" /> : <FaArrowDown className="text-[9px]" />}
+                    {badge}
                   </span>
                 </div>
                 <div className="bg-neutral-100 dark:bg-white/10 rounded-full h-2.5 overflow-hidden">
@@ -261,9 +308,7 @@ export default function AdminDashboard() {
           <strong className="text-blue-700 dark:text-blue-400">{stats.totalUsers}</strong> registered users,
           with <strong className="text-emerald-700 dark:text-emerald-400">{stats.totalJobs}</strong> active job
           postings and <strong className="text-violet-700 dark:text-violet-400">{stats.totalResources}</strong> learning
-          resources. A total of{" "}
-          <strong className="text-amber-600 dark:text-amber-400">{stats.totalApplications}</strong> applications have been
-          processed, reflecting steady platform engagement.
+          resources available, reflecting steady platform growth and engagement.
         </p>
       </motion.div>
     </div>

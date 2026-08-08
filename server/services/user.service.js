@@ -53,7 +53,6 @@ export async function updateUserProfile(id, body) {
 
 /**
  * Get dashboard stats for a user:
- * - applied jobs count
  * - saved jobs count
  * - saved companies count
  * - interview sessions count
@@ -66,7 +65,6 @@ export async function getUserStats(userId) {
 
   const [[stats]] = await db.query(
     `SELECT
-       (SELECT COUNT(*) FROM applications    WHERE user_id = :uid) AS applied_jobs,
        (SELECT COUNT(*) FROM saved_jobs      WHERE user_id = :uid) AS saved_jobs,
        (SELECT COUNT(*) FROM saved_companies WHERE user_id = :uid) AS saved_companies,
        (SELECT COUNT(*) FROM interview_sessions WHERE user_id = :uid) AS interviews,
@@ -77,7 +75,6 @@ export async function getUserStats(userId) {
   );
 
   return {
-    appliedJobs:      Number(stats.applied_jobs    || 0),
     savedJobs:        Number(stats.saved_jobs      || 0),
     savedCompanies:   Number(stats.saved_companies || 0),
     interviews:       Number(stats.interviews      || 0),

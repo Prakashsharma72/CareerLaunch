@@ -16,6 +16,7 @@ import savedCompanyRoutes from "./routes/savedCompany.routes.js";
 import placesRoutes       from "./routes/places.routes.js";
 import settingsRoutes     from "./routes/settings.routes.js";
 import uploadRoutes       from "./routes/upload.routes.js";
+import adminRoutes        from "./routes/admin.routes.js";
 
 import { errorHandler } from "./middleware/error.middleware.js";
 import sequelize         from "./config/db.js";  // eslint-disable-line no-unused-vars
@@ -23,14 +24,17 @@ import sequelize         from "./config/db.js";  // eslint-disable-line no-unuse
 // Register all Sequelize models before sync
 import "./models/user.model.js";
 import "./models/job.model.js";
+import "./models/resource.model.js";
 import "./models/company.model.js";
 import "./models/savedCompany.model.js";
 import "./models/interviewSession.model.js";
 import "./models/interviewQuestion.model.js";
-import "./models/application.model.js";
 import "./models/roadmap.model.js";
 import "./models/resumeAnalysis.model.js";
 import "./models/savedJob.model.js";
+
+// Import associations after all models are loaded
+import "./models/associations.js";
 
 const app = express();
 
@@ -52,6 +56,7 @@ app.use("/api/saved-companies", savedCompanyRoutes);
 app.use("/api/places",          placesRoutes);
 app.use("/api/settings",        settingsRoutes);
 app.use("/api/upload",          uploadRoutes);
+app.use("/api/admin",           adminRoutes);
 
 /* ── Health check ─────────────────────────────────────────────────────────── */
 app.get("/", (_req, res) => res.send("🚀 CareerLaunch AI API is running"));

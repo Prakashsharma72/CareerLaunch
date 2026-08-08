@@ -32,11 +32,3 @@ export const AI_ROLES = {
   INTERVIEW_PREP: "interview-prep",
   RESUME_HELPER: "resume-helper",
 };
-
-// Application Status
-export const APPLICATION_STATUS = {
-  APPLIED: "Applied",
-  SHORTLISTED: "Shortlisted",
-  REJECTED: "Rejected",
-  SELECTED: "Selected",
-};

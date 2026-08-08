@@ -58,3 +58,8 @@ coverage/
 *.pem
 *.key
 *.cert
+
+
+
+
+server/careerlaunch.sqlite
