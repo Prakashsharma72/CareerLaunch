@@ -205,9 +205,9 @@ function Register() {
           </motion.div>
 
           <motion.div variants={item} className="flex flex-wrap gap-2.5">
-            <FeaturePill icon={FaBrain}     text="AI Resume Analyzer" />
-            <FeaturePill icon={FaChartLine} text="Career Roadmaps" />
-            <FeaturePill icon={FaShieldAlt} text="Mock Interviews" />
+            <FeaturePill icon={FaBrain}     text="Career Roadmaps" />
+            <FeaturePill icon={FaChartLine} text="Mock Interviews" />
+            <FeaturePill icon={FaShieldAlt} text="Job Search" />
           </motion.div>
 
           <motion.div variants={item} className="flex items-center gap-8 pt-2">

@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useInView, useMotionValue, useSpring } from "f
 import {
   FaBriefcase, FaRobot, FaRoad, FaCheckCircle, FaBuilding,
   FaMapMarkerAlt, FaDollarSign, FaSearch, FaMapPin, FaClock,
-  FaHeart, FaUserGraduate, FaTrophy, FaChartLine, FaLaptopCode,
+  FaHeart, FaUserGraduate, FaTrophy, FaLaptopCode,
   FaChevronDown, FaChevronUp, FaStar, FaQuoteLeft,
   FaArrowRight, FaBolt, FaShieldAlt, FaCode, FaRocket,
   FaLinkedin, FaTwitter, FaGithub, FaEnvelope,
@@ -134,15 +134,13 @@ function FeatureCard({ icon: Icon, title, desc, colorTheme, to }) {
 /* ── testimonial ── */
 const TESTIMONIALS = [
   { name:"Arjun Mehta",  role:"Frontend Dev @ Razorpay",     text:"CareerLaunch AI helped me land my dream job in 3 weeks. The AI roadmap was spot on!", rating:5, avatar:"A" },
-  { name:"Priya Sharma", role:"Data Scientist @ Infosys",     text:"The resume analyzer boosted my ATS score from 42% to 91%. Got 5 interviews in a week!", rating:5, avatar:"P" },
   { name:"Rahul Gupta",  role:"Backend Dev @ Flipkart",       text:"Mock interviews prepared me for every tricky question. The feedback was brutally honest and helpful.", rating:5, avatar:"R" },
   { name:"Sneha Patel",  role:"Full Stack Dev @ Paytm",       text:"The career roadmap feature showed me exactly what to learn. No more wasted time on random tutorials.", rating:5, avatar:"S" },
 ];
 
 /* ── FAQ ── */
 const FAQS = [
-  { q:"Is CareerLaunch AI free to use?",         a:"Yes! The core features — job search, resume analysis, career roadmaps, and mock interviews — are completely free for students." },
-  { q:"How does the AI resume analyzer work?",   a:"Upload your PDF resume and we'll analyze it against ATS systems, job descriptions, and industry standards to give you a score and actionable improvements." },
+  { q:"Is CareerLaunch AI free to use?",         a:"Yes! The core features — job search, career roadmaps, and mock interviews — are completely free for students." },
   { q:"Can I practice real interview questions?", a:"Absolutely. Our AI conducts role-specific mock interviews with 12 questions, provides instant feedback, scores each answer 1–10, and generates a full performance report." },
   { q:"How are job listings curated?",           a:"Listings are aggregated from trusted sources and company career pages, verified for freshness, and ranked by relevance to your profile." },
   { q:"Do you support non-tech roles?",          a:"While we specialize in tech roles, our platform supports Business Analyst, Product Manager, Digital Marketing, and other adjacent career paths." },
@@ -545,8 +543,7 @@ export default function Home() {
               CareerLaunch AI provides a complete suite of intelligent tools to help you prepare, practice, and secure your dream offer.
             </p>
           </motion.div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
-            <FeatureCard icon={FaChartLine} title="AI Resume Analysis"  desc="Score your resume against ATS systems and real job descriptions. Get instant improvement tips." colorTheme="blue"   to="/student/resume-analyzer" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             <FeatureCard icon={FaRoad}      title="Career Roadmaps"     desc="Step-by-step learning paths tailored to your target role and current skill level."                 colorTheme="purple" to="/student/roadmap-generator" />
             <FeatureCard icon={FaRobot}     title="Mock Interviews"      desc="Practice with our AI interviewer, get scored answers, and receive a full performance report."      colorTheme="orange" to="/student/mock-interview" />
             <FeatureCard icon={FaTrophy}    title="Skill Assessments"   desc="Validate expertise with standardized tests and showcase verified badges to employers."              colorTheme="green"  to="/student/dashboard" />

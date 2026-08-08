@@ -23,7 +23,6 @@ const Jobs             = lazy(() => import("./pages/student/Jobs"));
 const JobDetails       = lazy(() => import("./pages/student/JobDetails"));
 const Resources        = lazy(() => import("./pages/student/Resources"));
 const SavedJobs        = lazy(() => import("./pages/student/SavedJobs"));
-const ResumeAnalyzer   = lazy(() => import("./pages/student/ResumeAnalyzer"));
 const RoadmapGenerator = lazy(() => import("./pages/student/RoadmapGenerator"));
 const MockInterview    = lazy(() => import("./pages/student/MockInterview"));
 const CompanySearch    = lazy(() => import("./pages/student/CompanySearch"));
@@ -114,7 +113,6 @@ const App = () => (
         <Route path="jobs/:id"           element={<JobDetails />} />
         <Route path="resources"          element={<Resources />} />
         <Route path="saved-jobs"         element={<SavedJobs />} />
-        <Route path="resume-analyzer"    element={<ResumeAnalyzer />} />
         <Route path="roadmap-generator"  element={<RoadmapGenerator />} />
         <Route path="mock-interview"     element={<MockInterview />} />
         <Route path="companies"          element={<CompanySearch />} />

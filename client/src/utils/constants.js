@@ -3,8 +3,9 @@
  * Avoid hardcoding values across the app
  */
 
-// API BASE URL (frontend reference if needed)
-export const BASE_URL = "http://localhost:5000/api";
+// API BASE URL — always read from the Vite env variable, never hardcode localhost.
+// Set VITE_API_URL in .env.development / .env.production / Vercel dashboard.
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 // Local Storage Keys
 export const TOKEN_KEY = "token";
