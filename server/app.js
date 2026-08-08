@@ -14,6 +14,8 @@ import interviewRoutes    from "./routes/interview.routes.js";
 import companyRoutes      from "./routes/company.routes.js";
 import savedCompanyRoutes from "./routes/savedCompany.routes.js";
 import placesRoutes       from "./routes/places.routes.js";
+import settingsRoutes     from "./routes/settings.routes.js";
+import uploadRoutes       from "./routes/upload.routes.js";
 
 import { errorHandler } from "./middleware/error.middleware.js";
 import sequelize         from "./config/db.js";  // eslint-disable-line no-unused-vars
@@ -33,18 +35,7 @@ import "./models/savedJob.model.js";
 const app = express();
 
 /* ── CORS ─────────────────────────────────────────────────────────────────── */
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-];
-
-app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error("Not allowed by CORS"));
-  },
-  credentials: true,
-}));
+app.use(cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -59,6 +50,8 @@ app.use("/api/interview",       interviewRoutes);
 app.use("/api/companies",       companyRoutes);
 app.use("/api/saved-companies", savedCompanyRoutes);
 app.use("/api/places",          placesRoutes);
+app.use("/api/settings",        settingsRoutes);
+app.use("/api/upload",          uploadRoutes);
 
 /* ── Health check ─────────────────────────────────────────────────────────── */
 app.get("/", (_req, res) => res.send("🚀 CareerLaunch AI API is running"));

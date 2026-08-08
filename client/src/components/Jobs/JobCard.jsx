@@ -10,6 +10,7 @@ import {
   FaLocationArrow,
 } from "react-icons/fa";
 import { formatKm } from "../../utils/geoUtils";
+import AvatarIcon from "../common/AvatarIcon";
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 const GRADIENTS = [
@@ -24,10 +25,6 @@ const GRADIENTS = [
 function avatarGradient(name = "") {
   const idx = (name.charCodeAt(0) || 0) % GRADIENTS.length;
   return GRADIENTS[idx];
-}
-
-function initials(name = "") {
-  return name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 }
 
 const JOB_TYPE_COLORS = {
@@ -103,13 +100,11 @@ export default function JobCard({ job, isSaved = false, onSaveJob, distanceKm = 
         <div className="flex items-start gap-3">
 
           {/* Company avatar */}
-          <div
-            className="w-11 h-11 rounded-xl shrink-0 flex items-center justify-center
-              text-white font-extrabold text-sm select-none shadow-md"
-            style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}
-          >
-            {initials(company || title)}
-          </div>
+          <AvatarIcon
+            name={company || title}
+            size={44}
+            className="rounded-xl shadow-md shrink-0"
+          />
 
           {/* Title + company */}
           <div className="flex-1 min-w-0">

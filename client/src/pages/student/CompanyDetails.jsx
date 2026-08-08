@@ -15,15 +15,14 @@ import {
   FaExclamationTriangle,
 } from "react-icons/fa";
 import { getCompanyDetails } from "../../services/placesService";
+import AvatarIcon from "../../components/common/AvatarIcon";
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
 const GRADS = [
   ["#3b82f6","#6366f1"], ["#8b5cf6","#a855f7"], ["#10b981","#14b8a6"],
   ["#f43f5e","#ec4899"], ["#f59e0b","#f97316"], ["#06b6d4","#0ea5e9"],
 ];
-const grad     = (s = "") => GRADS[(s.charCodeAt(0) || 0) % GRADS.length];
-const initials = (s = "") =>
-  s.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("");
+const grad = (s = "") => GRADS[(s.charCodeAt(0) || 0) % GRADS.length];
 
 function Stars({ rating, count }) {
   if (!rating) return <span className="text-sm text-gray-400">No rating</span>;
@@ -245,17 +244,7 @@ export default function CompanyDetails() {
           <div className="p-6 md:p-8">
             {/* Header */}
             <div className="flex items-start gap-4 mb-5">
-              {logo ? (
-                <img src={logo} alt={companyName} loading="lazy"
-                  onError={e => { e.currentTarget.style.display = "none"; }}
-                  className="w-16 h-16 rounded-2xl object-contain bg-gray-100 dark:bg-white/8 p-1.5 shrink-0 border border-gray-200 dark:border-white/10" />
-              ) : (
-                <div className="w-16 h-16 rounded-2xl shrink-0 flex items-center justify-center
-                  text-white font-extrabold text-xl shadow-md select-none"
-                  style={{ background: `linear-gradient(135deg,${g1},${g2})` }}>
-                  {initials(companyName)}
-                </div>
-              )}
+              <AvatarIcon name={companyName} size={64} className="rounded-2xl shadow-md shrink-0" />
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
                   {companyName}

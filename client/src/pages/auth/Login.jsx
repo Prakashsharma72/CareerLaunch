@@ -156,7 +156,13 @@ function Login() {
     setLoading(true);
     try {
       const data = await login(formData.email, formData.password);
-      if (data?.token) navigate("/student/dashboard");
+      if (data?.token) {
+        if (data.user?.role === "admin") {
+          navigate("/admin/dashboard");
+        } else {
+          navigate("/student/dashboard");
+        }
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
     } finally {

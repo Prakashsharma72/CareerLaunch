@@ -1,278 +1,307 @@
 -- =============================================================================
--- CareerLaunch AI — Master Database Schema
--- Dialect: SQLite (also valid PostgreSQL with minor type adjustments)
+-- CareerLaunch AI — MySQL Schema
+-- Generated from Sequelize model definitions in server/models/
 --
--- This file is the single source of truth.
--- It reflects the exact Sequelize model definitions in server/models/.
--- Drop and recreate the database from this file for a clean slate.
+-- HOW TO IMPORT IN XAMPP:
+--   1. Open phpMyAdmin  →  http://localhost/phpmyadmin
+--   2. Create database `careerlaunch`  (Collation: utf8mb4_unicode_ci)
+--   3. Select `careerlaunch`  →  click SQL tab
+--   4. Paste this entire file  →  click Go
+--
+-- This script is idempotent: safe to re-run on an existing database.
+-- It drops all tables first (in FK-safe order) then recreates them.
 -- =============================================================================
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- ── DROP (FK-safe order: children first, parents last) ────────────────────────
+DROP TABLE IF EXISTS `interview_questions`;
+DROP TABLE IF EXISTS `interview_sessions`;
+DROP TABLE IF EXISTS `resume_analyses`;
+DROP TABLE IF EXISTS `roadmaps`;
+DROP TABLE IF EXISTS `applications`;
+DROP TABLE IF EXISTS `saved_companies`;
+DROP TABLE IF EXISTS `saved_jobs`;
+DROP TABLE IF EXISTS `chats`;
+DROP TABLE IF EXISTS `jobs`;
+DROP TABLE IF EXISTS `resources`;
+DROP TABLE IF EXISTS `companies`;
+DROP TABLE IF EXISTS `users`;
+
+SET FOREIGN_KEY_CHECKS = 1;
 
 
 -- ── USERS ─────────────────────────────────────────────────────────────────────
 -- model: user.model.js
-CREATE TABLE IF NOT EXISTS users (
-    id            INTEGER       PRIMARY KEY AUTOINCREMENT,
-    name          VARCHAR(255)  NOT NULL,
-    email         VARCHAR(255)  NOT NULL UNIQUE,
-    password      VARCHAR(255)  NOT NULL,
-    role          VARCHAR(50)   NOT NULL DEFAULT 'student',
-    phone         VARCHAR(20),
-    education     TEXT,
-    skills        TEXT,
-    resume_url    TEXT,
-    profile_image TEXT,
-    created_at    DATETIME      DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+-- timestamps: true  |  updatedAt: false  →  only created_at column
+CREATE TABLE `users` (
+  `id`            INT            NOT NULL AUTO_INCREMENT,
+  `name`          VARCHAR(255)   NOT NULL,
+  `email`         VARCHAR(255)   NOT NULL,
+  `password`      VARCHAR(255)   NOT NULL,
+  `role`          VARCHAR(50)    NOT NULL DEFAULT 'student',
+  `phone`         VARCHAR(20)    DEFAULT NULL,
+  `education`     TEXT           DEFAULT NULL,
+  `skills`        TEXT           DEFAULT NULL,
+  `resume_url`    TEXT           DEFAULT NULL,
+  `profile_image` TEXT           DEFAULT NULL,
+  `created_at`    DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_users_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ── RESOURCES ─────────────────────────────────────────────────────────────────
--- model: resource.model.js  (timestamps: true → createdAt + updatedAt)
-CREATE TABLE IF NOT EXISTS resources (
-    id          INTEGER      PRIMARY KEY AUTOINCREMENT,
-    title       VARCHAR(255) NOT NULL,
-    category    VARCHAR(255),
-    link        TEXT         NOT NULL,
-    created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    updated_at  DATETIME     DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_resources_category ON resources(category);
+-- model: resource.model.js
+-- timestamps: true  →  created_at + updated_at  (Sequelize underscored default)
+CREATE TABLE `resources` (
+  `id`          INT            NOT NULL AUTO_INCREMENT,
+  `title`       VARCHAR(255)   NOT NULL,
+  `category`    VARCHAR(255)   DEFAULT NULL,
+  `link`        TEXT           NOT NULL,
+  `created_at`  DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_resources_category` (`category`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ── JOBS ──────────────────────────────────────────────────────────────────────
--- model: job.model.js  (timestamps: true → createdAt + updatedAt)
-CREATE TABLE IF NOT EXISTS jobs (
-    id               INTEGER      PRIMARY KEY AUTOINCREMENT,
-
-    -- identity / source
-    external_job_id  VARCHAR(255),
-    source           VARCHAR(100) DEFAULT 'manual',
-    google_place_id  VARCHAR(255),
-
-    -- core
-    title            VARCHAR(255) NOT NULL,
-    company          VARCHAR(255) NOT NULL,
-    company_logo     TEXT,
-    website          VARCHAR(512),
-    career_page      VARCHAR(512),
-    location         VARCHAR(255),
-
-    -- job details
-    employment_type  VARCHAR(50),
-    experience_level VARCHAR(50)  DEFAULT 'Fresher',
-    salary           VARCHAR(100),
-    skills_required  TEXT,
-    description      TEXT,
-    apply_url        TEXT,
-
-    -- geo / rating
-    company_rating   REAL,
-    latitude         REAL,
-    longitude        REAL,
-
-    -- dates / status
-    posted_date      DATE,
-    expires_at       DATE,
-    status           VARCHAR(20)  DEFAULT 'active',
-
-    -- legacy
-    applicants       TEXT         DEFAULT '[]',   -- JSON array
-    posted_by        INTEGER      REFERENCES users(id) ON DELETE SET NULL,
-
-    created_at       DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    updated_at       DATETIME     DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_jobs_title    ON jobs(title);
-CREATE INDEX IF NOT EXISTS idx_jobs_company  ON jobs(company);
-CREATE INDEX IF NOT EXISTS idx_jobs_status   ON jobs(status);
-CREATE INDEX IF NOT EXISTS idx_jobs_source   ON jobs(source);
+-- model: job.model.js
+-- timestamps: true  →  createdAt / updatedAt  (Sequelize default column names)
+CREATE TABLE `jobs` (
+  `id`               INT            NOT NULL AUTO_INCREMENT,
+  `external_job_id`  VARCHAR(255)   DEFAULT NULL,
+  `source`           VARCHAR(100)   DEFAULT 'manual',
+  `google_place_id`  VARCHAR(255)   DEFAULT NULL,
+  `title`            VARCHAR(255)   NOT NULL,
+  `company`          VARCHAR(255)   NOT NULL,
+  `company_logo`     TEXT           DEFAULT NULL,
+  `website`          VARCHAR(512)   DEFAULT NULL,
+  `career_page`      VARCHAR(512)   DEFAULT NULL,
+  `location`         VARCHAR(255)   DEFAULT NULL,
+  `employment_type`  VARCHAR(50)    DEFAULT NULL,
+  `experience_level` VARCHAR(50)    DEFAULT 'Fresher',
+  `salary`           VARCHAR(100)   DEFAULT NULL,
+  `skills_required`  TEXT           DEFAULT NULL,
+  `description`      TEXT           DEFAULT NULL,
+  `apply_url`        TEXT           DEFAULT NULL,
+  `company_rating`   FLOAT          DEFAULT NULL,
+  `latitude`         DOUBLE         DEFAULT NULL,
+  `longitude`        DOUBLE         DEFAULT NULL,
+  `posted_date`      DATE           DEFAULT NULL,
+  `expires_at`       DATE           DEFAULT NULL,
+  `status`           VARCHAR(20)    DEFAULT 'active',
+  `applicants`       JSON           DEFAULT NULL,
+  `posted_by`        INT            DEFAULT NULL,
+  `createdAt`        DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt`        DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_jobs_title`    (`title`),
+  KEY `idx_jobs_company`  (`company`),
+  KEY `idx_jobs_status`   (`status`),
+  KEY `idx_jobs_source`   (`source`),
+  CONSTRAINT `fk_jobs_posted_by` FOREIGN KEY (`posted_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ── COMPANIES ─────────────────────────────────────────────────────────────────
--- model: company.model.js  (timestamps: true → createdAt + updatedAt)
--- Data source: Google Places API v2 only (place_id is the unique key).
-CREATE TABLE IF NOT EXISTS companies (
-    id              INTEGER      PRIMARY KEY AUTOINCREMENT,
-    place_id        VARCHAR(255) UNIQUE,         -- Google place_id (dedup key)
-    company_name    VARCHAR(255) NOT NULL,
-    website         VARCHAR(512),
-    career_page     VARCHAR(512),
-    address         TEXT,
-    short_address   TEXT,
-    phone           VARCHAR(50),
-    rating          REAL,
-    review_count    INTEGER,
-    latitude        REAL,
-    longitude       REAL,
-    maps_url        VARCHAR(512),
-    business_status VARCHAR(100),
-    opening_hours   TEXT,                        -- JSON array of weekday strings
-    is_open_now     INTEGER,                     -- BOOLEAN 0/1
-    types           TEXT,                        -- JSON
-    city            VARCHAR(100),
-    state           VARCHAR(100),
-    country         VARCHAR(100),
-    logo            TEXT,
-    industry        VARCHAR(100),
-    keyword         VARCHAR(255),
-    editorial_summary TEXT,
-    photo_refs      TEXT,                        -- JSON array of Google photo resource names
-    created_at      DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    updated_at      DATETIME     DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_companies_place_id ON companies(place_id);
-CREATE INDEX IF NOT EXISTS idx_companies_city     ON companies(city);
-CREATE INDEX IF NOT EXISTS idx_companies_rating   ON companies(rating);
+-- model: company.model.js
+-- timestamps: true  →  createdAt / updatedAt  (Sequelize default)
+-- JSON columns: opening_hours, types, photo_refs
+CREATE TABLE `companies` (
+  `id`                INT            NOT NULL AUTO_INCREMENT,
+  `place_id`          VARCHAR(255)   DEFAULT NULL,
+  `company_name`      VARCHAR(255)   NOT NULL,
+  `website`           VARCHAR(512)   DEFAULT NULL,
+  `career_page`       VARCHAR(512)   DEFAULT NULL,
+  `address`           TEXT           DEFAULT NULL,
+  `short_address`     TEXT           DEFAULT NULL,
+  `phone`             VARCHAR(50)    DEFAULT NULL,
+  `rating`            FLOAT          DEFAULT NULL,
+  `review_count`      INT            DEFAULT NULL,
+  `latitude`          DOUBLE         DEFAULT NULL,
+  `longitude`         DOUBLE         DEFAULT NULL,
+  `maps_url`          VARCHAR(512)   DEFAULT NULL,
+  `business_status`   VARCHAR(100)   DEFAULT NULL,
+  `opening_hours`     JSON           DEFAULT NULL,
+  `is_open_now`       TINYINT(1)     DEFAULT NULL,
+  `types`             JSON           DEFAULT NULL,
+  `city`              VARCHAR(100)   DEFAULT NULL,
+  `state`             VARCHAR(100)   DEFAULT NULL,
+  `country`           VARCHAR(100)   DEFAULT NULL,
+  `logo`              TEXT           DEFAULT NULL,
+  `industry`          VARCHAR(100)   DEFAULT NULL,
+  `keyword`           VARCHAR(255)   DEFAULT NULL,
+  `editorial_summary` TEXT           DEFAULT NULL,
+  `photo_refs`        JSON           DEFAULT NULL,
+  `createdAt`         DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt`         DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_companies_place_id` (`place_id`),
+  KEY `idx_companies_city`   (`city`),
+  KEY `idx_companies_rating` (`rating`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ── SAVED JOBS ────────────────────────────────────────────────────────────────
--- model: savedJob.model.js  (timestamps: false)
--- Inline job data — NO foreign key to jobs table.
--- job_id kept nullable for legacy rows only.
-CREATE TABLE IF NOT EXISTS saved_jobs (
-    id               INTEGER      PRIMARY KEY AUTOINCREMENT,
-    user_id          INTEGER      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-
-    -- legacy (nullable)
-    job_id           INTEGER,
-
-    -- inline snapshot of job data at save time
-    external_job_id  VARCHAR(255),
-    source           VARCHAR(100),
-    title            VARCHAR(255),
-    company          VARCHAR(255),
-    company_logo     TEXT,
-    location         VARCHAR(255),
-    salary           VARCHAR(255),
-    employment_type  VARCHAR(100),
-    apply_url        TEXT,
-    posted_date      VARCHAR(50),
-
-    saved_at         DATETIME     DEFAULT CURRENT_TIMESTAMP,
-
-    UNIQUE(user_id, external_job_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_saved_jobs_user ON saved_jobs(user_id);
+-- model: savedJob.model.js
+-- timestamps: false  |  id is BIGINT
+-- No FK to jobs table — inline snapshot stored at save time
+CREATE TABLE `saved_jobs` (
+  `id`              BIGINT         NOT NULL AUTO_INCREMENT,
+  `user_id`         INT            NOT NULL,
+  `job_id`          INT            DEFAULT NULL,
+  `external_job_id` VARCHAR(255)   DEFAULT NULL,
+  `source`          VARCHAR(100)   DEFAULT NULL,
+  `title`           VARCHAR(255)   DEFAULT NULL,
+  `company`         VARCHAR(255)   DEFAULT NULL,
+  `company_logo`    TEXT           DEFAULT NULL,
+  `location`        VARCHAR(255)   DEFAULT NULL,
+  `salary`          VARCHAR(255)   DEFAULT NULL,
+  `employment_type` VARCHAR(100)   DEFAULT NULL,
+  `apply_url`       TEXT           DEFAULT NULL,
+  `posted_date`     VARCHAR(50)    DEFAULT NULL,
+  `saved_at`        DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_saved_jobs_user_ext` (`user_id`, `external_job_id`),
+  KEY `idx_saved_jobs_user` (`user_id`),
+  CONSTRAINT `fk_saved_jobs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ── SAVED COMPANIES ───────────────────────────────────────────────────────────
--- model: savedCompany.model.js  (timestamps: true → createdAt + updatedAt)
--- Inline company data — NO foreign key to companies table.
--- company_id kept nullable for legacy rows only.
-CREATE TABLE IF NOT EXISTS saved_companies (
-    id                  INTEGER      PRIMARY KEY AUTOINCREMENT,
-    user_id             INTEGER      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-
-    -- legacy (nullable)
-    company_id          INTEGER,
-
-    -- inline snapshot of company data at save time
-    external_company_id VARCHAR(255),
-    source              VARCHAR(100),
-    company_name        VARCHAR(255),
-    logo                TEXT,
-    website             TEXT,
-    address             TEXT,
-    phone               VARCHAR(50),
-    rating              REAL,
-    maps_url            TEXT,
-    career_page         TEXT,
-    industry            VARCHAR(100),
-    city                VARCHAR(100),
-
-    created_at          DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    updated_at          DATETIME     DEFAULT CURRENT_TIMESTAMP,
-
-    UNIQUE(user_id, external_company_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_saved_companies_user ON saved_companies(user_id);
+-- model: savedCompany.model.js
+-- timestamps: true  underscored: true  →  created_at + updated_at
+-- No FK to companies table — inline snapshot stored at save time
+CREATE TABLE `saved_companies` (
+  `id`                  INT            NOT NULL AUTO_INCREMENT,
+  `user_id`             INT            NOT NULL,
+  `company_id`          INT            DEFAULT NULL,
+  `external_company_id` VARCHAR(255)   DEFAULT NULL,
+  `source`              VARCHAR(100)   DEFAULT NULL,
+  `company_name`        VARCHAR(255)   DEFAULT NULL,
+  `logo`                TEXT           DEFAULT NULL,
+  `website`             TEXT           DEFAULT NULL,
+  `address`             TEXT           DEFAULT NULL,
+  `phone`               VARCHAR(50)    DEFAULT NULL,
+  `rating`              FLOAT          DEFAULT NULL,
+  `maps_url`            TEXT           DEFAULT NULL,
+  `career_page`         TEXT           DEFAULT NULL,
+  `industry`            VARCHAR(100)   DEFAULT NULL,
+  `city`                VARCHAR(100)   DEFAULT NULL,
+  `created_at`          DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`          DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_saved_companies_user_ext` (`user_id`, `external_company_id`),
+  KEY `idx_saved_companies_user` (`user_id`),
+  CONSTRAINT `fk_saved_companies_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ── APPLICATIONS ──────────────────────────────────────────────────────────────
--- model: application.model.js  (timestamps: false)
-CREATE TABLE IF NOT EXISTS applications (
-    id         INTEGER     PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    job_id     INTEGER     NOT NULL REFERENCES jobs(id)  ON DELETE CASCADE,
-    status     VARCHAR(50) DEFAULT 'Applied',
-    applied_at DATETIME    DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_applications_user ON applications(user_id);
-CREATE INDEX IF NOT EXISTS idx_applications_job  ON applications(job_id);
+-- model: application.model.js
+-- timestamps: false
+CREATE TABLE `applications` (
+  `id`         INT            NOT NULL AUTO_INCREMENT,
+  `user_id`    INT            NOT NULL,
+  `job_id`     INT            NOT NULL,
+  `status`     VARCHAR(50)    DEFAULT 'Applied',
+  `applied_at` DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_applications_user` (`user_id`),
+  KEY `idx_applications_job`  (`job_id`),
+  CONSTRAINT `fk_applications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_applications_job`  FOREIGN KEY (`job_id`)  REFERENCES `jobs`  (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ── ROADMAPS ──────────────────────────────────────────────────────────────────
--- model: roadmap.model.js  (timestamps: false)
-CREATE TABLE IF NOT EXISTS roadmaps (
-    id              INTEGER      PRIMARY KEY AUTOINCREMENT,
-    user_id         INTEGER      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    title           VARCHAR(255),
-    target_role     VARCHAR(100),
-    roadmap_content TEXT,
-    created_at      DATETIME     DEFAULT CURRENT_TIMESTAMP
-);
+-- model: roadmap.model.js
+-- timestamps: false  (created_at managed manually)
+CREATE TABLE `roadmaps` (
+  `id`              INT            NOT NULL AUTO_INCREMENT,
+  `user_id`         INT            NOT NULL,
+  `title`           VARCHAR(255)   DEFAULT NULL,
+  `target_role`     VARCHAR(100)   DEFAULT NULL,
+  `roadmap_content` TEXT           DEFAULT NULL,
+  `created_at`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_roadmaps_user` (`user_id`),
+  CONSTRAINT `fk_roadmaps_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ── RESUME ANALYSES ───────────────────────────────────────────────────────────
--- model: resumeAnalysis.model.js  (timestamps: false)
-CREATE TABLE IF NOT EXISTS resume_analyses (
-    id         INTEGER  PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER  NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    ats_score  REAL,
-    feedback   TEXT,
-    resume_url TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+-- model: resumeAnalysis.model.js
+-- timestamps: false  (created_at managed manually)
+CREATE TABLE `resume_analyses` (
+  `id`         INT      NOT NULL AUTO_INCREMENT,
+  `user_id`    INT      NOT NULL,
+  `ats_score`  FLOAT    DEFAULT NULL,
+  `feedback`   TEXT     DEFAULT NULL,
+  `resume_url` TEXT     DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_resume_analyses_user` (`user_id`),
+  CONSTRAINT `fk_resume_analyses_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ── INTERVIEW SESSIONS ────────────────────────────────────────────────────────
--- model: interviewSession.model.js  (timestamps: true → createdAt + updatedAt)
-CREATE TABLE IF NOT EXISTS interview_sessions (
-    id                 INTEGER     PRIMARY KEY AUTOINCREMENT,
-    user_id            INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role               VARCHAR(255) NOT NULL,
-    difficulty         VARCHAR(255) NOT NULL,
-    status             VARCHAR(50)  DEFAULT 'active',
-    total_questions    INTEGER      DEFAULT 0,
-    answered_questions INTEGER      DEFAULT 0,
-    overall_score      REAL         DEFAULT 0,
-    report             TEXT,
-    created_at         DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    updated_at         DATETIME     DEFAULT CURRENT_TIMESTAMP
-);
+-- model: interviewSession.model.js
+-- timestamps: false  underscored: true
+-- IMPORTANT: Sequelize maps createdAt field → `started_at` column (not created_at)
+CREATE TABLE `interview_sessions` (
+  `id`                 INT            NOT NULL AUTO_INCREMENT,
+  `user_id`            INT            NOT NULL,
+  `role`               VARCHAR(255)   NOT NULL,
+  `difficulty`         VARCHAR(255)   NOT NULL,
+  `status`             VARCHAR(50)    DEFAULT 'active',
+  `total_questions`    INT            DEFAULT 0,
+  `answered_questions` INT            DEFAULT 0,
+  `overall_score`      FLOAT          DEFAULT 0,
+  `report`             TEXT           DEFAULT NULL,
+  `started_at`         DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_interview_sessions_user` (`user_id`),
+  CONSTRAINT `fk_interview_sessions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ── INTERVIEW QUESTIONS ───────────────────────────────────────────────────────
--- model: interviewQuestion.model.js  (timestamps: true → createdAt + updatedAt)
-CREATE TABLE IF NOT EXISTS interview_questions (
-    id              INTEGER      PRIMARY KEY AUTOINCREMENT,
-    session_id      INTEGER      NOT NULL REFERENCES interview_sessions(id) ON DELETE CASCADE,
-    question_number INTEGER      NOT NULL,
-    category        VARCHAR(255) DEFAULT 'technical',
-    question        TEXT         NOT NULL,
-    user_answer     TEXT,
-    feedback        TEXT,                          -- JSON
-    score           REAL,
-    skipped         INTEGER      DEFAULT 0,        -- BOOLEAN (0/1)
-    created_at      DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    updated_at      DATETIME     DEFAULT CURRENT_TIMESTAMP
-);
+-- model: interviewQuestion.model.js
+-- timestamps: true  underscored: true  →  created_at + updated_at
+CREATE TABLE `interview_questions` (
+  `id`              INT            NOT NULL AUTO_INCREMENT,
+  `session_id`      INT            NOT NULL,
+  `question_number` INT            NOT NULL,
+  `category`        VARCHAR(255)   DEFAULT 'technical',
+  `question`        TEXT           NOT NULL,
+  `user_answer`     TEXT           DEFAULT NULL,
+  `feedback`        TEXT           DEFAULT NULL,
+  `score`           FLOAT          DEFAULT NULL,
+  `skipped`         TINYINT(1)     DEFAULT 0,
+  `created_at`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_interview_questions_session` (`session_id`),
+  CONSTRAINT `fk_interview_questions_session` FOREIGN KEY (`session_id`) REFERENCES `interview_sessions` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ── CHATS ─────────────────────────────────────────────────────────────────────
--- model: chat.model.js  (timestamps: true → createdAt + updatedAt)
-CREATE TABLE IF NOT EXISTS chats (
-    id         INTEGER  PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER  NOT NULL,
-    message    TEXT,
-    response   TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+-- model: chat.model.js
+-- timestamps: true  →  createdAt / updatedAt  (Sequelize default)
+CREATE TABLE `chats` (
+  `id`        INT      NOT NULL AUTO_INCREMENT,
+  `userId`    INT      NOT NULL,
+  `message`   TEXT     DEFAULT NULL,
+  `response`  TEXT     DEFAULT NULL,
+  `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_chats_user` (`userId`),
+  CONSTRAINT `fk_chats_user` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

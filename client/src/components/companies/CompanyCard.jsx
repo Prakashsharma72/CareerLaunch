@@ -12,16 +12,15 @@ import {
   FaBookmark, FaExternalLinkAlt, FaMapMarkedAlt,
   FaBriefcase, FaChevronRight, FaRegClock,
 } from "react-icons/fa";
+import AvatarIcon from "../common/AvatarIcon";
 
-/* ── Avatar gradient pool ─────────────────────────────────────────── */
+/* ── Avatar gradient pool (kept for accent bar) ───────────────────── */
 const GRADS = [
   ["#3b82f6","#6366f1"], ["#8b5cf6","#a855f7"], ["#10b981","#14b8a6"],
   ["#f43f5e","#ec4899"], ["#f59e0b","#f97316"], ["#06b6d4","#0ea5e9"],
   ["#84cc16","#22c55e"], ["#ec4899","#f43f5e"],
 ];
-const grad     = (s = "") => GRADS[(s.charCodeAt(0) || 0) % GRADS.length];
-const initials = (s = "") =>
-  s.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("");
+const grad = (s = "") => GRADS[(s.charCodeAt(0) || 0) % GRADS.length];
 
 /* ── Stars ────────────────────────────────────────────────────────── */
 function Stars({ rating, count }) {
@@ -92,24 +91,12 @@ export default function CompanyCard({ company, isSaved = false, onSave }) {
         {/* ── Header ─────────────────────────────────────────── */}
         <div className="flex items-start gap-3">
 
-          {/* Logo / avatar */}
-          {logo ? (
-            <img src={logo} alt={companyName} loading="lazy"
-              onError={e => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.style.display = "none";
-              }}
-              className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl shrink-0 object-contain
-                bg-gray-100 dark:bg-white/8 p-1.5 border border-gray-200 dark:border-white/10"
-            />
-          ) : (
-            <div
-              className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl shrink-0 flex items-center justify-center
-                text-white font-extrabold text-sm select-none shadow-md"
-              style={{ background: `linear-gradient(135deg,${g1},${g2})` }}>
-              {initials(companyName)}
-            </div>
-          )}
+          {/* Logo / avatar — always use generated icon */}
+          <AvatarIcon
+            name={companyName}
+            size={44}
+            className="rounded-xl shadow-md shrink-0"
+          />
 
           {/* Name + rating + status */}
           <div className="flex-1 min-w-0">

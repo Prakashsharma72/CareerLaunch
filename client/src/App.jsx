@@ -34,6 +34,7 @@ import AdminDashboard  from "./pages/admin/AdminDashboard";
 import ManageJobs      from "./pages/admin/ManageJobs";
 import ManageResources from "./pages/admin/ManageResources";
 import ManageUsers     from "./pages/admin/ManageUsers";
+import AdminSettings   from "./pages/admin/AdminSettings";
 
 /**
  * ProtectedRoute
@@ -104,6 +105,7 @@ const App = () => (
       <Route path="jobs"      element={<ManageJobs />} />
       <Route path="resources" element={<ManageResources />} />
       <Route path="users"     element={<ManageUsers />} />
+      <Route path="settings"  element={<AdminSettings />} />
     </Route>
 
     {/* ── Fallback ── */}

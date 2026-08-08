@@ -19,7 +19,7 @@ import {
   FaCode, FaFire, FaTrophy, FaMedal, FaLightbulb, FaChartLine,
   FaCalendarAlt, FaBuilding, FaSpinner, FaBolt,
 } from "react-icons/fa";
-import { updateProfile as updateProfileApi, fetchStats } from "../../services/authService";
+import { updateProfile as updateProfileApi, fetchStats, uploadResumeFile, uploadAvatarFile } from "../../services/authService";
 import { refreshProfile } from "../../redux/authSlice";
 
 /* ── Shared primitives ── */
@@ -148,12 +148,20 @@ export default function Profile() {
   });
   const [skillsList, setSkillsList] = useState([]);
   const [skillInput, setSkillInput] = useState("");
-  const [avatarUrl,  setAvatarUrl]  = useState(null);
-  const [saving,     setSaving]     = useState(false);
-  const [saved,      setSaved]      = useState(false);
-  const [saveError,  setSaveError]  = useState(null);
-  const [activeTab,  setActiveTab]  = useState("personal");
-  const [stats,      setStats]      = useState(null);
+  const [avatarUrl,      setAvatarUrl]      = useState(null);
+  const [saving,         setSaving]         = useState(false);
+  const [saved,          setSaved]          = useState(false);
+  const [saveError,      setSaveError]      = useState(null);
+  const [activeTab,      setActiveTab]      = useState("personal");
+  const [stats,          setStats]          = useState(null);
+  // upload state
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarProgress,  setAvatarProgress]  = useState(0);
+  const [avatarError,     setAvatarError]     = useState(null);
+  const [resumeUploading, setResumeUploading] = useState(false);
+  const [resumeProgress,  setResumeProgress]  = useState(0);
+  const [resumeError,     setResumeError]     = useState(null);
+  const [resumeSuccess,   setResumeSuccess]   = useState(false);
   const fileRef   = useRef();
   const resumeRef = useRef();
 
@@ -195,6 +203,25 @@ export default function Profile() {
     setSkillInput("");
   };
   const removeSkill = s => setSkillsList(p => p.filter(x => x !== s));
+
+  const handleResumeUpload = async (file) => {
+    setResumeError(null);
+    setResumeSuccess(false);
+    setResumeUploading(true);
+    setResumeProgress(0);
+    try {
+      const res = await uploadResumeFile(file, setResumeProgress);
+      setForm(p => ({ ...p, resumeUrl: res.data.resumeUrl }));
+      await dispatch(refreshProfile());
+      setResumeSuccess(true);
+      setTimeout(() => setResumeSuccess(false), 4000);
+    } catch (err) {
+      setResumeError(err?.response?.data?.message || "Resume upload failed");
+    } finally {
+      setResumeUploading(false);
+      setResumeProgress(0);
+    }
+  };
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -259,22 +286,49 @@ export default function Profile() {
                 {avatarUrl
                   ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
                   : initial}
+                {/* Upload overlay */}
+                {avatarUploading && (
+                  <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center rounded-2xl">
+                    <FaSpinner className="animate-spin text-white text-lg" />
+                    <span className="text-white text-[10px] mt-1">{avatarProgress}%</span>
+                  </div>
+                )}
               </div>
               <button type="button" onClick={() => fileRef.current?.click()}
+                disabled={avatarUploading}
                 className="absolute -bottom-2 -right-2 w-6 h-6 sm:w-7 sm:h-7 rounded-xl
                   flex items-center justify-center bg-white text-blue-600
-                  shadow-lg hover:scale-110 transition-all">
+                  shadow-lg hover:scale-110 transition-all disabled:opacity-60">
                 <FaCamera className="text-[9px] sm:text-[10px]" />
               </button>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden"
-                onChange={e => {
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                onChange={async e => {
                   const f = e.target.files[0];
-                  if (f) setAvatarUrl(URL.createObjectURL(f));
+                  if (!f) return;
+                  // Show local preview immediately
+                  setAvatarUrl(URL.createObjectURL(f));
+                  setAvatarError(null);
+                  setAvatarUploading(true);
+                  setAvatarProgress(0);
+                  try {
+                    const res = await uploadAvatarFile(f, setAvatarProgress);
+                    setAvatarUrl(res.data.profileImage);
+                    await dispatch(refreshProfile());
+                  } catch (err) {
+                    setAvatarError(err?.response?.data?.message || "Avatar upload failed");
+                  } finally {
+                    setAvatarUploading(false);
+                    setAvatarProgress(0);
+                    e.target.value = "";
+                  }
                 }} />
             </div>
 
             {/* Name + stats chips */}
             <div className="flex-1 min-w-0">
+              {avatarError && (
+                <p className="text-red-300 text-[10px] mb-1">{avatarError}</p>
+              )}
               <h1 className="text-base sm:text-xl md:text-2xl font-bold text-white truncate">
                 {user?.name || "—"}
               </h1>
@@ -468,15 +522,78 @@ export default function Profile() {
                   initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }}>
                   <Card className="p-4 sm:p-6 md:p-7 space-y-4 sm:space-y-5">
-                    <SectionTitle sub="Stored in MySQL — used by Resume Analyzer">Resume</SectionTitle>
-                    <Field id="resumeUrl" label="Resume URL (Cloudinary / Drive)" name="resumeUrl" value={form.resumeUrl} onChange={handleChange} icon={FaGlobe} />
+                    <SectionTitle sub="Upload PDF — stored in Cloudinary, URL saved to your profile">Resume</SectionTitle>
+
+                    {/* ── Drop zone ── */}
+                    <div
+                      onClick={() => resumeRef.current?.click()}
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={async e => {
+                        e.preventDefault();
+                        const f = e.dataTransfer.files[0];
+                        if (f) resumeRef.current && handleResumeUpload(f);
+                      }}
+                      className="relative flex flex-col items-center justify-center gap-3 p-8
+                        border-2 border-dashed border-neutral-300 dark:border-white/15
+                        rounded-2xl cursor-pointer
+                        hover:border-blue-400 dark:hover:border-blue-500/60
+                        hover:bg-blue-50/40 dark:hover:bg-blue-500/5
+                        transition-all duration-200">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center
+                        bg-blue-100 dark:bg-blue-500/15">
+                        <FaFileAlt className="text-blue-500 dark:text-blue-400 text-xl" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-semibold text-neutral-700 dark:text-white">
+                          {resumeUploading ? "Uploading…" : "Click or drag & drop your resume"}
+                        </p>
+                        <p className="text-xs text-neutral-400 mt-0.5">PDF only · max 5 MB</p>
+                      </div>
+                      <input ref={resumeRef} type="file" accept="application/pdf" className="hidden"
+                        onChange={e => {
+                          const f = e.target.files[0];
+                          if (f) handleResumeUpload(f);
+                          e.target.value = "";
+                        }} />
+                    </div>
+
+                    {/* ── Progress bar ── */}
+                    {resumeUploading && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
+                            <FaSpinner className="animate-spin text-blue-500" /> Uploading to Cloudinary…
+                          </span>
+                          <span className="font-bold text-blue-500">{resumeProgress}%</span>
+                        </div>
+                        <div className="h-2 bg-neutral-100 dark:bg-white/10 rounded-full overflow-hidden">
+                          <motion.div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500"
+                            animate={{ width: `${resumeProgress}%` }}
+                            transition={{ duration: 0.3 }} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Error ── */}
+                    {resumeError && (
+                      <div className="flex items-center gap-2 px-4 py-3 rounded-xl
+                        bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30
+                        text-sm text-red-600 dark:text-red-400">
+                        <FaTimes className="shrink-0" /> {resumeError}
+                      </div>
+                    )}
+
+                    {/* ── Success / current resume ── */}
                     {form.resumeUrl && (
                       <div className="flex items-center gap-3 p-3 sm:p-4 rounded-xl
                         bg-green-50 dark:bg-green-500/10
                         border border-green-200/60 dark:border-green-500/20">
                         <FaFileAlt className="text-green-600 dark:text-green-400 text-lg shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-semibold text-neutral-800 dark:text-white truncate">
+                          <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                            {resumeSuccess ? "✅ Resume uploaded successfully!" : "Current resume"}
+                          </p>
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
                             {form.resumeUrl}
                           </p>
                         </div>
@@ -488,7 +605,6 @@ export default function Profile() {
                         </a>
                       </div>
                     )}
-                    <SaveBtn loading={saving} saved={saved} />
                   </Card>
                 </motion.div>
               )}

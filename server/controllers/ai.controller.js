@@ -1,43 +1,29 @@
-import axios from "axios";
+import { callGemini } from "../ai/geminiClient.js";
 
 /**
- * AI CHAT CONTROLLER (OpenAI or GPT API)
+ * AI CHAT CONTROLLER — powered by Gemini
  */
 export const chatWithAI = async (req, res) => {
   try {
     const { message } = req.body;
+    if (!message?.trim()) {
+      return res.status(400).json({ message: "message is required" });
+    }
 
-    const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
+    const reply = await callGemini([
       {
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a helpful career assistant for students and freshers.",
-          },
-          {
-            role: "user",
-            content: message,
-          },
-        ],
+        role:    "system",
+        content: "You are a helpful career assistant for students and freshers. Give clear, practical, concise advice.",
       },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+      { role: "user", content: message },
+    ]);
 
-    res.status(200).json({
-      reply: response.data.choices[0].message.content,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "AI service error",
-      error: error.message,
+    return res.status(200).json({ reply });
+  } catch (err) {
+    console.error("chatWithAI error:", err.message);
+    return res.status(err.status || 500).json({
+      message: err.message || "AI service error",
+      code:    err.code,
     });
   }
 };

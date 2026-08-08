@@ -12,6 +12,7 @@ import {
   FaBriefcase, FaIndustry,
 } from "react-icons/fa";
 import { getSavedCompanies, removeSavedCompany } from "../../services/companyService";
+import AvatarIcon from "../../components/common/AvatarIcon";
 
 /* ── Helpers ──────────────────────────────────────────────────────────── */
 const GRADS = [
@@ -20,7 +21,6 @@ const GRADS = [
   ["#84cc16","#22c55e"],["#ec4899","#f43f5e"],
 ];
 const grad  = (s="") => GRADS[(s.charCodeAt(0)||0) % GRADS.length];
-const inits = (s="") => s.split(" ").slice(0,2).map(w=>w[0]?.toUpperCase()||"").join("");
 
 /* ── Skeleton ─────────────────────────────────────────────────────────── */
 function Sk() {
@@ -61,16 +61,11 @@ function SavedCompanyCard({ company, onRemove, removing }) {
       <div className="flex flex-col flex-1 p-5 gap-4">
         {/* Header */}
         <div className="flex items-start gap-3">
-          {company.logo ? (
-            <img src={company.logo} alt={company.companyName} loading="lazy"
-              onError={e => { e.currentTarget.style.display = "none"; }}
-              className="w-12 h-12 rounded-xl object-contain border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 p-1 shrink-0" />
-          ) : (
-            <div className="w-12 h-12 rounded-xl shrink-0 flex items-center justify-center text-white font-extrabold text-base shadow-md"
-              style={{ background: `linear-gradient(135deg,${g1},${g2})` }}>
-              {inits(company.companyName)}
-            </div>
-          )}
+          <AvatarIcon
+            name={company.companyName}
+            size={48}
+            className="rounded-xl shadow-md shrink-0"
+          />
 
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-900 dark:text-white text-[15px] leading-tight truncate">
