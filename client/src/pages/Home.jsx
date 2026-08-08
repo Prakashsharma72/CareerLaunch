@@ -652,57 +652,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════
-          FOOTER
-      ═══════════════════════════════════════ */}
-      <footer className="bg-[#0a0a14] border-t border-white/8 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-10 mb-12">
-            {/* brand */}
-            <div className="md:col-span-1">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-                  style={{background:"linear-gradient(135deg,#0ba5ff,#8b5cf6)"}}>
-                  <FaRocket className="text-white text-sm" />
-                </div>
-                <span className="font-bold text-white">CareerLaunch AI</span>
-              </div>
-              <p className="text-xs text-neutral-500 leading-relaxed mb-4">
-                AI-powered career platform helping students land their dream jobs.
-              </p>
-              <div className="flex gap-3">
-                {[FaLinkedin,FaTwitter,FaGithub].map((Icon,i)=>(
-                  <a key={i} href="#" className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/20 transition-colors">
-                    <Icon className="text-xs" />
-                  </a>
-                ))}
-              </div>
-            </div>
-            {/* links */}
-            {[
-              { head:"Platform", links:[{l:"Find Jobs",t:"/student/jobs"},{l:"Resume AI",t:"/student/resume-analyzer"},{l:"Roadmaps",t:"/student/roadmap-generator"},{l:"Mock Interview",t:"/student/mock-interview"}] },
-              { head:"Company",  links:[{l:"About",t:"#"},{l:"Blog",t:"#"},{l:"Careers",t:"#"},{l:"Contact",t:"#"}] },
-              { head:"Legal",    links:[{l:"Privacy Policy",t:"#"},{l:"Terms of Service",t:"#"},{l:"Cookie Policy",t:"#"}] },
-            ].map(({head,links})=>(
-              <div key={head}>
-                <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-4">{head}</h4>
-                <ul className="space-y-2.5">
-                  {links.map(({l,t})=>(
-                    <li key={l}><Link to={t} className="text-xs text-neutral-500 hover:text-white transition-colors">{l}</Link></li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-          <div className="pt-8 border-t border-white/8 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-neutral-600">© {new Date().getFullYear()} CareerLaunch AI. All rights reserved.</p>
-            <div className="flex items-center gap-1.5 text-xs text-neutral-600">
-              <FaEnvelope className="text-[10px]" />
-              <a href="mailto:support@careerlaunch.ai" className="hover:text-neutral-400 transition-colors">support@careerlaunch.ai</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      
+     
     </div>
   );
 }

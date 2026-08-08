@@ -1,17 +1,14 @@
-import openaiClient from "../ai/openaiClient.js";
-import InterviewSession from "../models/interviewSession.model.js";
-import InterviewQuestion from "../models/interviewQuestion.model.js";
+import { callGemini }       from "../ai/geminiClient.js";
+import InterviewSession    from "../models/interviewSession.model.js";
+import InterviewQuestion   from "../models/interviewQuestion.model.js";
 import {
   interviewSystemPrompt,
   interviewReportPrompt,
 } from "../ai/prompts.js";
 
-const MODEL = "gpt-4o-mini";
-
 /* ── helpers ── */
 function safeParseJSON(raw) {
   try {
-    // strip markdown code fences if present
     const clean = raw.replace(/```json|```/g, "").trim();
     return JSON.parse(clean);
   } catch {
@@ -19,15 +16,8 @@ function safeParseJSON(raw) {
   }
 }
 
-async function callOpenAI(messages) {
-  const res = await openaiClient.post("/chat/completions", {
-    model: MODEL,
-    messages,
-    temperature: 0.7,
-    max_tokens: 1200,
-  });
-  return res.data.choices[0].message.content;
-}
+// Single alias so all callers stay the same
+const callAI = callGemini;
 
 /* ════════════════════════════════════════════
    POST /api/interview/start
@@ -54,7 +44,7 @@ export const startInterview = async (req, res) => {
 
     // Ask GPT for question #1
     const systemMsg = interviewSystemPrompt(role, difficulty);
-    const raw = await callOpenAI([
+    const raw = await callAI([
       { role: "system", content: systemMsg },
       { role: "user",   content: "Start the interview. Ask the first question." },
     ]);
@@ -87,7 +77,10 @@ export const startInterview = async (req, res) => {
     });
   } catch (err) {
     console.error("startInterview error:", err.message);
-    return res.status(500).json({ message: "Failed to start interview", error: err.message });
+    return res.status(err.status || 500).json({
+      message: err.message || "Failed to start interview",
+      code: err.code || "INTERNAL_ERROR",
+    });
   }
 };
 
@@ -140,7 +133,7 @@ export const submitAnswer = async (req, res) => {
 
     if (!isLastQuestion) {
       // Ask for feedback + next question
-      const raw = await callOpenAI([
+      const raw = await callAI([
         { role: "system", content: systemMsg },
         ...history,
       ]);
@@ -193,7 +186,7 @@ export const submitAnswer = async (req, res) => {
       });
     } else {
       // Last question — get feedback only (no nextQuestion)
-      const raw = await callOpenAI([
+      const raw = await callAI([
         { role: "system", content: systemMsg },
         ...history,
         { role: "user", content: "This was the last answer. Provide feedback only (no nextQuestion field)." },
@@ -227,7 +220,7 @@ export const submitAnswer = async (req, res) => {
     }
   } catch (err) {
     console.error("submitAnswer error:", err.message);
-    return res.status(500).json({ message: "Failed to submit answer", error: err.message });
+    return res.status(err.status || 500).json({ message: err.message || "Failed to submit answer", code: err.code });
   }
 };
 
@@ -256,7 +249,7 @@ export const skipQuestion = async (req, res) => {
 
     // Generate next question from AI
     const systemMsg = interviewSystemPrompt(session.role, session.difficulty);
-    const raw = await callOpenAI([
+    const raw = await callAI([
       { role: "system", content: systemMsg },
       { role: "user",   content: `Skip question ${question.questionNumber}. Ask question number ${nextNumber}.` },
     ]);
@@ -284,7 +277,7 @@ export const skipQuestion = async (req, res) => {
     });
   } catch (err) {
     console.error("skipQuestion error:", err.message);
-    return res.status(500).json({ message: "Failed to skip question", error: err.message });
+    return res.status(err.status || 500).json({ message: err.message || "Failed to skip question", code: err.code });
   }
 };
 
@@ -321,7 +314,7 @@ export const endInterview = async (req, res) => {
       : 0;
 
     // Generate AI report
-    const reportRaw = await callOpenAI([
+    const reportRaw = await callAI([
       { role: "system", content: "You are a senior technical interviewer writing a performance report. Always respond with valid JSON only." },
       { role: "user",   content: interviewReportPrompt(session.role, session.difficulty, qaSummary) },
     ]);
@@ -348,7 +341,7 @@ export const endInterview = async (req, res) => {
     return res.status(200).json({ report, session: { id: session.id, role: session.role, difficulty: session.difficulty } });
   } catch (err) {
     console.error("endInterview error:", err.message);
-    return res.status(500).json({ message: "Failed to generate report", error: err.message });
+    return res.status(err.status || 500).json({ message: err.message || "Failed to generate report", code: err.code });
   }
 };
 
@@ -361,7 +354,7 @@ export const getInterviewHistory = async (req, res) => {
     const userId = req.user.id;
     const sessions = await InterviewSession.findAll({
       where: { userId },
-      order: [["createdAt", "DESC"]],
+      order: [["id", "DESC"]],
     });
 
     const result = sessions.map((s) => ({

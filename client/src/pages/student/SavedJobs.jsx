@@ -13,6 +13,7 @@ import {
   FaClock, FaBuilding,
 } from "react-icons/fa";
 import { getSavedJobs, removeSavedJob } from "../../services/jobService";
+import AvatarIcon from "../../components/common/AvatarIcon";
 
 /* ── Helpers ──────────────────────────────────────────────────────────── */
 const GRADS = [
@@ -20,7 +21,6 @@ const GRADS = [
   ["#f43f5e","#ec4899"],["#f59e0b","#f97316"],["#06b6d4","#0ea5e9"],
 ];
 const grad   = (s="") => GRADS[(s.charCodeAt(0)||0) % GRADS.length];
-const inits  = (s="") => s.split(" ").slice(0,2).map(w=>w[0]?.toUpperCase()||"").join("");
 const fmtDate = (str) => {
   if (!str) return "";
   try {
@@ -61,7 +61,6 @@ function Sk() {
   );
 }
 
-/* ── Saved Job Card ───────────────────────────────────────────────────── */
 function SavedJobCard({ job, onRemove, removing }) {
   const [g1, g2] = grad(job.company || job.title);
   const empType  = job.employmentType || job.type || "";
@@ -81,16 +80,11 @@ function SavedJobCard({ job, onRemove, removing }) {
       <div className="flex flex-col flex-1 p-5 gap-4">
         {/* Header */}
         <div className="flex items-start gap-3">
-          {job.companyLogo ? (
-            <img src={job.companyLogo} alt={job.company} loading="lazy"
-              onError={e => { e.currentTarget.style.display = "none"; }}
-              className="w-12 h-12 rounded-xl object-contain border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 p-1 shrink-0" />
-          ) : (
-            <div className="w-12 h-12 rounded-xl shrink-0 flex items-center justify-center text-white font-extrabold text-sm shadow-md"
-              style={{ background: `linear-gradient(135deg,${g1},${g2})` }}>
-              {inits(job.company || job.title)}
-            </div>
-          )}
+          <AvatarIcon
+            name={job.company || job.title}
+            size={48}
+            className="rounded-xl shadow-md shrink-0"
+          />
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-900 dark:text-white text-[15px] leading-tight line-clamp-2">{job.title}</h3>
             <p className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mt-1">

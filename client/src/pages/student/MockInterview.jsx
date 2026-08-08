@@ -476,7 +476,16 @@ function MockInterview() {
       setView("interview");
     } catch (err) {
       setTyping(false);
-      setError(err?.response?.data?.message || "Failed to start interview. Check your connection.");
+      const code = err?.response?.data?.code;
+      if (code === "NO_API_KEY") {
+        setError("Gemini API key is not configured. Add GEMINI_API_KEY to server/.env — get a free key at aistudio.google.com/app/apikey");
+      } else if (code === "INVALID_KEY") {
+        setError("Gemini API key is invalid. Check GEMINI_API_KEY in server/.env");
+      } else if (code === "RATE_LIMIT") {
+        setError("Gemini rate limit reached. Please wait a moment and try again.");
+      } else {
+        setError(err?.response?.data?.message || "Failed to start interview. Check server logs.");
+      }
     } finally {
       setAiLoading(false);
     }
@@ -617,7 +626,17 @@ function MockInterview() {
             className="flex items-start gap-2.5 px-4 py-3 rounded-xl
               bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20" role="alert">
             <FaExclamationCircle className="text-red-500 mt-0.5 shrink-0 text-sm" />
-            <p className="text-sm text-red-600 dark:text-red-400 flex-1">{error}</p>
+            <div className="text-sm text-red-600 dark:text-red-400 flex-1">
+              <p>{error}</p>
+              {(error.includes("Gemini") || error.includes("API key") || error.includes("aistudio")) && (
+                <a href="https://aistudio.google.com/app/apikey"
+                  target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-1.5 text-xs font-semibold
+                    text-red-700 dark:text-red-300 underline hover:no-underline">
+                  Get free Gemini API key →
+                </a>
+              )}
+            </div>
             <button onClick={() => setError("")} className="text-red-400 hover:text-red-600 transition-colors">
               <FaTimes className="text-xs" />
             </button>

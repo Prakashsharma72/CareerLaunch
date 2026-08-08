@@ -7,7 +7,7 @@ import {
   FaBell, FaRocket, FaChevronDown,
   FaTachometerAlt, FaBookmark, FaFileAlt,
 } from "react-icons/fa";
-
+  
 /* ── nav links ── */
 const NAV_LINKS = [
   { to: "/student/jobs",              label: "Jobs"      },

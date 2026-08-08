@@ -27,3 +27,37 @@ export const updateProfile = (data) => api.put("/users/profile", data);
  * Dashboard stats: appliedJobs, savedJobs, interviews, resumeScore …
  */
 export const fetchStats = () => api.get("/users/stats");
+
+/**
+ * POST /api/upload/resume
+ * Uploads a PDF to Cloudinary and saves the URL to users.resume_url
+ * @param {File} file - PDF file object
+ * @param {function} onProgress - optional (percent: number) => void
+ */
+export const uploadResumeFile = (file, onProgress) => {
+  const fd = new FormData();
+  fd.append("resume", file);
+  return api.post("/upload/resume", fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress: onProgress
+      ? (e) => onProgress(Math.round((e.loaded * 100) / (e.total || 1)))
+      : undefined,
+  });
+};
+
+/**
+ * POST /api/upload/avatar
+ * Uploads an image to Cloudinary and saves the URL to users.profile_image
+ * @param {File} file - image file object
+ * @param {function} onProgress - optional (percent: number) => void
+ */
+export const uploadAvatarFile = (file, onProgress) => {
+  const fd = new FormData();
+  fd.append("avatar", file);
+  return api.post("/upload/avatar", fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress: onProgress
+      ? (e) => onProgress(Math.round((e.loaded * 100) / (e.total || 1)))
+      : undefined,
+  });
+};

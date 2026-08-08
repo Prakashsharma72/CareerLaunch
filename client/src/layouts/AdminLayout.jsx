@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   FaTachometerAlt, FaBriefcase, FaBook,
   FaUsers, FaBars, FaTimes, FaSignOutAlt,
-  FaUserShield, FaRocket, FaChevronLeft,
+  FaUserShield, FaRocket, FaChevronLeft, FaCog,
 } from "react-icons/fa";
 
 const MENU = [
@@ -20,6 +20,7 @@ const MENU = [
   { name: "Manage Jobs",      icon: FaBriefcase,     path: "/admin/jobs"       },
   { name: "Manage Resources", icon: FaBook,          path: "/admin/resources"  },
   { name: "Manage Users",     icon: FaUsers,         path: "/admin/users"      },
+  { name: "API Settings",     icon: FaCog,           path: "/admin/settings"   },
 ];
 
 const SIDEBAR_W = 260;
