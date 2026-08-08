@@ -11,9 +11,11 @@ const createMysqlSequelize = () => {
   const rawPassword = process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || "";
   const PASSWORD = rawPassword === "your_password" ? "" : rawPassword;
   const HOST = process.env.DB_HOST || "127.0.0.1";
+  const PORT = parseInt(process.env.DB_PORT || "3306", 10);
 
   return new Sequelize(DATABASE, USER, PASSWORD, {
     host: HOST,
+    port: PORT,
     dialect: "mysql",
     logging: false,
     pool: {
