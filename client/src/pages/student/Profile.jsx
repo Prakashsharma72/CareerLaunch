@@ -249,10 +249,9 @@ export default function Profile() {
   );
 
   const statCards = [
-    { label: "Saved Jobs",     value: stats?.savedJobs     ?? "—", icon: FaBookmark  },
+    { label: "Saved Jobs",     value: stats?.savedJobs      ?? "—", icon: FaBookmark  },
     { label: "Saved Companies",value: stats?.savedCompanies ?? "—", icon: FaBriefcase },
-    { label: "Resume",         value: stats?.resumeScore != null ? `${stats.resumeScore}%` : "—", icon: FaFileAlt },
-    { label: "Interviews",     value: stats?.interviews    ?? "—", icon: FaRobot     },
+    { label: "Interviews",     value: stats?.interviews     ?? "—", icon: FaRobot     },
   ];
 
   const tabs = [
@@ -567,7 +566,7 @@ export default function Profile() {
                           <span className="font-bold text-blue-500">{resumeProgress}%</span>
                         </div>
                         <div className="h-2 bg-neutral-100 dark:bg-white/10 rounded-full overflow-hidden">
-                          <motion.div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500"
+                          <motion.div className="h-full rounded-full bg-linear-to-r from-blue-500 to-violet-500"
                             animate={{ width: `${resumeProgress}%` }}
                             transition={{ duration: 0.3 }} />
                         </div>
@@ -626,7 +625,6 @@ export default function Profile() {
             </div>
             {[
               { label: "Profile Completion",  value: completion,                                    colors: "from-blue-400 to-blue-600"    },
-              { label: "Resume Score",        value: stats?.resumeScore ?? 0,                        colors: "from-green-400 to-green-600"  },
               { label: "Interview Readiness", value: Math.min((stats?.interviews ?? 0) * 20, 100),  colors: "from-violet-400 to-violet-600" },
             ].map((p, i) => (
               <div key={i} className="mb-3 last:mb-0">

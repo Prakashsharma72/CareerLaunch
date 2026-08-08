@@ -5,22 +5,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   FaBars, FaTimes, FaUser, FaSignOutAlt,
   FaBell, FaRocket, FaChevronDown,
-  FaTachometerAlt, FaBookmark, FaFileAlt,
+  FaTachometerAlt, FaBookmark,
 } from "react-icons/fa";
   
 /* ── nav links ── */
 const NAV_LINKS = [
   { to: "/student/jobs",              label: "Jobs"      },
   { to: "/student/resources",         label: "Resources" },
-  { to: "/student/resume-analyzer",   label: "Resume AI" },
   { to: "/student/roadmap-generator", label: "Roadmaps"  },
 ];
 
 const USER_MENU = [
-  { icon: FaTachometerAlt, label: "Dashboard",  to: "/student/dashboard"       },
-  { icon: FaUser,          label: "Profile",    to: "/student/profile"         },
-  { icon: FaBookmark,      label: "Saved Jobs", to: "/student/saved-jobs"      },
-  { icon: FaFileAlt,       label: "Resume AI",  to: "/student/resume-analyzer" },
+  { icon: FaTachometerAlt, label: "Dashboard",  to: "/student/dashboard"  },
+  { icon: FaUser,          label: "Profile",    to: "/student/profile"    },
+  { icon: FaBookmark,      label: "Saved Jobs", to: "/student/saved-jobs" },
 ];
 
 function Navbar() {

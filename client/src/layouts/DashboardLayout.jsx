@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaTachometerAlt, FaUser, FaBriefcase, FaBook,
-  FaBookmark, FaFileAlt, FaRoad, FaRobot,
+  FaBookmark, FaRoad, FaRobot,
   FaSignOutAlt, FaBars, FaTimes, FaRocket,
   FaChevronLeft, FaBell, FaBuilding,
 } from "react-icons/fa";
@@ -20,7 +20,6 @@ const menuItems = [
   { name: "Resources",        icon: FaBook,          path: "/student/resources" },
   { name: "Saved Jobs",       icon: FaBookmark,      path: "/student/saved-jobs" },
   { name: "Saved Companies",  icon: FaBuilding,      path: "/student/saved-companies" },
-  { name: "Resume Analyzer",  icon: FaFileAlt,       path: "/student/resume-analyzer" },
   { name: "Roadmap",          icon: FaRoad,          path: "/student/roadmap-generator" },
   { name: "Mock Interview",   icon: FaRobot,         path: "/student/mock-interview" },
 ];
