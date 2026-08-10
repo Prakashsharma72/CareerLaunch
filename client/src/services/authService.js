@@ -24,6 +24,16 @@ export const resendOtpApi = (data) => api.post("/auth/resend-otp", data);
 export const loginUser = (data) => api.post("/auth/login", data);
 
 /**
+ * POST /api/auth/forgot-password
+ */
+export const forgotPasswordApi = (data) => api.post("/auth/forgot-password", data);
+
+/**
+ * POST /api/auth/reset-password
+ */
+export const resetPasswordApi = (data) => api.post("/auth/reset-password", data);
+
+/**
  * GET /api/users/profile
  * Always fetches fresh profile from MySQL — call this on app start
  * and whenever the user object needs to be trusted.

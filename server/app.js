@@ -24,6 +24,8 @@ import sequelize         from "./config/db.js";  // eslint-disable-line no-unuse
 
 // Register all Sequelize models before sync
 import "./models/user.model.js";
+import "./models/pendingRegistration.model.js";
+import "./models/passwordReset.model.js";
 import "./models/job.model.js";
 import "./models/resource.model.js";
 import "./models/company.model.js";

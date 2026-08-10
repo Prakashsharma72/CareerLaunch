@@ -8,8 +8,10 @@ import DashboardLayout from "./layouts/DashboardLayout";
 import AdminLayout     from "./layouts/AdminLayout";
 
 // ── Auth pages (eager – entry points, minimal weight) ───────────────────────
-import Login    from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
+import Login         from "./pages/auth/Login";
+import Register      from "./pages/auth/Register";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword  from "./pages/auth/ResetPassword";
 
 // ── Public pages ─────────────────────────────────────────────────────────────
 // Home is the landing page and loads on every first visit → keep eager
@@ -94,8 +96,10 @@ const App = () => (
   <Suspense fallback={<PageLoader />}>
     <Routes>
       {/* ── Public auth ── */}
-      <Route path="/login"    element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/login"           element={<Login />} />
+      <Route path="/register"        element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password"  element={<ResetPassword />} />
 
       {/* ── Public main ── */}
       <Route path="/" element={<MainLayout />}>
