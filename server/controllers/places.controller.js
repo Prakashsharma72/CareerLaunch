@@ -30,7 +30,19 @@ function errorResponse(res, e) {
     });
   }
   if (e.response?.data) {
-    const gErr = e.response.data.error;
+    const gErr   = e.response.data.error;
+    const status = e.response.status;
+
+    // 429 — daily quota exhausted
+    if (status === 429 || gErr?.status === "RESOURCE_EXHAUSTED") {
+      return res.status(429).json({
+        success: false,
+        error:   "QUOTA_EXCEEDED",
+        reason:  "Google Places daily search quota has been reached.",
+        hint:    "The free tier allows 100 searches/day. Quota resets at midnight Pacific Time. Try again tomorrow or upgrade your Google Cloud billing plan.",
+      });
+    }
+
     return res.status(502).json({
       success:  false,
       error:    gErr?.status || "GOOGLE_API_ERROR",

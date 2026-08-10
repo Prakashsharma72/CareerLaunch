@@ -3,7 +3,8 @@
  *
  * Matches the EXACT MySQL `users` table schema:
  *   id, name, email, password, role, phone,
- *   education, skills, resume_url, profile_image, created_at
+ *   education, skills, resume_url, profile_image, created_at,
+ *   otp, otp_expires_at, is_verified
  *
  * timestamps: false  — table has created_at but NO updatedAt column.
  * createdAt is mapped to the `created_at` column via the field option.
@@ -74,6 +75,25 @@ const User = db.define(
     createdAt: {
       type:  DataTypes.DATE,
       field: "created_at",
+    },
+
+    // ── OTP email verification ────────────────────────────────────────────
+    otp: {
+      type:      DataTypes.STRING(6),
+      allowNull: true,
+    },
+
+    otpExpiresAt: {
+      type:      DataTypes.DATE,
+      allowNull: true,
+      field:     "otp_expires_at",
+    },
+
+    isVerified: {
+      type:         DataTypes.BOOLEAN,
+      allowNull:    false,
+      defaultValue: false,
+      field:        "is_verified",
     },
   },
   {

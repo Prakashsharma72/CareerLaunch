@@ -2,8 +2,21 @@ import api from "./api";
 
 /**
  * POST /api/auth/register
+ * Sends OTP to user's email — does NOT return a JWT.
  */
 export const registerUser = (data) => api.post("/auth/register", data);
+
+/**
+ * POST /api/auth/verify-otp
+ * Verifies the 6-digit OTP and returns { user, token } on success.
+ */
+export const verifyOtpApi = (data) => api.post("/auth/verify-otp", data);
+
+/**
+ * POST /api/auth/resend-otp
+ * Generates a new OTP and resends it to the email.
+ */
+export const resendOtpApi = (data) => api.post("/auth/resend-otp", data);
 
 /**
  * POST /api/auth/login

@@ -6,8 +6,11 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import store from "./redux/store";
 import { bootstrapAuth } from "./redux/authSlice";
+import { getThemePreference, applyTheme } from "./utils/helpers";
 
 import "./index.css";
+
+applyTheme(getThemePreference());
 
 /**
  * On every page load:

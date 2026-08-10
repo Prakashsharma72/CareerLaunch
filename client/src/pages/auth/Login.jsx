@@ -6,6 +6,7 @@ import {
   FaGoogle, FaGithub, FaExclamationCircle,
 } from "react-icons/fa";
 import useAuth from "../../hooks/useAuth";
+import { getThemePreference, applyTheme } from "../../utils/helpers";
 
 /* ─── Password strength helper ─── */
 function getPasswordStrength(pw) {
@@ -95,11 +96,13 @@ function FloatingInput({
       >
         {label}
       </label>
-      <Icon
-        className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-sm transition-colors duration-200
-          ${focused ? "text-primary-500 dark:text-primary-400" : "text-neutral-400 dark:text-neutral-500"}`}
-        aria-hidden="true"
-      />
+      {Icon && (
+        <Icon
+          className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm transition-colors duration-200 pointer-events-none
+            ${focused ? "text-primary-500 dark:text-primary-400" : "text-slate-400 dark:text-slate-500"}`}
+          aria-hidden="true"
+        />
+      )}
       <input
         id={id}
         type={type}
@@ -111,15 +114,15 @@ function FloatingInput({
         required={required}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className={`w-full pl-10 ${suffix ? "pr-11" : "pr-4"} pt-5 pb-1.5 rounded-xl border text-sm font-medium
-          bg-white/60 dark:bg-white/5 backdrop-blur-sm
-          text-neutral-900 dark:text-white
-          placeholder-neutral-400 dark:placeholder-neutral-600
-          transition-all duration-200 outline-none
+        className={`w-full pl-12 ${suffix ? "pr-18" : "pr-4"} pt-5 pb-2 rounded-2xl border text-sm font-medium
+          bg-white/95 dark:bg-slate-950/90 backdrop-blur-sm
+          text-slate-950 dark:text-slate-100
+          placeholder-slate-500 dark:placeholder-slate-500
+          transition-all duration-300 outline-none
           ${focused
-            ? "border-primary-500/70 ring-2 ring-primary-500/20 shadow-[0_0_0_4px_rgba(11,165,255,0.08)]"
-            : "border-white/30 dark:border-white/10 hover:border-white/50 dark:hover:border-white/20"
-          }`}
+            ? "border-primary-500 shadow-[0_0_0_12px_rgba(59,130,246,0.18)]"
+            : "border-slate-200 dark:border-slate-700 hover:border-primary-300 dark:hover:border-primary-500"
+          } focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20`}
       />
       {suffix}
     </div>
@@ -136,13 +139,11 @@ function Login() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [darkMode, setDarkMode] = useState(
-    () => window.matchMedia("(prefers-color-scheme: dark)").matches
-  );
+  const [darkMode, setDarkMode] = useState(getThemePreference);
   const { ripples: btnRipples, addRipple: addBtnRipple } = useRipple();
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
+    applyTheme(darkMode);
   }, [darkMode]);
 
   const handleChange = (e) => {
@@ -252,8 +253,8 @@ function Login() {
           onClick={() => setDarkMode(!darkMode)}
           aria-label="Toggle dark mode"
           className="absolute top-5 right-5 z-30 w-10 h-10 rounded-full flex items-center justify-center
-            bg-white/30 dark:bg-white/10 backdrop-blur-md border border-white/30 dark:border-white/15
-            text-neutral-600 dark:text-neutral-300 shadow-md hover:shadow-lg transition-shadow"
+            bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/70 dark:border-slate-700/80
+            text-slate-700 dark:text-slate-100 shadow-lg hover:shadow-xl transition-all duration-300"
         >
           <AnimatePresence mode="wait">
             {darkMode ? (
@@ -459,11 +460,17 @@ function Login() {
                 onMouseDown={addBtnRipple}
                 whileHover={!loading ? { y: -1, boxShadow: "0 12px 32px rgba(11,165,255,0.35)" } : {}}
                 whileTap={!loading ? { scale: 0.98 } : {}}
-                className="relative overflow-hidden w-full py-3 rounded-xl font-semibold text-sm text-white
-                  bg-linear-to-r from-primary-500 to-accent-500
+                style={{
+          backgroundImage: "linear-gradient(#020617, #020617), linear-gradient(90deg, #0ba5ff, #8b5cf6)",
+          backgroundOrigin: "border-box",
+          backgroundClip: "padding-box, border-box",
+        }}
+        className="group relative overflow-hidden w-full rounded-2xl border-2 border-transparent py-3 text-white
                   disabled:opacity-60 disabled:cursor-not-allowed
-                  focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
-                  transition-shadow duration-200 mt-1"
+                  transition-all duration-300 ease-out
+                  hover:scale-[1.02] hover:shadow-[0_18px_80px_rgba(59,130,246,0.24)]
+                  active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500
+                  focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 mt-1"
               >
                 {/* shimmer overlay */}
                 {!loading && (

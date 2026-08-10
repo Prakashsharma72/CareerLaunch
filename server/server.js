@@ -302,6 +302,8 @@ async function runMigrations() {
     ["companies", "is_open_now",       "TINYINT(1)"],
     ["companies", "editorial_summary", "TEXT"],
     ["companies", "photo_refs",        "TEXT"],
+    ["companies", "career_valid",      "TINYINT(1)"],
+    ["companies", "career_checked_at", "DATETIME"],
 
     // saved_companies
     ["saved_companies", "external_company_id", "VARCHAR(255)"],
@@ -396,19 +398,19 @@ async function startServer() {
   /* ── HTTP server ────────────────────────────────────────────────────── */
   const PORT = process.env.PORT || 5000;
 
-// app.listen(5000, "0.0.0.0", () => {
-//   console.log("Server running on http://192.168.0.102:5000");
-// });
-
-
-
-
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     log(`🚀 HTTP server running on port ${PORT}`);
-    // log(`   POST http://localhost:${PORT}/api/auth/register`);
-    // log(`   POST http://localhost:${PORT}/api/auth/login`);
-    // log(`   GET  http://localhost:${PORT}/api/jobs`);
-    // log(`   GET  http://localhost:${PORT}/api/companies`);
+  });
+
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`\n✗ Port ${PORT} is already in use.`);
+      console.error(`  Stop the other process:  netstat -ano | findstr :${PORT}`);
+      console.error(`  Then kill its PID:       taskkill /PID <pid> /F`);
+      console.error(`  Or use a different port: set PORT=5001 in server/.env\n`);
+      process.exit(1);
+    }
+    throw err;
   });
 }
 

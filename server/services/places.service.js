@@ -23,7 +23,7 @@ const err  = (msg, e)  => console.error(`${new Date().toISOString()} ${TAG} ERRO
 
 /* ─── In-memory cache (6 h TTL) ──────────────────────────────────────── */
 const MEM_CACHE     = new Map();
-const CACHE_TTL_MS  = 6 * 60 * 60 * 1000;   // 6 hours
+const CACHE_TTL_MS  = 24 * 60 * 60 * 1000;  // 24 hours (conserve daily quota)
 
 function memGet(key) {
   const e = MEM_CACHE.get(key);
@@ -263,7 +263,6 @@ async function upsertToDb(place, careerPage, extras = {}) {
     const payload = {
       companyName:      place.companyName,
       website:          place.website          || null,
-      careerPage:       careerPage             || null,
       address:          place.address          || null,
       shortAddress:     place.shortAddress     || null,
       phone:            place.phone            || null,
@@ -283,6 +282,10 @@ async function upsertToDb(place, careerPage, extras = {}) {
       ...extras,
     };
 
+    if (careerPage !== undefined) {
+      payload.careerPage = careerPage || null;
+    }
+
     const [row, created] = await Company.upsert({ placeId: place.placeId, ...payload });
     return { row, created };
   } catch (e) {
@@ -292,14 +295,16 @@ async function upsertToDb(place, careerPage, extras = {}) {
 }
 
 /* ─── Enrich result list: career page + distance + DB save ───────────── */
-async function enrichPlaces(places, { userLat, userLon, city, keyword } = {}) {
+async function enrichPlaces(places, { userLat, userLon, city, keyword, skipCareerProbe = false } = {}) {
   const enriched = await Promise.allSettled(
     places.map(async (p) => {
-      // Parallel: career page probe
-      const careerPage = await detectCareerPage(p.website).catch(() => null);
+      // Parallel: career page probe (skipped when caller runs full verification)
+      const careerPage = skipCareerProbe
+        ? null
+        : await detectCareerPage(p.website).catch(() => null);
 
-      // DB upsert
-      await upsertToDb(p, careerPage, { city: city || null, keyword: keyword || null });
+      // DB upsert — preserve career cache when skipping probe
+      await upsertToDb(p, skipCareerProbe ? undefined : careerPage, { city: city || null, keyword: keyword || null });
 
       // Distance
       let distanceKm   = null;
@@ -341,27 +346,15 @@ async function enrichPlaces(places, { userLat, userLon, city, keyword } = {}) {
 /**
  * buildQueryVariants(keyword)
  * Returns an array of search queries to run in parallel.
- * Covers both the user's keyword and common related terms so we get
- * the broadest possible coverage from Google Places.
+ *
+ * QUOTA NOTE: Google Places Text Search free tier = 100 req/day.
+ * Each variant × maxPages = API calls consumed per user search.
+ * Keep variants at 1 to stay well within daily quota.
  */
 function buildQueryVariants(keyword = "software company") {
-  const base = keyword.toLowerCase().trim();
-
-  // If the user typed a specific company name (not a generic term), just use it
-  const GENERIC = ["software company", "it company", "tech company", "technology company",
-                   "software", "it", "tech", "startup", "company"];
-  if (!GENERIC.includes(base)) {
-    return [keyword];  // specific query — no need to expand
-  }
-
-  // Generic term — run multiple overlapping queries for maximum coverage
-  return [
-    "software company",
-    "IT company",
-    "technology company",
-    "tech startup",
-    "software development company",
-  ];
+  // Always use a single query to conserve daily quota (100 req/day on free tier).
+  // Running 5 variants × 3 pages = 15 calls per search, exhausting quota in ~6 searches.
+  return [keyword];
 }
 
 /**
@@ -390,7 +383,7 @@ function mergeAndDedup(settledResults) {
  * getNearbyCompanies({ lat, lon, radius, keyword })
  * Runs 5 parallel query variants, 3 pages each → up to 300 raw results → deduplicated.
  */
-export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "software company" }) {
+export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "software company", skipCareerProbe = false }) {
   if (lat == null || lon == null) throw new Error("lat/lon required");
 
   const cacheKey = `nearby:${Math.round(lat * 100)}:${Math.round(lon * 100)}:${radius}:${keyword}`;
@@ -404,23 +397,28 @@ export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "sof
 
   log(`getNearbyCompanies: running ${queries.length} parallel queries, radius=${radius}km`);
 
-  // Fetch all query variants in parallel (each can return up to 60 via pagination)
+  // Fetch all query variants in parallel (1 page = 20 results per query, conserves quota)
   const allFetches = await Promise.allSettled(
     queries.map(q => googleTextSearch({
       textQuery:    `${q} near me`,
       lat, lon,
       radiusMeters: radiusM,
-      maxPages:     3,
+      maxPages:     1,
     }))
   );
 
   const merged = mergeAndDedup(allFetches);
   log(`getNearbyCompanies: ${merged.length} unique companies after dedup`);
 
-  const result = await enrichPlaces(merged, { userLat: lat, userLon: lon, keyword });
+  // If all fetches failed, surface the first error so the controller can return a proper error response
+  if (merged.length === 0 && allFetches.every(r => r.status === "rejected")) {
+    throw allFetches[0].reason;
+  }
+
+  const result = await enrichPlaces(merged, { userLat: lat, userLon: lon, keyword, skipCareerProbe });
 
   const payload = { companies: result, total: result.length, source: "google_places" };
-  memSet(cacheKey, payload);
+  if (!skipCareerProbe) memSet(cacheKey, payload);
   return payload;
 }
 
@@ -428,7 +426,7 @@ export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "sof
  * searchCompaniesByCity({ keyword, city, userLat, userLon })
  * Runs multiple parallel queries to maximise result count.
  */
-export async function searchCompaniesByCity({ keyword = "software company", city, userLat, userLon }) {
+export async function searchCompaniesByCity({ keyword = "software company", city, userLat, userLon, skipCareerProbe = false }) {
   if (!city?.trim()) throw new Error("city is required");
 
   const cacheKey = `city:${city.toLowerCase().trim()}:${keyword.toLowerCase().trim()}`;
@@ -460,17 +458,22 @@ export async function searchCompaniesByCity({ keyword = "software company", city
       textQuery:    `${q} in ${city}`,
       lat, lon,
       radiusMeters: 30000,
-      maxPages:     3,
+      maxPages:     1,
     }))
   );
 
   const merged = mergeAndDedup(allFetches);
   log(`searchCompaniesByCity: ${merged.length} unique companies for "${city}"`);
 
-  const result = await enrichPlaces(merged, { userLat: lat, userLon: lon, city, keyword });
+  // If all fetches failed, surface the first error
+  if (merged.length === 0 && allFetches.every(r => r.status === "rejected")) {
+    throw allFetches[0].reason;
+  }
+
+  const result = await enrichPlaces(merged, { userLat: lat, userLon: lon, city, keyword, skipCareerProbe });
 
   const payload = { companies: result, total: result.length, source: "google_places" };
-  memSet(cacheKey, payload);
+  if (!skipCareerProbe) memSet(cacheKey, payload);
   return payload;
 }
 
