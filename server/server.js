@@ -111,7 +111,38 @@ async function runMigrations() {
       skills        TEXT,
       resume_url    TEXT,
       profile_image TEXT,
+      otp           VARCHAR(6),
+      otp_expires_at DATETIME,
+      is_verified   TINYINT(1) DEFAULT 0,
       created_at    DATETIME DEFAULT ${NOW}
+    )
+  `);
+
+  await createTableIfMissing("pending_registrations", `
+    CREATE TABLE pending_registrations (
+      id            ${AI},
+      name          VARCHAR(255)  NOT NULL,
+      email         VARCHAR(255)  NOT NULL UNIQUE,
+      password      VARCHAR(255)  NOT NULL,
+      role          VARCHAR(50)   NOT NULL DEFAULT 'student',
+      phone         VARCHAR(20),
+      education     TEXT,
+      skills        TEXT,
+      otp           VARCHAR(6),
+      otp_expires_at DATETIME,
+      created_at    DATETIME DEFAULT ${NOW},
+      updated_at    DATETIME DEFAULT ${NOW}
+    )
+  `);
+
+  await createTableIfMissing("password_resets", `
+    CREATE TABLE password_resets (
+      id          ${AI},
+      email       VARCHAR(255) NOT NULL UNIQUE,
+      token       VARCHAR(255) NOT NULL UNIQUE,
+      expires_at  DATETIME NOT NULL,
+      created_at  DATETIME DEFAULT ${NOW},
+      updated_at  DATETIME DEFAULT ${NOW}
     )
   `);
 
@@ -304,6 +335,11 @@ async function runMigrations() {
     ["companies", "photo_refs",        "TEXT"],
     ["companies", "career_valid",      "TINYINT(1)"],
     ["companies", "career_checked_at", "DATETIME"],
+
+    // users — OTP verification
+    ["users", "otp", "VARCHAR(6)"],
+    ["users", "otp_expires_at", "DATETIME"],
+    ["users", "is_verified", "TINYINT(1) DEFAULT 0"],
 
     // saved_companies
     ["saved_companies", "external_company_id", "VARCHAR(255)"],

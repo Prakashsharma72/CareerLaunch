@@ -446,7 +446,7 @@ function Login() {
                   </span>
                 </label>
                 <Link
-                  to="#"
+                  to="/forgot-password"
                   className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:text-primary-700 dark:hover:text-primary-300 transition-colors focus:outline-none focus-visible:underline"
                 >
                   Forgot password?
