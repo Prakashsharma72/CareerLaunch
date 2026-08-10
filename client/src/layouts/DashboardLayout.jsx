@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { getThemePreference, applyTheme } from "../utils/helpers";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaTachometerAlt, FaUser, FaBriefcase, FaBook,
@@ -31,12 +32,10 @@ function DashboardLayout() {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed,  setCollapsed]  = useState(false);
-  const [darkMode,   setDarkMode]   = useState(
-    () => window.matchMedia("(prefers-color-scheme: dark)").matches
-  );
+  const [darkMode,   setDarkMode]   = useState(getThemePreference);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
+    applyTheme(darkMode);
   }, [darkMode]);
 
   /* close mobile sidebar on route change */

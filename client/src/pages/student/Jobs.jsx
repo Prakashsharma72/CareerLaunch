@@ -1,11 +1,10 @@
 /**
  * Jobs.jsx — Find Jobs page
  *
- * Uses the same placesSlice as Companies — identical data, different framing.
- * Companies are presented as "hiring companies" with job-seeking context.
- * Search / filters / pagination all reuse the shared Redux store.
+ * Shows only nearby software companies with a verified careers/jobs page
+ * on their official website. Data from GET /api/company-careers.
  */
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import { useDispatch, useSelector }                  from "react-redux";
 import { motion, AnimatePresence }                   from "framer-motion";
 import {
@@ -14,16 +13,13 @@ import {
   FaSearch, FaChevronLeft, FaChevronRight,
 } from "react-icons/fa";
 
-import CompanyCard         from "../../components/companies/CompanyCard";
-import CompanyCardSkeleton from "../../components/companies/CompanyCardSkeleton";
-import CompanyFilters      from "../../components/companies/CompanyFilters";
-import usePlaces           from "../../hooks/usePlaces";
+import CareerCard         from "../../components/jobs/CareerCard";
+import CareerCardSkeleton from "../../components/jobs/CareerCardSkeleton";
+import CompanyFilters     from "../../components/companies/CompanyFilters";
+import useCompanyCareers  from "../../hooks/useCompanyCareers";
 import {
   setFilter, setPage, setManualCity,
   setSavedMap, addSaved, removeSaved,
-  selectFilteredCompanies,
-  selectPagedCompanies,
-  selectTotalPages,
 } from "../../redux/placesSlice";
 import {
   saveCompanyBookmark,
@@ -104,7 +100,7 @@ function LocationPrompt({ onRequestGPS, onCitySubmit }) {
           Allow location or enter a city
         </h3>
         <p className="text-gray-400 dark:text-gray-500 text-sm">
-          We search Google Maps for real nearby software companies actively hiring in your area.
+          We find nearby software companies and verify which ones have working career pages on their websites.
         </p>
       </div>
       <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
@@ -147,35 +143,68 @@ function LocationPrompt({ onRequestGPS, onCitySubmit }) {
 ══════════════════════════════════════════════════════════════════ */
 export default function Jobs() {
   const dispatch = useDispatch();
-  const { requestLocation, fetchByCity, refetch } = usePlaces();
-  const { isAuthenticated } = useSelector(s => s.auth);
+  const {
+    companies,
+    loading,
+    error,
+    source,
+    requestLocation,
+    fetchByCity,
+    refetch,
+  } = useCompanyCareers();
 
+  const { isAuthenticated } = useSelector(s => s.auth);
   const location   = useSelector(s => s.places.location);
-  const loading    = useSelector(s => s.places.loading);
-  const error      = useSelector(s => s.places.error);
   const filters    = useSelector(s => s.places.filters);
   const page       = useSelector(s => s.places.page);
-  const source     = useSelector(s => s.places.source);
   const savedMap   = useSelector(s => s.places.savedMap);
 
-  const allFiltered = useSelector(selectFilteredCompanies);
-  const paged       = useSelector(selectPagedCompanies);
-  const totalPages  = useSelector(selectTotalPages);
+  const allFiltered = useMemo(() => {
+    let list = companies;
+
+    if (filters.search?.trim()) {
+      const q = filters.search.toLowerCase();
+      list = list.filter(c =>
+        c.companyName?.toLowerCase().includes(q) ||
+        c.address?.toLowerCase().includes(q) ||
+        c.website?.toLowerCase().includes(q)
+      );
+    }
+
+    if (filters.minRating > 0) {
+      list = list.filter(c => c.rating != null && c.rating >= filters.minRating);
+    }
+
+    if (filters.maxRadius < 50) {
+      list = list.filter(c => c.distanceKm == null || c.distanceKm <= filters.maxRadius);
+    }
+
+    return list;
+  }, [companies, filters.search, filters.minRating, filters.maxRadius]);
+
   const total       = allFiltered.length;
+  const totalPages  = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const paged       = allFiltered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const hasGPS     = location.status === "granted";
   const isIdle     = location.status === "idle";
   const hasDenied  = location.status === "denied" || location.status === "manual";
   const showPrompt = !loading && !error && (isIdle || hasDenied) &&
-    allFiltered.length === 0 && source !== "google_places";
+    companies.length === 0 && source !== "company_careers";
 
   /* ── Auto-request on mount ── */
   const didInit = useRef(false);
   useEffect(() => {
+    dispatch(setPage(1));
     if (didInit.current) return;
     didInit.current = true;
     if (source === null || source === "no_location") requestLocation();
   }, []); // eslint-disable-line
+
+  /* ── Reset page when filters or data change ── */
+  useEffect(() => {
+    dispatch(setPage(1));
+  }, [filters.search, filters.minRating, filters.maxRadius, companies.length, dispatch]);
 
   /* ── Load saved map ── */
   useEffect(() => {
@@ -224,9 +253,9 @@ export default function Jobs() {
           phone:       company.phone      || null,
           rating:      company.rating     || null,
           mapsUrl:     company.mapsUrl    || null,
-          careerPage:  company.careerPage || null,
+          careerPage:  company.careerUrl  || null,
           industry:    company.industry   || null,
-          city:        company.city || location.city || null,
+          city:        location.city || null,
         });
         dispatch(addSaved({ placeId: pid, savedId: data.savedId ?? data.id }));
       } catch {
@@ -248,13 +277,13 @@ export default function Jobs() {
             Find Jobs
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm flex items-center gap-2 flex-wrap">
-            Nearby software companies actively hiring
-            {source === "google_places" && (
+            Companies with verified career pages on their official websites
+            {source === "company_careers" && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold
                 px-2 py-0.5 rounded-full
                 bg-green-100 text-green-700 dark:bg-green-900/25 dark:text-green-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
-                Live
+                Verified
               </span>
             )}
           </p>
@@ -263,9 +292,9 @@ export default function Jobs() {
         {!loading && total > 0 && (
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold
-              bg-blue-50 dark:bg-blue-900/25 text-blue-600 dark:text-blue-400
-              px-3 py-1.5 rounded-full border border-blue-200 dark:border-blue-500/30">
-              {total} {total === 1 ? "company" : "companies"}
+              bg-emerald-50 dark:bg-emerald-900/25 text-emerald-600 dark:text-emerald-400
+              px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-500/30">
+              {total} with career pages
             </span>
             <button
               onClick={refetch}
@@ -289,7 +318,23 @@ export default function Jobs() {
               border border-blue-200 dark:border-blue-500/30 rounded-xl px-4 py-3 text-sm">
             <FaLocationArrow className="text-blue-500 animate-pulse shrink-0" />
             <span className="text-blue-700 dark:text-blue-300 font-medium">
-              Detecting your location to find nearby hiring companies…
+              Detecting your location…
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Verifying careers banner ──────────────────────────── */}
+      <AnimatePresence>
+        {loading && (
+          <motion.div
+            key="verify"
+            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/15
+              border border-emerald-200 dark:border-emerald-500/30 rounded-xl px-4 py-3 text-sm">
+            <FaBriefcase className="text-emerald-500 animate-pulse shrink-0" />
+            <span className="text-emerald-700 dark:text-emerald-300 font-medium">
+              Finding nearby companies and verifying career pages — this may take a moment…
             </span>
           </motion.div>
         )}
@@ -313,7 +358,7 @@ export default function Jobs() {
           </strong>
           {" "}of{" "}
           <strong className="text-gray-800 dark:text-white">{total}</strong>
-          {" "}hiring companies
+          {" "}companies with career pages
           {location.city && (
             <> near{" "}
               <strong className="text-blue-600 dark:text-blue-400">{location.city}</strong>
@@ -323,15 +368,12 @@ export default function Jobs() {
       )}
 
       {/* ── Card grid ─────────────────────────────────────────── */}
-      {/* Mobile: 1 col | sm-md: 2 cols | lg+: 3 cols */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 items-stretch">
 
-        {/* Skeletons */}
         {loading && Array.from({ length: PAGE_SIZE }).map((_, i) => (
-          <CompanyCardSkeleton key={i} />
+          <CareerCardSkeleton key={i} />
         ))}
 
-        {/* Location prompt */}
         {showPrompt && (
           <LocationPrompt
             onRequestGPS={requestLocation}
@@ -339,7 +381,6 @@ export default function Jobs() {
           />
         )}
 
-        {/* Error state */}
         {!loading && error && (
           <motion.div
             initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
@@ -367,8 +408,7 @@ export default function Jobs() {
           </motion.div>
         )}
 
-        {/* Empty state */}
-        {!loading && !error && !showPrompt && total === 0 && (
+        {!loading && !error && !showPrompt && total === 0 && source === "company_careers" && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="col-span-full flex flex-col items-center justify-center
@@ -380,10 +420,11 @@ export default function Jobs() {
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white">
-                No companies found
+                No verified career pages found
               </h3>
-              <p className="text-gray-400 text-sm mt-1">
-                Try adjusting the filters or expanding the radius.
+              <p className="text-gray-400 text-sm mt-1 max-w-md mx-auto">
+                Nearby companies were checked, but none had a reachable careers or jobs page.
+                Try a different city or expand the search radius.
               </p>
             </div>
             <button
@@ -395,9 +436,8 @@ export default function Jobs() {
           </motion.div>
         )}
 
-        {/* Company cards */}
         {!loading && !error && paged.map(company => (
-          <CompanyCard
+          <CareerCard
             key={company.placeId}
             company={company}
             isSaved={!!savedMap[company.placeId]}
@@ -406,7 +446,6 @@ export default function Jobs() {
         ))}
       </div>
 
-      {/* ── Pagination ────────────────────────────────────────── */}
       <Pagination
         page={page}
         totalPages={totalPages}

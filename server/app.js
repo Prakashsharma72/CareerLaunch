@@ -14,6 +14,7 @@ import interviewRoutes    from "./routes/interview.routes.js";
 import companyRoutes      from "./routes/company.routes.js";
 import savedCompanyRoutes from "./routes/savedCompany.routes.js";
 import placesRoutes       from "./routes/places.routes.js";
+import companyCareersRoutes from "./routes/companyCareers.routes.js";
 import settingsRoutes     from "./routes/settings.routes.js";
 import uploadRoutes       from "./routes/upload.routes.js";
 import adminRoutes        from "./routes/admin.routes.js";
@@ -47,8 +48,9 @@ const ALLOWED_ORIGINS = [
   "http://localhost:4173",
   "http://127.0.0.1:5173",
   // Production frontend — all Vercel domains for this project
-  "https://career-launch-ashy.vercel.app",
-  "https://careerlaunch-ai.vercel.app",
+  // Custom domain
+  "https://careerlaunchai.in",
+  "https://www.careerlaunchai.in",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
@@ -93,6 +95,7 @@ app.use("/api/interview",       interviewRoutes);
 app.use("/api/companies",       companyRoutes);
 app.use("/api/saved-companies", savedCompanyRoutes);
 app.use("/api/places",          placesRoutes);
+app.use("/api/company-careers", companyCareersRoutes);
 app.use("/api/settings",        settingsRoutes);
 app.use("/api/upload",          uploadRoutes);
 app.use("/api/admin",           adminRoutes);

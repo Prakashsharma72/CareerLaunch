@@ -8,11 +8,15 @@ import {
   logout,
 } from "../redux/authSlice";
 
-import { loginUser, registerUser } from "../services/authService";
+import { loginUser, registerUser, verifyOtpApi, resendOtpApi } from "../services/authService";
 
 /**
  * Custom Auth Hook
- * Wraps Redux + API logic into reusable functions
+ * Wraps Redux + API logic into reusable functions.
+ *
+ * Registration flow (two-step):
+ *   1. register(userData)  → sends OTP to email, returns { email, otpSent: true }
+ *   2. verifyOtp(email, otp) → verifies OTP, dispatches loginSuccess, returns { user, token }
  */
 const useAuth = () => {
   const dispatch = useDispatch();
@@ -23,9 +27,7 @@ const useAuth = () => {
 
   const [localLoading, setLocalLoading] = useState(false);
 
-  /**
-   * LOGIN USER
-   */
+  /* ── LOGIN ─────────────────────────────────────────────────────────────── */
   const login = async (email, password) => {
     dispatch(loginStart());
     setLocalLoading(true);
@@ -38,36 +40,59 @@ const useAuth = () => {
     } catch (err) {
       const msg = err?.response?.data?.message || "Login failed";
       dispatch(loginFailure(msg));
-      throw err;          // ← re-throw so Login.jsx can show the error
+      throw err;
     } finally {
       setLocalLoading(false);
     }
   };
 
-  /**
-   * REGISTER USER
-   */
+  /* ── REGISTER (step 1 — sends OTP) ────────────────────────────────────── */
   const register = async (userData) => {
+    setLocalLoading(true);
+    try {
+      const res = await registerUser(userData);
+      // Returns { message, email, otpSent: true } — no JWT yet
+      return res.data;
+    } catch (err) {
+      throw err;
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  /* ── VERIFY OTP (step 2 — completes registration) ─────────────────────── */
+  const verifyOtp = async (email, otp) => {
     dispatch(loginStart());
     setLocalLoading(true);
     try {
-      const res  = await registerUser(userData);
+      const res  = await verifyOtpApi({ email, otp });
       const data = res.data;
       localStorage.setItem("token", data.token);
       dispatch(loginSuccess({ user: data.user, token: data.token }));
       return data;
     } catch (err) {
-      const msg = err?.response?.data?.message || "Registration failed";
+      const msg = err?.response?.data?.message || "Verification failed";
       dispatch(loginFailure(msg));
-      throw err;          // ← re-throw so Register.jsx can show the error
+      throw err;
     } finally {
       setLocalLoading(false);
     }
   };
 
-  /**
-   * LOGOUT USER
-   */
+  /* ── RESEND OTP ────────────────────────────────────────────────────────── */
+  const resendOtp = async (email) => {
+    setLocalLoading(true);
+    try {
+      const res = await resendOtpApi({ email });
+      return res.data;
+    } catch (err) {
+      throw err;
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  /* ── LOGOUT ────────────────────────────────────────────────────────────── */
   const logoutUser = () => {
     localStorage.removeItem("token");
     dispatch(logout());
@@ -83,6 +108,8 @@ const useAuth = () => {
 
     login,
     register,
+    verifyOtp,
+    resendOtp,
     logoutUser,
   };
 };

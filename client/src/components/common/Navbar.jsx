@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { getThemePreference, applyTheme } from "../../utils/helpers";
 import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -30,9 +31,7 @@ function Navbar() {
   const [scrolled,   setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropOpen,   setDropOpen]   = useState(false);
-  const [darkMode,   setDarkMode]   = useState(
-    () => document.documentElement.classList.contains("dark")
-  );
+  const [darkMode,   setDarkMode]   = useState(getThemePreference);
   const dropRef = useRef(null);
 
   /* scroll → solid background after 10px */
@@ -56,7 +55,7 @@ function Navbar() {
   const toggleDark = () => {
     const next = !darkMode;
     setDarkMode(next);
-    document.documentElement.classList.toggle("dark", next);
+    applyTheme(next);
   };
 
   /* logout — unchanged */
