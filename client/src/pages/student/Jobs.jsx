@@ -13,8 +13,8 @@ import {
   FaSearch, FaChevronLeft, FaChevronRight,
 } from "react-icons/fa";
 
-import CareerCard         from "../../components/jobs/CareerCard";
-import CareerCardSkeleton from "../../components/jobs/CareerCardSkeleton";
+import CareerCard         from "../../components/Jobs/CareerCard";
+import CareerCardSkeleton from "../../components/Jobs/CareerCardSkeleton";
 import CompanyFilters     from "../../components/companies/CompanyFilters";
 import useCompanyCareers  from "../../hooks/useCompanyCareers";
 import {
