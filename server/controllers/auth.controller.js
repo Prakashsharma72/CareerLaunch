@@ -11,10 +11,16 @@
  * Passwords: hashed with bcrypt (cost 12) — plain text never stored.
  */
 
-import User           from "../models/user.model.js";
-import bcrypt         from "bcryptjs";
-import jwt            from "jsonwebtoken";
-import { sendOtpEmail } from "../services/email.service.js";
+import crypto                 from "crypto";
+import User                   from "../models/user.model.js";
+import PendingRegistration     from "../models/pendingRegistration.model.js";
+import PasswordReset          from "../models/passwordReset.model.js";
+import bcrypt                 from "bcryptjs";
+import jwt                    from "jsonwebtoken";
+import {
+  sendOtpEmail,
+  sendPasswordResetEmail,
+} from "../services/email.service.js";
 
 const TAG    = "[auth]";
 const log    = (msg, data) =>
@@ -38,6 +44,10 @@ function signToken(user) {
 
 function generateOtp() {
   return String(Math.floor(100000 + Math.random() * 900000)); // 6 digits
+}
+
+function generateResetToken() {
+  return crypto.randomBytes(32).toString("hex");
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -64,32 +74,35 @@ export const register = async (req, res) => {
 
   try {
     /* ── Check for existing verified account ── */
-    const existing = await User.findOne({ where: { email: normalEmail } });
+    const existingUser = await User.findOne({ where: { email: normalEmail } });
+    const existingPending = await PendingRegistration.findOne({ where: { email: normalEmail } });
 
-    if (existing) {
-      if (existing.isVerified) {
-        return res.status(409).json({ code: "EMAIL_TAKEN", message: "An account with that email already exists." });
-      }
+    if (existingUser) {
+      return res.status(409).json({ code: "EMAIL_TAKEN", message: "An account with that email already exists." });
+    }
 
-      // Account exists but is unverified — resend a fresh OTP instead of duplicating
-      const otp           = generateOtp();
-      const otpExpiresAt  = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-      const hashed        = await bcrypt.hash(password, 12);
+    if (existingPending) {
+      const otp          = generateOtp();
+      const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+      const hashed       = await bcrypt.hash(password, 12);
 
-      await existing.update({ password: hashed, otp, otpExpiresAt });
+      await existingPending.update({ password: hashed, otp, otpExpiresAt });
 
       try {
-        await sendOtpEmail(normalEmail, otp, existing.name);
+        if (process.env.NODE_ENV === "development") {
+          log(`Sending OTP for pending registration`, { email: normalEmail, otp });
+        }
+        await sendOtpEmail(normalEmail, otp, name.trim());
       } catch (mailErr) {
-        errLog("Failed to resend OTP (unverified account)", mailErr);
+        errLog("Failed to resend OTP (pending registration)", mailErr);
         return res.status(500).json({ code: "EMAIL_ERROR", message: "Could not send verification email. Please try again." });
       }
 
-      log(`✓ Refreshed OTP for unverified account: ${normalEmail}`);
+      log(`✓ Refreshed OTP for pending registration: ${normalEmail}`);
       return res.status(200).json({
-        message:   "Verification code sent to your email.",
-        email:     normalEmail,
-        otpSent:   true,
+        message: "Verification code sent to your email.",
+        email:   normalEmail,
+        otpSent: true,
       });
     }
 
@@ -111,29 +124,31 @@ export const register = async (req, res) => {
       skills:       skills    || null,
       otp,
       otpExpiresAt,
-      isVerified:   false,
     };
 
-    log("Creating unverified user…", { name: payload.name, email: payload.email });
+    log("Creating pending registration…", { name: payload.name, email: payload.email });
 
     let created;
     try {
-      created = await User.create(payload);
+      created = await PendingRegistration.create(payload);
     } catch (insertErr) {
-      errLog("INSERT INTO users FAILED", { message: insertErr.message, original: insertErr.original?.message });
+      errLog("INSERT INTO pending_registrations FAILED", { message: insertErr.message, original: insertErr.original?.message });
       throw insertErr;
     }
 
-    log(`✓ Unverified user created — ID: ${created.id}`);
+    log(`✓ Pending registration created — ID: ${created.id}`);
 
     /* ── Send OTP email ── */
     try {
+      if (process.env.NODE_ENV === "development") {
+        log(`Sending OTP for new registration`, { email: normalEmail, otp });
+      }
       await sendOtpEmail(normalEmail, otp, name.trim());
       log(`✓ OTP sent to: ${normalEmail}`);
     } catch (mailErr) {
-      // Roll back: delete the user row so they can retry cleanly
+      // Roll back: delete the pending registration so the user can retry cleanly
       await created.destroy();
-      errLog("OTP email failed — user rolled back", mailErr);
+      errLog("OTP email failed — pending registration rolled back", mailErr);
       return res.status(500).json({
         code:    "EMAIL_ERROR",
         message: "Could not send verification email. Please try again.",
@@ -164,35 +179,46 @@ export const verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
 
   if (!email?.trim()) return res.status(400).json({ code: "VALIDATION_ERROR", message: "email is required" });
-  if (!otp?.trim())   return res.status(400).json({ code: "VALIDATION_ERROR", message: "otp is required" });
+  if (!otp?.toString().trim()) return res.status(400).json({ code: "VALIDATION_ERROR", message: "otp is required" });
 
   const normalEmail = email.toLowerCase().trim();
+  const cleanOtp = otp.toString().replace(/\D/g, "").trim();
+
+  if (cleanOtp.length !== 6) return res.status(400).json({ code: "VALIDATION_ERROR", message: "otp must be a 6-digit code" });
 
   try {
-    const user = await User.findOne({ where: { email: normalEmail } });
+    const pending = await PendingRegistration.findOne({ where: { email: normalEmail } });
 
-    if (!user) {
-      return res.status(404).json({ code: "NOT_FOUND", message: "No account found with that email." });
+    if (!pending) {
+      return res.status(404).json({ code: "NOT_FOUND", message: "No pending verification found for that email." });
     }
 
-    if (user.isVerified) {
-      return res.status(400).json({ code: "ALREADY_VERIFIED", message: "This account is already verified. Please log in." });
-    }
-
-    if (!user.otp || !user.otpExpiresAt) {
+    if (!pending.otp || !pending.otpExpiresAt) {
       return res.status(400).json({ code: "NO_OTP", message: "No OTP found. Please request a new code." });
     }
 
-    if (new Date() > new Date(user.otpExpiresAt)) {
+    if (new Date() > new Date(pending.otpExpiresAt)) {
       return res.status(400).json({ code: "OTP_EXPIRED", message: "Verification code has expired. Please request a new one." });
     }
 
-    if (user.otp !== otp.trim()) {
+    if (pending.otp !== cleanOtp) {
       return res.status(400).json({ code: "INVALID_OTP", message: "Invalid verification code. Please try again." });
     }
 
-    /* ── Mark verified, clear OTP fields ── */
-    await user.update({ isVerified: true, otp: null, otpExpiresAt: null });
+    /* ── Create permanent user and delete pending registration ── */
+    const userPayload = {
+      name:       pending.name,
+      email:      pending.email,
+      password:   pending.password,
+      role:       pending.role,
+      phone:      pending.phone,
+      education:  pending.education,
+      skills:     pending.skills,
+      isVerified: true,
+    };
+
+    const user = await User.create(userPayload);
+    await pending.destroy();
 
     const safeUser = await User.findByPk(user.id, { attributes: SAFE_ATTRS });
     const token    = signToken(safeUser);
@@ -223,23 +249,22 @@ export const resendOtp = async (req, res) => {
   const normalEmail = email.toLowerCase().trim();
 
   try {
-    const user = await User.findOne({ where: { email: normalEmail } });
+    const pending = await PendingRegistration.findOne({ where: { email: normalEmail } });
 
-    if (!user) {
-      return res.status(404).json({ code: "NOT_FOUND", message: "No account found with that email." });
-    }
-
-    if (user.isVerified) {
-      return res.status(400).json({ code: "ALREADY_VERIFIED", message: "This account is already verified." });
+    if (!pending) {
+      return res.status(404).json({ code: "NOT_FOUND", message: "No pending verification found for that email." });
     }
 
     const otp          = generateOtp();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    await user.update({ otp, otpExpiresAt });
+    await pending.update({ otp, otpExpiresAt });
 
     try {
-      await sendOtpEmail(normalEmail, otp, user.name);
+      if (process.env.NODE_ENV === "development") {
+        log(`Resending OTP for pending verification`, { email: normalEmail, otp });
+      }
+      await sendOtpEmail(normalEmail, otp, pending.name);
       log(`✓ OTP resent to: ${normalEmail}`);
     } catch (mailErr) {
       errLog("resendOtp() email failed", mailErr);
@@ -251,6 +276,103 @@ export const resendOtp = async (req, res) => {
   } catch (e) {
     errLog("resendOtp() unhandled error", e);
     return res.status(500).json({ code: "SERVER_ERROR", message: e.message || "Failed to resend OTP." });
+  }
+};
+
+/* ─────────────────────────────────────────────────────────────────────────
+   FORGOT PASSWORD   POST /api/auth/forgot-password
+   Sends a one-time reset link to the user's email.
+───────────────────────────────────────────────────────────────────────── */
+export const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email?.trim()) {
+    return res.status(400).json({ code: "VALIDATION_ERROR", message: "email is required" });
+  }
+
+  const normalEmail = email.toLowerCase().trim();
+
+  try {
+    const user = await User.findOne({ where: { email: normalEmail } });
+
+    if (!user) {
+      log("Forgot password requested for unknown email", { email: normalEmail });
+      return res.status(200).json({
+        message: "If your email exists, you will receive password reset instructions.",
+      });
+    }
+
+    const token     = generateResetToken();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await PasswordReset.upsert({ email: normalEmail, token, expiresAt });
+
+    try {
+      await sendPasswordResetEmail(normalEmail, token, user.name);
+      log(`✓ Password reset email sent: ${normalEmail}`);
+    } catch (mailErr) {
+      errLog("forgotPassword() email failed", mailErr);
+      return res.status(500).json({ code: "EMAIL_ERROR", message: "Could not send password reset email. Please try again." });
+    }
+
+    return res.status(200).json({
+      message: "If your email exists, you will receive password reset instructions.",
+    });
+  } catch (e) {
+    errLog("forgotPassword() unhandled error", e);
+    return res.status(500).json({ code: "SERVER_ERROR", message: e.message || "Password reset request failed." });
+  }
+};
+
+/* ─────────────────────────────────────────────────────────────────────────
+   RESET PASSWORD   POST /api/auth/reset-password
+   Validates the reset token, updates the password, and clears the token.
+───────────────────────────────────────────────────────────────────────── */
+export const resetPassword = async (req, res) => {
+  const { email, token, password } = req.body;
+
+  if (!email?.trim()) {
+    return res.status(400).json({ code: "VALIDATION_ERROR", message: "email is required" });
+  }
+  if (!token?.trim()) {
+    return res.status(400).json({ code: "VALIDATION_ERROR", message: "token is required" });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ code: "VALIDATION_ERROR", message: "password must be at least 6 characters" });
+  }
+
+  const normalEmail = email.toLowerCase().trim();
+  const cleanToken  = token.trim();
+
+  try {
+    const resetEntry = await PasswordReset.findOne({ where: { email: normalEmail, token: cleanToken } });
+
+    if (!resetEntry) {
+      return res.status(400).json({ code: "INVALID_TOKEN", message: "Invalid or expired reset token." });
+    }
+
+    if (new Date() > new Date(resetEntry.expiresAt)) {
+      await resetEntry.destroy();
+      return res.status(400).json({ code: "TOKEN_EXPIRED", message: "Password reset token has expired. Please request a new one." });
+    }
+
+    const user = await User.findOne({ where: { email: normalEmail } });
+    if (!user) {
+      return res.status(404).json({ code: "NOT_FOUND", message: "No account found with that email." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    await user.update({ password: hashedPassword });
+    await resetEntry.destroy();
+
+    log(`✓ Password reset completed for user ${user.id}`);
+
+    return res.status(200).json({
+      message: "Your password has been reset successfully. You may now sign in with your new password.",
+    });
+  } catch (e) {
+    errLog("resetPassword() unhandled error", e);
+    return res.status(500).json({ code: "SERVER_ERROR", message: e.message || "Password reset failed." });
   }
 };
 

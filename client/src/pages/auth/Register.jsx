@@ -211,10 +211,11 @@ function Register() {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setError("");
-    if (otp.replace(/\s/g, "").length !== 6) return setError("Please enter the full 6-digit code");
+    const cleanOtp = otp.replace(/\D/g, "");
+    if (cleanOtp.length !== 6) return setError("Please enter the full 6-digit code");
     setLoading(true);
     try {
-      await verifyOtp(pendingEmail, otp.trim());
+      await verifyOtp(pendingEmail, cleanOtp);
       navigate("/student/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Invalid code. Please try again.");
