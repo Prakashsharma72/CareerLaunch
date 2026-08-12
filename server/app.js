@@ -17,6 +17,7 @@ import placesRoutes       from "./routes/places.routes.js";
 import companyCareersRoutes from "./routes/companyCareers.routes.js";
 import settingsRoutes     from "./routes/settings.routes.js";
 import uploadRoutes       from "./routes/upload.routes.js";
+import roadmapRoutes      from "./routes/roadmap.routes.js";
 import adminRoutes        from "./routes/admin.routes.js";
 
 import { errorHandler } from "./middleware/error.middleware.js";
@@ -100,6 +101,7 @@ app.use("/api/places",          placesRoutes);
 app.use("/api/company-careers", companyCareersRoutes);
 app.use("/api/settings",        settingsRoutes);
 app.use("/api/upload",          uploadRoutes);
+app.use("/api/roadmaps",        roadmapRoutes);
 app.use("/api/admin",           adminRoutes);
 
 /* ── Health check ─────────────────────────────────────────────────────────── */

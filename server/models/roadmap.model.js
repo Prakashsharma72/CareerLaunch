@@ -11,7 +11,6 @@ const Roadmap = db.define(
     },
     userId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
       field: "user_id",
     },
     title: {

@@ -31,6 +31,7 @@ ensureJwtSecret();
 /* ── Remaining imports (safe to import after env is ready) ──────────────── */
 import app       from "./app.js";
 import sequelize from "./config/db.js";
+import { verifySmtpConnection } from "./services/email.service.js";
 
 const LOG = "[server]";
 const log = (msg) => console.log(`${new Date().toISOString()} ${LOG} ${msg}`);
@@ -211,7 +212,7 @@ async function runMigrations() {
   await createTableIfMissing("roadmaps", `
     CREATE TABLE roadmaps (
       id              ${AI},
-      user_id         INT          NOT NULL,
+      user_id         INT,
       title           VARCHAR(255),
       target_role     VARCHAR(100),
       roadmap_content TEXT,
@@ -417,6 +418,14 @@ async function startServer() {
   try {
     await sequelize.authenticate();
     console.log("✓ Database connected");
+
+    try {
+      await verifySmtpConnection();
+      console.log("✓ SMTP verification succeeded");
+    } catch (smtpError) {
+      console.error(`${new Date().toISOString()} ${LOG} ❌ SMTP verification failed:`, smtpError.message);
+      console.error(`${new Date().toISOString()} ${LOG} ❌ Email sending will fail until SMTP is configured correctly.`);
+    }
 
     // Run migrations BEFORE sync so columns exist when Sequelize validates
     await runMigrations();

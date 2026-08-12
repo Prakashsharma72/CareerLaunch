@@ -125,7 +125,7 @@ export default function Dashboard() {
   ];
 
   const quickActions = [
-    { label: "Generate Roadmap", color: "from-green-500 to-green-600",  icon: FaRoad,      action: () => navigate("/student/roadmap-generator") },
+    { label: "Request Roadmap", color: "from-green-500 to-green-600",  icon: FaRoad,      action: () => navigate("/student/roadmap-generator") },
     { label: "Mock Interview",   color: "from-violet-500 to-violet-600",icon: FaRobot,     action: () => navigate("/student/mock-interview")    },
     { label: "Find Jobs",        color: "from-amber-500 to-amber-600",  icon: FaBriefcase, action: () => navigate("/student/jobs")              },
   ];

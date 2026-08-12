@@ -19,7 +19,6 @@ const menuItems = [
   { name: "Jobs",             icon: FaBriefcase,     path: "/student/jobs" },
   { name: "Companies",        icon: FaBuilding,      path: "/student/companies" },
   { name: "Resources",        icon: FaBook,          path: "/student/resources" },
-  { name: "Saved Jobs",       icon: FaBookmark,      path: "/student/saved-jobs" },
   { name: "Saved Companies",  icon: FaBuilding,      path: "/student/saved-companies" },
   { name: "Roadmap",          icon: FaRoad,          path: "/student/roadmap-generator" },
   { name: "Mock Interview",   icon: FaRobot,         path: "/student/mock-interview" },
