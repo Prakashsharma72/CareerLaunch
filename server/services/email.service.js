@@ -9,6 +9,7 @@
  */
 
 import nodemailer from "nodemailer";
+import axios from "axios";
 
 const TAG = "[email]";
 
@@ -21,6 +22,14 @@ const smtpConfig = {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  // Helpful debugging options. These are safe in server logs (do not print password),
+  // but make sure Render logs are protected. Timeouts help surface network/connectivity
+  // failures quickly (ETIMEDOUT, ECONNREFUSED, etc.).
+  logger: true,
+  debug: process.env.SMTP_DEBUG === "true",
+  connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT) || 10_000, // ms
+  greetingTimeout:   Number(process.env.SMTP_GREETING_TIMEOUT)   || 10_000, // ms
+  socketTimeout:     Number(process.env.SMTP_SOCKET_TIMEOUT)     || 20_000, // ms
 };
 
 const transporter = nodemailer.createTransport(smtpConfig);
@@ -31,11 +40,25 @@ export async function verifySmtpConnection() {
   }
 
   try {
+    console.log("[email] SMTP config:", { host: smtpConfig.host, port: smtpConfig.port, user: smtpConfig.auth.user, secure: smtpConfig.secure });
+    console.log("[email] Starting transporter.verify() — will timeout quickly if network blocked");
     await transporter.verify();
+    console.log("[email] transporter.verify() succeeded");
     return true;
   } catch (err) {
-    console.error(`${TAG} SMTP verification failed:`, err.message);
-    console.error(`${TAG} SMTP verify error details:`, err);
+    // Log structured details to make network vs auth issues obvious in Render logs
+    console.error(`${TAG} SMTP verification failed:`, err?.message ?? err);
+    console.error(`${TAG} SMTP verify error code:`, err?.code);
+    console.error(`${TAG} SMTP verify error stack:`, err?.stack);
+    console.error(`${TAG} SMTP verify raw error:`, err);
+
+    // Attach an actionable hint for common cloud hosting issues
+    if (err?.code === "ETIMEDOUT" || err?.code === "ESOCKETTIMEDOUT") {
+      console.error(`${TAG} NETWORK HINT: Connection timed out when connecting to ${smtpConfig.host}:${smtpConfig.port}.`);
+      console.error(`${TAG} NETWORK HINT: Some cloud hosts (or provider firewalls) block outbound SMTP ports. ` +
+                    `If you're on Render, verify that outbound SMTP is allowed or use Brevo's HTTP API instead.`);
+    }
+
     throw err;
   }
 }
@@ -138,8 +161,29 @@ export async function sendOtpEmail(to, otp, name = "there") {
     console.log(`${TAG} OTP email sent to ${to} — messageId: ${info.messageId}`);
     return info;
   } catch (err) {
-    console.error(`${TAG} Failed to send OTP email to ${to}:`, err.message);
+    console.error(`${TAG} Failed to send OTP email to ${to}:`, err?.message ?? err);
     console.error(`${TAG} SMTP error details:`, err);
+
+    // Fallback: if network-level error (timeout/refused) and BREVO_API_KEY is configured,
+    // try sending via Brevo HTTP API (uses HTTPS port 443 which is usually allowed).
+    if ((err?.code === "ETIMEDOUT" || err?.code === "ESOCKETTIMEDOUT" || err?.code === "ECONNREFUSED") && process.env.BREVO_API_KEY) {
+      try {
+        console.log(`${TAG} Attempting HTTP API fallback via Brevo`);
+        const res = await sendViaBrevoApi({
+          to: [{ email: to, name }],
+          subject: mailOptions.subject,
+          htmlContent: mailOptions.html,
+          textContent: mailOptions.text,
+          sender: { name: process.env.SMTP_FROM_NAME || "CareerLaunch AI", email: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER },
+        });
+        console.log(`${TAG} Brevo API fallback succeeded: id=${res.data?.messageId || res.data?.messageId || "(unknown)"}`);
+        return res.data;
+      } catch (apiErr) {
+        console.error(`${TAG} Brevo API fallback failed:`, apiErr?.message ?? apiErr);
+        console.error(`${TAG} Brevo API error details:`, apiErr?.response?.data ?? apiErr);
+      }
+    }
+
     throw err;
   }
 }
@@ -240,8 +284,45 @@ export async function sendPasswordResetEmail(to, token, name = "there") {
     console.log(`${TAG} Password reset email sent to ${to} — messageId: ${info.messageId}`);
     return info;
   } catch (err) {
-    console.error(`${TAG} Failed to send password reset email to ${to}:`, err.message);
+    console.error(`${TAG} Failed to send password reset email to ${to}:`, err?.message ?? err);
     console.error(`${TAG} SMTP error details:`, err);
+
+    if ((err?.code === "ETIMEDOUT" || err?.code === "ESOCKETTIMEDOUT" || err?.code === "ECONNREFUSED") && process.env.BREVO_API_KEY) {
+      try {
+        console.log(`${TAG} Attempting HTTP API fallback via Brevo`);
+        const res = await sendViaBrevoApi({
+          to: [{ email: to, name }],
+          subject: mailOptions.subject,
+          htmlContent: mailOptions.html,
+          textContent: mailOptions.text,
+          sender: { name: process.env.SMTP_FROM_NAME || "CareerLaunch AI", email: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER },
+        });
+        console.log(`${TAG} Brevo API fallback succeeded: id=${res.data?.messageId || "(unknown)"}`);
+        return res.data;
+      } catch (apiErr) {
+        console.error(`${TAG} Brevo API fallback failed:`, apiErr?.message ?? apiErr);
+        console.error(`${TAG} Brevo API error details:`, apiErr?.response?.data ?? apiErr);
+      }
+    }
+
     throw err;
   }
+}
+
+async function sendViaBrevoApi({ sender, to, subject, htmlContent, textContent }) {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) throw new Error("BREVO_API_KEY is not configured");
+
+  const payload = {
+    sender,
+    to,
+    subject,
+    htmlContent,
+    textContent,
+  };
+
+  return axios.post("https://api.brevo.com/v3/smtp/email", payload, {
+    headers: { "api-key": apiKey, "Content-Type": "application/json" },
+    timeout: 15_000,
+  });
 }
