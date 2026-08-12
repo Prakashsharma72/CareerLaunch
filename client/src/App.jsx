@@ -36,6 +36,7 @@ const AdminDashboard  = lazy(() => import("./pages/admin/AdminDashboard"));
 const ManageJobs      = lazy(() => import("./pages/admin/ManageJobs"));
 const ManageResources = lazy(() => import("./pages/admin/ManageResources"));
 const ManageUsers     = lazy(() => import("./pages/admin/ManageUsers"));
+const ManageRoadmaps  = lazy(() => import("./pages/admin/ManageRoadmaps"));
 const AdminSettings   = lazy(() => import("./pages/admin/AdminSettings"));
 
 // ── Route-level loading fallback ─────────────────────────────────────────────
@@ -133,6 +134,7 @@ const App = () => (
         <Route path="jobs"      element={<ManageJobs />} />
         <Route path="resources" element={<ManageResources />} />
         <Route path="users"     element={<ManageUsers />} />
+        <Route path="roadmaps"  element={<ManageRoadmaps />} />
         <Route path="settings"  element={<AdminSettings />} />
       </Route>
 

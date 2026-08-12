@@ -6,9 +6,10 @@
  */
 import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import { useDispatch, useSelector }                  from "react-redux";
+import { useNavigate }                               from "react-router-dom";
 import { motion, AnimatePresence }                   from "framer-motion";
 import {
-  FaBriefcase, FaSyncAlt, FaMapMarkerAlt,
+  FaBriefcase, FaBookmark, FaSyncAlt, FaMapMarkerAlt,
   FaLocationArrow, FaExclamationTriangle,
   FaSearch, FaChevronLeft, FaChevronRight,
 } from "react-icons/fa";
@@ -158,6 +159,7 @@ export default function Jobs() {
   const filters    = useSelector(s => s.places.filters);
   const page       = useSelector(s => s.places.page);
   const savedMap   = useSelector(s => s.places.savedMap);
+  const navigate   = useNavigate();
 
   const allFiltered = useMemo(() => {
     let list = companies;
@@ -296,6 +298,13 @@ export default function Jobs() {
               px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-500/30">
               {total} with career pages
             </span>
+            <button
+              onClick={() => navigate("/student/saved-jobs")}
+              title="View saved jobs"
+              className="inline-flex items-center gap-2 text-sm font-semibold
+                bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-colors">
+              <FaBookmark className="text-xs" /> Saved Jobs
+            </button>
             <button
               onClick={refetch}
               title="Refresh"

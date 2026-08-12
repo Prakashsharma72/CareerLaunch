@@ -13,7 +13,7 @@ import nodemailer from "nodemailer";
 const TAG = "[email]";
 
 /* ── Transporter ────────────────────────────────────────────────────────── */
-const transporter = nodemailer.createTransport({
+const smtpConfig = {
   host:   process.env.SMTP_HOST,
   port:   Number(process.env.SMTP_PORT) || 587,
   secure: process.env.SMTP_SECURE === "true", // true for port 465, false otherwise
@@ -21,7 +21,24 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
-});
+};
+
+const transporter = nodemailer.createTransport(smtpConfig);
+
+export async function verifySmtpConnection() {
+  if (!smtpConfig.host || !smtpConfig.auth.user || !smtpConfig.auth.pass) {
+    throw new Error("SMTP configuration incomplete. Set SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS.");
+  }
+
+  try {
+    await transporter.verify();
+    return true;
+  } catch (err) {
+    console.error(`${TAG} SMTP verification failed:`, err.message);
+    console.error(`${TAG} SMTP verify error details:`, err);
+    throw err;
+  }
+}
 
 /**
  * Send OTP verification email.

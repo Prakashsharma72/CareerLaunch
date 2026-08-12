@@ -13,6 +13,7 @@ import {
   FaTachometerAlt, FaBriefcase, FaBook,
   FaUsers, FaBars, FaTimes, FaSignOutAlt,
   FaUserShield, FaRocket, FaChevronLeft, FaCog,
+  FaPencilAlt,
 } from "react-icons/fa";
 
 const MENU = [
@@ -20,6 +21,7 @@ const MENU = [
   { name: "Manage Jobs",      icon: FaBriefcase,     path: "/admin/jobs"       },
   { name: "Manage Resources", icon: FaBook,          path: "/admin/resources"  },
   { name: "Manage Users",     icon: FaUsers,         path: "/admin/users"      },
+  { name: "Manage Roadmaps",  icon: FaPencilAlt,     path: "/admin/roadmaps"   },
   { name: "API Settings",     icon: FaCog,           path: "/admin/settings"   },
 ];
 
