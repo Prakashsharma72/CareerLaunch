@@ -110,6 +110,24 @@ export const getDashboardStats = async (req, res) => {
  * GET /api/admin/activities
  * Returns recent platform activities (user registrations, job posts, resources)
  */
+export const getAdminUsers = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: ["id", "name", "email", "role", "created_at"],
+      order: [["created_at", "DESC"]],
+    });
+
+    return res.status(200).json({ success: true, data: users });
+  } catch (error) {
+    console.error(`${TAG} Error fetching users:`, error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+      error: error.message,
+    });
+  }
+};
+
 export const getRecentActivities = async (req, res) => {
   try {
     log("Fetching recent activities");

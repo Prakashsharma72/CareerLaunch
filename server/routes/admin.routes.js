@@ -4,7 +4,7 @@
  * Admin-specific routes for dashboard stats and platform management
  */
 import express from "express";
-import { getDashboardStats, getRecentActivities } from "../controllers/admin.controller.js";
+import { getDashboardStats, getRecentActivities, getAdminUsers } from "../controllers/admin.controller.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -18,6 +18,12 @@ router.use(requireAdmin);
  * Get dashboard statistics (total users, jobs, resources)
  */
 router.get("/stats", getDashboardStats);
+
+/**
+ * GET /api/admin/users
+ * Get all user accounts
+ */
+router.get("/users", getAdminUsers);
 
 /**
  * GET /api/admin/activities
