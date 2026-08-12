@@ -18,27 +18,27 @@ import {
 } from "react-icons/fa";
 import { motion } from "framer-motion";
 import DashboardCard from "../../components/dashboard/DashboardCard";
-import Loader        from "../../components/common/Loader";
-import adminService  from "../../services/adminService";
+import Loader from "../../components/common/Loader";
+import adminService from "../../services/adminService";
 
 /* ── animation helpers ── */
-const fadeUp  = (delay = 0) => ({
-  initial:   { opacity: 0, y: 20 },
-  animate:   { opacity: 1, y: 0  },
-  transition:{ duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] },
+const fadeUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] },
 });
 
 const TYPE_DOT = {
-  user:     "bg-blue-500",
-  job:      "bg-green-500",
+  user: "bg-blue-500",
+  job: "bg-green-500",
   resource: "bg-violet-500",
 };
 
-export default function AdminDashboard() {
+function AdminDashboard() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [stats,   setStats]   = useState({
+  const [stats, setStats] = useState({
     totalUsers: 0, totalJobs: 0,
     totalResources: 0,
     growth: {
@@ -49,7 +49,9 @@ export default function AdminDashboard() {
   const [recentActivities, setRecentActivities] = useState([]);
   const [error, setError] = useState(null);
 
-  useEffect(() => { fetchDashboardData(); }, []);
+  useEffect(() => { 
+    fetchDashboardData(); 
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -72,7 +74,7 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
       setError(err.response?.data?.message || "Failed to load dashboard data");
-      
+
       // Set default values on error
       setStats({
         totalUsers: 0,
@@ -130,18 +132,18 @@ export default function AdminDashboard() {
       <motion.div {...fadeUp(0.08)}
         className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
         <DashboardCard
-          title="Total Users"    value={stats.totalUsers}
-          icon={<FaUsers />}     bgColor="from-blue-500 to-blue-700"
+          title="Total Users" value={stats.totalUsers}
+          icon={<FaUsers />} bgColor="from-blue-500 to-blue-700"
           onClick={() => navigate("/admin/users")}
         />
         <DashboardCard
-          title="Total Jobs"     value={stats.totalJobs}
+          title="Total Jobs" value={stats.totalJobs}
           icon={<FaBriefcase />} bgColor="from-emerald-500 to-emerald-700"
           onClick={() => navigate("/admin/jobs")}
         />
         <DashboardCard
-          title="Resources"      value={stats.totalResources}
-          icon={<FaBook />}      bgColor="from-violet-500 to-violet-700"
+          title="Resources" value={stats.totalResources}
+          icon={<FaBook />} bgColor="from-violet-500 to-violet-700"
           onClick={() => navigate("/admin/resources")}
         />
       </motion.div>
@@ -255,17 +257,17 @@ export default function AdminDashboard() {
 
           <div className="space-y-6 flex-1 flex flex-col justify-center">
             {[
-              { 
-                label: "Users Growth", 
-                pct: Math.min(Math.abs(stats.growth.users.percentage), 100), 
-                badge: `${stats.growth.users.percentage >= 0 ? '+' : ''}${stats.growth.users.percentage}%`, 
+              {
+                label: "Users Growth",
+                pct: Math.min(Math.abs(stats.growth.users.percentage), 100),
+                badge: `${stats.growth.users.percentage >= 0 ? '+' : ''}${stats.growth.users.percentage}%`,
                 color: "bg-blue-500",
                 isPositive: stats.growth.users.percentage >= 0,
               },
-              { 
-                label: "Job Posts", 
-                pct: Math.min(Math.abs(stats.growth.jobs.percentage), 100), 
-                badge: `${stats.growth.jobs.percentage >= 0 ? '+' : ''}${stats.growth.jobs.percentage}%`, 
+              {
+                label: "Job Posts",
+                pct: Math.min(Math.abs(stats.growth.jobs.percentage), 100),
+                badge: `${stats.growth.jobs.percentage >= 0 ? '+' : ''}${stats.growth.jobs.percentage}%`,
                 color: "bg-emerald-500",
                 isPositive: stats.growth.jobs.percentage >= 0,
               },
@@ -273,11 +275,10 @@ export default function AdminDashboard() {
               <div key={label}>
                 <div className="flex justify-between mb-2 items-center">
                   <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</span>
-                  <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${
-                    isPositive 
+                  <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${isPositive
                       ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15'
                       : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/15'
-                  }`}>
+                    }`}>
                     {isPositive ? <FaArrowUp className="text-[9px]" /> : <FaArrowDown className="text-[9px]" />}
                     {badge}
                   </span>
@@ -314,3 +315,6 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+
+export default AdminDashboard;

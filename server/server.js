@@ -419,6 +419,9 @@ async function startServer() {
     await sequelize.authenticate();
     console.log("✓ Database connected");
 
+    // Log SMTP env visibility (do not print SMTP_PASS)
+    console.log(`[server] SMTP env: host=${process.env.SMTP_HOST || "(missing)"}, port=${process.env.SMTP_PORT || "(missing)"}, user=${process.env.SMTP_USER ? process.env.SMTP_USER.replace(/(.+?)@/, '***@') : "(missing)"}`);
+
     try {
       await verifySmtpConnection();
       console.log("✓ SMTP verification succeeded");
