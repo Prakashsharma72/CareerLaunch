@@ -6,8 +6,6 @@
  * recognisable across page reloads without storing anything.
  */
 
-import React from "react";
-
 /* ── Palette ─────────────────────────────────────────────────────── */
 const PALETTES = [
   ["#1d4ed8", "#6366f1"],

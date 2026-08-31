@@ -11,7 +11,7 @@ import { motion, AnimatePresence }            from "framer-motion";
 import {
   FaArrowLeft, FaStar, FaMapMarkerAlt, FaGlobe, FaPhone,
   FaBriefcase, FaMapMarkedAlt, FaRegClock, FaChevronLeft,
-  FaChevronRight, FaExternalLinkAlt, FaRegBuilding, FaSpinner,
+  FaChevronRight, FaExternalLinkAlt, FaRegBuilding,
   FaExclamationTriangle,
 } from "react-icons/fa";
 import { getCompanyDetails } from "../../services/placesService";
@@ -193,7 +193,10 @@ export default function CompanyDetails() {
     }
   }, [placeId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
   if (loading) return <PageSkeleton />;
 
@@ -213,7 +216,7 @@ export default function CompanyDetails() {
   );
 
   const {
-    companyName, logo, rating, reviewCount, address, website, phone,
+    companyName, rating, reviewCount, address, website, phone,
     mapsUrl, businessStatus, isOpenNow, careerPage, industry,
     openingHours, photos, reviews, editorialSummary, types,
   } = company;

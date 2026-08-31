@@ -111,7 +111,12 @@ export default function Dashboard() {
     finally { setJobsLoading(false); }
   }, []);
 
-  useEffect(() => { loadStats(); loadJobs(); }, [loadStats, loadJobs]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadStats();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadJobs();
+  }, [loadStats, loadJobs]);
 
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";

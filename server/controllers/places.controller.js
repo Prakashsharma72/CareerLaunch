@@ -62,7 +62,7 @@ function errorResponse(res, e) {
    Returns companies sorted nearest-first.
 ─────────────────────────────────────────────────────────────────────────── */
 export async function nearbyCompanies(req, res) {
-  const { lat, lon, radius, keyword } = req.body;
+  const { lat, lon, radius, keyword, batchIndex } = req.body;
 
   if (lat == null || lon == null) return send400(res, "lat and lon are required in the request body.");
 
@@ -76,7 +76,7 @@ export async function nearbyCompanies(req, res) {
   log(`POST /nearby lat=${userLat} lon=${userLon} radius=${radiusKm}km keyword="${searchKw}"`);
 
   try {
-    const result = await getNearbyCompanies({ lat: userLat, lon: userLon, radius: radiusKm, keyword: searchKw });
+    const result = await getNearbyCompanies({ lat: userLat, lon: userLon, radius: radiusKm, keyword: searchKw, batchIndex: Number(batchIndex) || 0 });
     log(`Returning ${result.companies.length} companies`);
     return res.status(200).json({ success: true, ...result });
   } catch (e) {
@@ -88,18 +88,19 @@ export async function nearbyCompanies(req, res) {
    For city-based search (no GPS or explicit city override).
 ─────────────────────────────────────────────────────────────────────────── */
 export async function searchByCity(req, res) {
-  const { keyword, city, lat, lon } = req.query;
+  const { keyword, city, lat, lon, radius, batchIndex } = req.query;
 
   if (!city?.trim()) return send400(res, "city is required.", "Add ?city=Pune");
 
   const searchKw = keyword?.trim() || "software company";
   const userLat  = lat ? parseFloat(lat) : null;
   const userLon  = lon ? parseFloat(lon) : null;
+  const radiusKm = radius ? Math.min(parseFloat(radius) || 50, 50) : 50;
 
   log(`GET /search keyword="${searchKw}" city="${city}" lat=${userLat ?? "–"} lon=${userLon ?? "–"}`);
 
   try {
-    const result = await searchCompaniesByCity({ keyword: searchKw, city: city.trim(), userLat, userLon });
+    const result = await searchCompaniesByCity({ keyword: searchKw, city: city.trim(), userLat, userLon, radius: radiusKm, batchIndex: Number(batchIndex) || 0 });
     log(`Returning ${result.companies.length} companies for city "${city}"`);
     return res.status(200).json({ success: true, ...result });
   } catch (e) {

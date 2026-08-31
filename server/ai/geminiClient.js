@@ -13,7 +13,7 @@
  */
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-3.6-flash";
 
 function getClient() {
   const apiKey = (process.env.GEMINI_API_KEY || "").trim();
@@ -89,6 +89,11 @@ export async function callGemini(messages) {
     if (message.includes("PERMISSION_DENIED") || message.includes("billing")) {
       const e = new Error("Gemini API access denied. Ensure the Generative Language API is enabled in Google Cloud Console.");
       e.code = "PERMISSION_DENIED"; e.status = 503;
+      throw e;
+    }
+    if (status === 404 || /model.*(not found|no longer available|unavailable)/i.test(message)) {
+      const e = new Error(`Configured Gemini model "${GEMINI_MODEL}" is unavailable. Update the model in server/ai/geminiClient.js or check the Generative Language API model list.`);
+      e.code = "MODEL_UNAVAILABLE"; e.status = 503;
       throw e;
     }
     // Re-throw with original message

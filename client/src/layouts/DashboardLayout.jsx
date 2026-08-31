@@ -4,9 +4,9 @@ import { getThemePreference, applyTheme } from "../utils/helpers";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaTachometerAlt, FaUser, FaBriefcase, FaBook,
-  FaBookmark, FaRoad, FaRobot,
+  FaRoad, FaRobot,
   FaSignOutAlt, FaBars, FaTimes, FaRocket,
-  FaChevronLeft, FaBell, FaBuilding,
+  FaChevronLeft, FaBuilding,
 } from "react-icons/fa";
 import { useSelector } from "react-redux";
 
@@ -24,6 +24,90 @@ const menuItems = [
   { name: "Mock Interview",   icon: FaRobot,         path: "/student/mock-interview" },
 ];
 
+function SidebarContent({
+  onClose,
+  collapsed,
+  setCollapsed,
+  location,
+  user,
+  userInitial,
+  handleLogout,
+}) {
+  const isMobileDrawer = !!onClose;
+  const showLabels = isMobileDrawer || !collapsed;
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className={`flex items-center border-b border-white/10 dark:border-white/5 ${showLabels ? "justify-between px-4 py-4" : "justify-center px-0 py-5"}`}>
+        {showLabels ? (
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center" style={{ background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" }}>
+              <FaRocket className="text-white text-xs" />
+            </div>
+            <span className="font-bold text-white text-sm truncate">CareerLaunch AI</span>
+          </div>
+        ) : (
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto" style={{ background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" }}>
+            <FaRocket className="text-white text-xs" />
+          </div>
+        )}
+
+        {isMobileDrawer ? (
+          <button onClick={onClose} aria-label="Close sidebar" className="text-white/60 hover:text-white transition-colors p-1 ml-2 shrink-0">
+            <FaTimes className="text-sm" />
+          </button>
+        ) : (
+          <button onClick={() => setCollapsed(!collapsed)} aria-label="Toggle sidebar" className="hidden lg:flex text-white/40 hover:text-white/80 transition-colors p-1 shrink-0">
+            <motion.span animate={{ rotate: collapsed ? 180 : 0 }} transition={{ duration: 0.25 }}>
+              <FaChevronLeft className="text-xs" />
+            </motion.span>
+          </button>
+        )}
+      </div>
+
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const active = location.pathname.startsWith(item.path);
+          return (
+            <NavLink key={item.path} to={item.path} className={() => `relative flex items-center gap-3 rounded-xl transition-all duration-200 group ${!showLabels ? "justify-center px-0 py-3" : "px-3 py-2.5"} ${active ? "bg-white/15 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]" : "text-white/55 hover:bg-white/8 hover:text-white/90"}`}>
+              {active && (
+                <motion.div layoutId="sidebar-pill" className="absolute inset-0 rounded-xl bg-white/10" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />
+              )}
+              {active && showLabels && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-blue-400" />
+              )}
+              <Icon className={`relative z-10 shrink-0 text-sm ${active ? "text-blue-300" : ""}`} />
+              {showLabels && <span className="relative z-10 text-sm font-medium truncate">{item.name}</span>}
+              {!showLabels && (
+                <div className="absolute left-14 bg-neutral-900 text-white text-xs font-medium px-2 py-1 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
+                  {item.name}
+                </div>
+              )}
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      <div className="p-2 border-t border-white/10 dark:border-white/5 space-y-1">
+        {showLabels && (
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/8">
+            <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">{userInitial}</div>
+            <div className="min-w-0">
+              <p className="text-white text-sm font-semibold truncate">{user?.name || "Student"}</p>
+              <p className="text-white/40 text-xs truncate">{user?.email || "student@app.com"}</p>
+            </div>
+          </div>
+        )}
+        <button onClick={handleLogout} className={`w-full flex items-center gap-2.5 rounded-xl py-2.5 text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-colors duration-200 ${!showLabels ? "justify-center px-0" : "px-3"}`}>
+          <FaSignOutAlt className="text-sm shrink-0" />
+          {showLabels && <span className="text-sm font-medium">Logout</span>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,6 +122,7 @@ function DashboardLayout() {
   }, [darkMode]);
 
   /* close mobile sidebar on route change */
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   /* track whether we're on a "desktop" breakpoint (md = 768px) */
@@ -71,113 +156,6 @@ function DashboardLayout() {
   const userInitial = (user?.name || "S")[0].toUpperCase();
   const pageName    = menuItems.find((m) => location.pathname.startsWith(m.path))?.name ?? "Dashboard";
 
-  /* ── Sidebar content ── */
-  function SidebarContent({ onClose }) {
-    const isMobileDrawer = !!onClose;
-    const showLabels     = isMobileDrawer || !collapsed;
-
-    return (
-      <div className="flex flex-col h-full">
-
-        {/* Logo row */}
-        <div className={`flex items-center border-b border-white/10 dark:border-white/5
-          ${showLabels ? "justify-between px-4 py-4" : "justify-center px-0 py-5"}`}>
-          {showLabels ? (
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" }}>
-                <FaRocket className="text-white text-xs" />
-              </div>
-              <span className="font-bold text-white text-sm truncate">CareerLaunch AI</span>
-            </div>
-          ) : (
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto"
-              style={{ background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" }}>
-              <FaRocket className="text-white text-xs" />
-            </div>
-          )}
-
-          {isMobileDrawer ? (
-            <button onClick={onClose} aria-label="Close sidebar"
-              className="text-white/60 hover:text-white transition-colors p-1 ml-2 shrink-0">
-              <FaTimes className="text-sm" />
-            </button>
-          ) : (
-            <button onClick={() => setCollapsed(!collapsed)} aria-label="Toggle sidebar"
-              className="hidden lg:flex text-white/40 hover:text-white/80 transition-colors p-1 shrink-0">
-              <motion.span animate={{ rotate: collapsed ? 180 : 0 }} transition={{ duration: 0.25 }}>
-                <FaChevronLeft className="text-xs" />
-              </motion.span>
-            </button>
-          )}
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {menuItems.map((item) => {
-            const Icon   = item.icon;
-            const active = location.pathname.startsWith(item.path);
-            return (
-              <NavLink key={item.path} to={item.path}
-                className={() =>
-                  `relative flex items-center gap-3 rounded-xl transition-all duration-200 group
-                   ${!showLabels ? "justify-center px-0 py-3" : "px-3 py-2.5"}
-                   ${active
-                     ? "bg-white/15 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
-                     : "text-white/55 hover:bg-white/8 hover:text-white/90"}`
-                }
-              >
-                {active && (
-                  <motion.div layoutId="sidebar-pill"
-                    className="absolute inset-0 rounded-xl bg-white/10"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />
-                )}
-                {active && showLabels && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-blue-400" />
-                )}
-                <Icon className={`relative z-10 shrink-0 text-sm ${active ? "text-blue-300" : ""}`} />
-                {showLabels && (
-                  <span className="relative z-10 text-sm font-medium truncate">{item.name}</span>
-                )}
-                {/* Tooltip for collapsed icon-only mode */}
-                {!showLabels && (
-                  <div className="absolute left-14 bg-neutral-900 text-white text-xs font-medium
-                    px-2 py-1 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100
-                    pointer-events-none transition-opacity z-50 shadow-lg">
-                    {item.name}
-                  </div>
-                )}
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        {/* User + Logout */}
-        <div className="p-2 border-t border-white/10 dark:border-white/5 space-y-1">
-          {showLabels && (
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/8">
-              <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                {userInitial}
-              </div>
-              <div className="min-w-0">
-                <p className="text-white text-sm font-semibold truncate">{user?.name || "Student"}</p>
-                <p className="text-white/40 text-xs truncate">{user?.email || "student@app.com"}</p>
-              </div>
-            </div>
-          )}
-          <button onClick={handleLogout}
-            className={`w-full flex items-center gap-2.5 rounded-xl py-2.5 text-red-400
-              hover:bg-red-500/15 hover:text-red-300 transition-colors duration-200
-              ${!showLabels ? "justify-center px-0" : "px-3"}`}
-          >
-            <FaSignOutAlt className="text-sm shrink-0" />
-            {showLabels && <span className="text-sm font-medium">Logout</span>}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-[#080810] transition-colors duration-300">
 
@@ -200,7 +178,7 @@ function DashboardLayout() {
             className="fixed top-0 left-0 h-full w-64 z-50 lg:hidden"
             style={{ background: "linear-gradient(180deg,#0c1033 0%,#0d0f1e 100%)" }}
           >
-            <SidebarContent onClose={() => setMobileOpen(false)} />
+            <SidebarContent onClose={() => setMobileOpen(false)} collapsed={collapsed} setCollapsed={setCollapsed} location={location} user={user} userInitial={userInitial} handleLogout={handleLogout} />
           </motion.aside>
         )}
       </AnimatePresence>
@@ -212,7 +190,7 @@ function DashboardLayout() {
         className="hidden md:flex flex-col fixed top-0 left-0 h-full z-30 overflow-hidden shrink-0"
         style={{ background: "linear-gradient(180deg,#0c1033 0%,#0d0f1e 100%)" }}
       >
-        <SidebarContent />
+        <SidebarContent collapsed={collapsed} setCollapsed={setCollapsed} location={location} user={user} userInitial={userInitial} handleLogout={handleLogout} />
       </motion.aside>
 
       {/* ── Main content area ── */}
@@ -285,7 +263,7 @@ function DashboardLayout() {
               className="relative w-9 h-9 flex items-center justify-center rounded-xl
                 bg-neutral-100 dark:bg-white/8 text-neutral-500 dark:text-neutral-300
                 hover:bg-neutral-200 dark:hover:bg-white/15 transition-colors">
-              <FaBell className="text-sm" />
+              <span className="text-sm">🔔</span>
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full
                 border-2 border-white dark:border-[#0d0f1e]" />
             </motion.button>

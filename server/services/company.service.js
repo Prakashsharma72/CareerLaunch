@@ -175,7 +175,7 @@ async function searchViaGoogle(textQuery, apiKey) {
   log("info", "Google Places v2 → REQUEST", { textQuery });
   const { data, status } = await axios.post(
     "https://places.googleapis.com/v1/places:searchText",
-    { textQuery, maxResultCount: 20 },
+    { textQuery, maxResultCount: 500 },
     { headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": SEARCH_FIELD_MASK }, timeout: 15000 }
   );
   log("info", "Google Places v2 → RESPONSE", { httpStatus: status, count: data.places?.length ?? 0 });

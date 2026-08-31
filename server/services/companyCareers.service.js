@@ -1,9 +1,8 @@
 /**
  * companyCareers.service.js
  *
- * Fetches nearby software companies from Google Places, verifies career pages
- * on official websites, caches results in DB for 24 h, and returns only
- * companies with a validated careers/jobs page.
+ * Fetches nearby software companies from Google Places and optionally enriches
+ * them with verified career pages. Career verification never removes a place.
  */
 import axios from "axios";
 import { Op } from "sequelize";
@@ -247,7 +246,9 @@ function toResponseItem(company) {
     placeId:     company.placeId,
     companyName: company.companyName,
     website:     company.website || null,
-    careerUrl:   company.careerUrl,
+    careerUrl:   company.careerUrl || null,
+    careerVerified: Boolean(company.careerUrl),
+    mapsUrl:      company.mapsUrl || null,
     logo:        company.logo || null,
     address:     company.address || null,
     phone:       company.phone || null,
@@ -268,36 +269,46 @@ export async function getCompaniesWithCareers({
   radius = 15,
   keyword = "software company",
   city,
+  pageToken = null,
 }) {
   let payload;
 
   if (lat != null && lon != null) {
     payload = await getNearbyCompanies({
       lat, lon, radius, keyword,
+      pageToken,
       skipCareerProbe: true,
     });
   } else if (city?.trim()) {
     payload = await searchCompaniesByCity({
       keyword, city: city.trim(), userLat: lat, userLon: lon,
+      pageToken,
       skipCareerProbe: true,
     });
   } else {
     throw new Error("lat/lon or city is required");
   }
 
-  const companies = (payload.companies || []).filter(c => c.website);
-  const cacheMap  = await preloadCareerCache(companies.map(c => c.placeId));
-  const cacheHits = companies.filter(c => readCachedRow(cacheMap.get(c.placeId)) !== undefined).length;
+  const companies = payload.companies || [];
+  const withWebsites = companies.filter(c => c.website);
+  const cacheMap  = await preloadCareerCache(withWebsites.map(c => c.placeId));
+  const cacheHits = withWebsites.filter(c => readCachedRow(cacheMap.get(c.placeId)) !== undefined).length;
 
-  log(`Verifying ${companies.length} companies (${cacheHits} cache hits, ${companies.length - cacheHits} to check)`);
+  log(`Verifying ${withWebsites.length} companies (${cacheHits} cache hits, ${withWebsites.length - cacheHits} to check)`);
 
-  const verified    = await mapPool(companies, c => resolveCareerForCompany(c, cacheMap));
-  const withCareers = verified.filter(Boolean).map(toResponseItem);
+  const enriched = await mapPool(companies, async company => {
+    if (!company.website) return toResponseItem({ ...company, careerUrl: null });
+    const career = await resolveCareerForCompany(company, cacheMap);
+    return toResponseItem({ ...company, careerUrl: career?.careerUrl || null });
+  });
 
-  log(`Returning ${withCareers.length} companies with verified career pages`);
+  const verifiedCount = enriched.filter(company => company.careerVerified).length;
+  log(`Returning ${enriched.length} companies (${verifiedCount} with verified career pages)`);
   return {
-    companies: withCareers,
-    total:     withCareers.length,
+    companies: enriched,
+    total:     enriched.length,
+    verifiedCareerCount: verifiedCount,
+    nextPageToken: payload.nextPageToken || null,
     source:    "company_careers",
   };
 }

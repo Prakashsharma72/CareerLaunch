@@ -8,15 +8,15 @@
  *
  * Dark-mode: all cards use dark: variants.
  */
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
   FaUser, FaEnvelope, FaPhone, FaUniversity, FaGraduationCap,
   FaMapMarkerAlt, FaGithub, FaLinkedin, FaGlobe, FaFileAlt,
   FaDownload, FaTimes, FaPlus, FaCamera, FaCheck,
-  FaBriefcase, FaBookmark, FaRobot, FaStar,
-  FaCode, FaFire, FaTrophy, FaMedal, FaLightbulb, FaChartLine,
+  FaBriefcase, FaBookmark, FaRobot,
+  FaCode, FaFire, FaLightbulb, FaChartLine,
   FaCalendarAlt, FaBuilding, FaSpinner, FaBolt,
 } from "react-icons/fa";
 import { updateProfile as updateProfileApi, fetchStats, uploadResumeFile, uploadAvatarFile } from "../../services/authService";
@@ -133,6 +133,11 @@ function SaveBtn({ loading, saved }) {
   );
 }
 
+function formatDateInput(value) {
+  if (!value) return "";
+  return String(value).slice(0, 10);
+}
+
 /* ══════════════════════════════════════════════════════════
    MAIN COMPONENT
 ══════════════════════════════════════════════════════════ */
@@ -168,12 +173,13 @@ export default function Profile() {
   /* seed from Redux user */
   useEffect(() => {
     if (!user) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm({
       name:       user.name       ?? "",
       phone:      user.phone      ?? "",
       location:   user.location   ?? "",
       bio:        user.bio        ?? "",
-      dob:        user.dob        ?? "",
+      dob:        formatDateInput(user.dob),
       gender:     user.gender     ?? "",
       college:    user.college    ?? "",
       degree:     user.degree     ?? "",
@@ -304,6 +310,7 @@ export default function Profile() {
                 onChange={async e => {
                   const f = e.target.files[0];
                   if (!f) return;
+                  const previousAvatarUrl = avatarUrl;
                   // Show local preview immediately
                   setAvatarUrl(URL.createObjectURL(f));
                   setAvatarError(null);
@@ -314,6 +321,7 @@ export default function Profile() {
                     setAvatarUrl(res.data.profileImage);
                     await dispatch(refreshProfile());
                   } catch (err) {
+                    setAvatarUrl(previousAvatarUrl);
                     setAvatarError(err?.response?.data?.message || "Avatar upload failed");
                   } finally {
                     setAvatarUploading(false);

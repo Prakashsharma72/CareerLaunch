@@ -9,7 +9,7 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaBookmark, FaSearch, FaMapMarkerAlt, FaMoneyBillWave,
-  FaBriefcase, FaExternalLinkAlt, FaTrash, FaSyncAlt,
+  FaExternalLinkAlt, FaTrash, FaSyncAlt,
   FaClock, FaBuilding,
 } from "react-icons/fa";
 import { getSavedJobs, removeSavedJob } from "../../services/jobService";
@@ -165,7 +165,10 @@ export default function SavedJobs() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
   const handleRemove = async (savedId) => {
     setRemoving(savedId);
