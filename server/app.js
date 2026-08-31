@@ -14,37 +14,76 @@ import interviewRoutes    from "./routes/interview.routes.js";
 import companyRoutes      from "./routes/company.routes.js";
 import savedCompanyRoutes from "./routes/savedCompany.routes.js";
 import placesRoutes       from "./routes/places.routes.js";
+import companyCareersRoutes from "./routes/companyCareers.routes.js";
+import settingsRoutes     from "./routes/settings.routes.js";
+import uploadRoutes       from "./routes/upload.routes.js";
+import roadmapRoutes      from "./routes/roadmap.routes.js";
+import adminRoutes        from "./routes/admin.routes.js";
 
 import { errorHandler } from "./middleware/error.middleware.js";
 import sequelize         from "./config/db.js";  // eslint-disable-line no-unused-vars
 
 // Register all Sequelize models before sync
 import "./models/user.model.js";
+import "./models/pendingRegistration.model.js";
+import "./models/passwordReset.model.js";
 import "./models/job.model.js";
+import "./models/resource.model.js";
 import "./models/company.model.js";
 import "./models/savedCompany.model.js";
 import "./models/interviewSession.model.js";
 import "./models/interviewQuestion.model.js";
-import "./models/application.model.js";
 import "./models/roadmap.model.js";
-import "./models/resumeAnalysis.model.js";
 import "./models/savedJob.model.js";
+
+// Import associations after all models are loaded
+import "./models/associations.js";
 
 const app = express();
 
 /* ── CORS ─────────────────────────────────────────────────────────────────── */
-const allowedOrigins = [
+// Explicit allowlist — never use the open cors() wildcard in production.
+// On mobile browsers, a missing or wrong CORS header silently blocks the
+// request before it ever reaches the controller.
+const ALLOWED_ORIGINS = [
+  // Local development
   "http://localhost:5173",
-  "http://localhost:3000",
-];
+  "http://localhost:4173",
+  "http://127.0.0.1:5173",
+  // Production frontend — all Vercel domains for this project
+  // Custom domain
+  "https://careerlaunchai.in",
+  "https://www.careerlaunchai.in",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
 
-app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error("Not allowed by CORS"));
-  },
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+
+      if (ALLOWED_ORIGINS.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Allow any Vercel preview deployment for this project
+      if (/^https:\/\/(career-launch|careerlaunch)[\w-]*\.vercel\.app$/.test(origin)) {
+        return callback(null, true);
+      }
+
+      console.warn(`[cors] Blocked origin: ${origin}`);
+      return callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: ["Authorization"],
+    credentials: false,
+    optionsSuccessStatus: 200,
+  })
+);
+
+// Handle ALL preflight OPTIONS requests before any other middleware
+app.options("*", cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -59,6 +98,11 @@ app.use("/api/interview",       interviewRoutes);
 app.use("/api/companies",       companyRoutes);
 app.use("/api/saved-companies", savedCompanyRoutes);
 app.use("/api/places",          placesRoutes);
+app.use("/api/company-careers", companyCareersRoutes);
+app.use("/api/settings",        settingsRoutes);
+app.use("/api/upload",          uploadRoutes);
+app.use("/api/roadmaps",        roadmapRoutes);
+app.use("/api/admin",           adminRoutes);
 
 /* ── Health check ─────────────────────────────────────────────────────────── */
 app.get("/", (_req, res) => res.send("🚀 CareerLaunch AI API is running"));

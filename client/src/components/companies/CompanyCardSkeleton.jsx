@@ -2,13 +2,15 @@
  * CompanyCardSkeleton.jsx — animated placeholder while companies load
  * Matches the updated CompanyCard layout exactly.
  */
+import { memo } from "react";
+
 function Shimmer({ className = "" }) {
   return (
     <div className={`animate-pulse bg-gray-200 dark:bg-white/8 rounded-lg ${className}`} />
   );
 }
 
-export default function CompanyCardSkeleton() {
+function CompanyCardSkeleton() {
   return (
     <div className="flex flex-col h-full bg-white dark:bg-[#0f1123]
       border border-gray-100 dark:border-white/8 rounded-2xl shadow-sm overflow-hidden">
@@ -48,3 +50,5 @@ export default function CompanyCardSkeleton() {
     </div>
   );
 }
+
+export default memo(CompanyCardSkeleton);

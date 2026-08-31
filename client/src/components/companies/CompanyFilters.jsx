@@ -8,7 +8,7 @@
  *
  * Chips wrap automatically on all sizes.
  */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   FaSearch, FaMapMarkerAlt, FaStar, FaRegClock,
   FaTimes, FaSlidersH, FaLocationArrow,
@@ -32,10 +32,11 @@ export default function CompanyFilters({
 }) {
   const [kwInput,   setKwInput]   = useState(filters.keyword || "software company");
   const [cityInput, setCityInput] = useState(filters.city    || "");
-  const nameDebounce = useRef(null);
 
-  useEffect(() => { setKwInput(filters.keyword  || "software company"); }, [filters.keyword]);
-  useEffect(() => { setCityInput(filters.city   || "");                 }, [filters.city]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setKwInput(filters.keyword || "software company"); }, [filters.keyword]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setCityInput(filters.city || ""); }, [filters.city]);
 
   function submitSearch() {
     const kw   = kwInput.trim()   || "software company";
@@ -47,11 +48,6 @@ export default function CompanyFilters({
 
   function clearCity()    { setCityInput(""); onFilter({ city: "" }); }
   function clearKeyword() { setKwInput(""); onFilter({ keyword: "software company" }); }
-
-  function handleNameFilter(value) {
-    clearTimeout(nameDebounce.current);
-    nameDebounce.current = setTimeout(() => onFilter({ search: value }), 280);
-  }
 
   const anyChipActive =
     (filters.minRating > 0) || filters.openNow ||

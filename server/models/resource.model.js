@@ -23,10 +23,21 @@ const Resource = db.define(
     category: {
       type: DataTypes.STRING,
     },
+
+    // Map createdAt and updatedAt to match DB columns
+    createdAt: {
+      type: DataTypes.DATE,
+      field: "created_at",
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      field: "updated_at",
+    },
   },
   {
     tableName: "resources",
     timestamps: true,
+    underscored: true,
   }
 );
 

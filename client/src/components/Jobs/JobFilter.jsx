@@ -38,6 +38,7 @@ export default function JobFilter({
   /* ── Sync controlled values from parent ─────────────────────────────── */
   useEffect(() => {
     if (locationValue !== location) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocation(locationValue);
       // Immediately fire so the parent's filter runs
       onFilter({ search, location: locationValue, jobType, radius, includeRemote });
@@ -46,11 +47,13 @@ export default function JobFilter({
   }, [locationValue]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (radiusValue !== radius) setRadius(radiusValue);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radiusValue]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (includeRemoteValue !== includeRemote) setIncludeRemote(includeRemoteValue);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [includeRemoteValue]);

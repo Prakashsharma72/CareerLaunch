@@ -7,6 +7,7 @@
  *  - padding scales p-4 md:p-6
  *  - min-w-0 / truncate so long values never overflow
  */
+import { memo }        from "react";
 import { FaArrowRight } from "react-icons/fa";
 
 function DashboardCard({
@@ -63,4 +64,4 @@ function DashboardCard({
   );
 }
 
-export default DashboardCard;
+export default memo(DashboardCard);

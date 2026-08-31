@@ -19,6 +19,11 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+
+
+
+
+
 /* ── Step 2: guarantee a strong JWT_SECRET ──────────────────────────────── */
 import { ensureJwtSecret } from "./config/ensureSecret.js";
 ensureJwtSecret();
@@ -26,6 +31,7 @@ ensureJwtSecret();
 /* ── Remaining imports (safe to import after env is ready) ──────────────── */
 import app       from "./app.js";
 import sequelize from "./config/db.js";
+import { verifySmtpConnection } from "./services/email.service.js";
 
 const LOG = "[server]";
 const log = (msg) => console.log(`${new Date().toISOString()} ${LOG} ${msg}`);
@@ -92,6 +98,153 @@ async function runMigrations() {
   // ── 1. Create missing tables ────────────────────────────────────────────
   const AI = dialect === "sqlite" ? "INTEGER PRIMARY KEY AUTOINCREMENT" : "INT AUTO_INCREMENT PRIMARY KEY";
   const NOW = dialect === "sqlite" ? "CURRENT_TIMESTAMP" : "CURRENT_TIMESTAMP";
+
+  // ── Core tables that must exist before Sequelize sync ─────────────────
+  await createTableIfMissing("users", `
+    CREATE TABLE users (
+      id            ${AI},
+      name          VARCHAR(255)  NOT NULL,
+      email         VARCHAR(255)  NOT NULL UNIQUE,
+      password      VARCHAR(255)  NOT NULL,
+      role          VARCHAR(50)   NOT NULL DEFAULT 'student',
+      phone         VARCHAR(20),
+      location      VARCHAR(255),
+      bio           TEXT,
+      education     TEXT,
+      skills        TEXT,
+      experience    TEXT,
+      dob           DATE,
+      gender        VARCHAR(50),
+      college       VARCHAR(255),
+      degree        VARCHAR(100),
+      branch        VARCHAR(100),
+      grad_year     VARCHAR(10),
+      languages     VARCHAR(255),
+      resume_url    TEXT,
+      profile_image TEXT,
+      otp           VARCHAR(6),
+      otp_expires_at DATETIME,
+      is_verified   TINYINT(1) DEFAULT 0,
+      created_at    DATETIME DEFAULT ${NOW}
+    )
+  `);
+
+  await createTableIfMissing("pending_registrations", `
+    CREATE TABLE pending_registrations (
+      id            ${AI},
+      name          VARCHAR(255)  NOT NULL,
+      email         VARCHAR(255)  NOT NULL UNIQUE,
+      password      VARCHAR(255)  NOT NULL,
+      role          VARCHAR(50)   NOT NULL DEFAULT 'student',
+      phone         VARCHAR(20),
+      education     TEXT,
+      skills        TEXT,
+      otp           VARCHAR(6),
+      otp_expires_at DATETIME,
+      created_at    DATETIME DEFAULT ${NOW},
+      updated_at    DATETIME DEFAULT ${NOW}
+    )
+  `);
+
+  await createTableIfMissing("password_resets", `
+    CREATE TABLE password_resets (
+      id          ${AI},
+      email       VARCHAR(255) NOT NULL UNIQUE,
+      token       VARCHAR(255) NOT NULL UNIQUE,
+      expires_at  DATETIME NOT NULL,
+      created_at  DATETIME DEFAULT ${NOW},
+      updated_at  DATETIME DEFAULT ${NOW}
+    )
+  `);
+
+  await createTableIfMissing("resources", `
+    CREATE TABLE resources (
+      id         ${AI},
+      title      VARCHAR(255) NOT NULL,
+      category   VARCHAR(255),
+      link       TEXT         NOT NULL,
+      created_at DATETIME DEFAULT ${NOW},
+      updated_at DATETIME DEFAULT ${NOW}
+    )
+  `);
+
+  await createTableIfMissing("jobs", `
+    CREATE TABLE jobs (
+      id               ${AI},
+      external_job_id  VARCHAR(255),
+      source           VARCHAR(100) DEFAULT 'manual',
+      google_place_id  VARCHAR(255),
+      title            VARCHAR(255) NOT NULL,
+      company          VARCHAR(255) NOT NULL,
+      company_logo     TEXT,
+      website          VARCHAR(512),
+      career_page      VARCHAR(512),
+      location         VARCHAR(255),
+      employment_type  VARCHAR(50),
+      experience_level VARCHAR(50)  DEFAULT 'Fresher',
+      salary           VARCHAR(100),
+      skills_required  TEXT,
+      description      TEXT,
+      apply_url        TEXT,
+      company_rating   FLOAT,
+      latitude         DOUBLE,
+      longitude        DOUBLE,
+      posted_date      DATE,
+      expires_at       DATE,
+      status           VARCHAR(20)  DEFAULT 'active',
+      applicants       TEXT         DEFAULT '[]',
+      posted_by        INT,
+      created_at       DATETIME DEFAULT ${NOW},
+      updated_at       DATETIME DEFAULT ${NOW}
+    )
+  `);
+
+  await createTableIfMissing("saved_jobs", `
+    CREATE TABLE saved_jobs (
+      id               ${AI},
+      user_id          INT          NOT NULL,
+      job_id           INT,
+      external_job_id  VARCHAR(255),
+      source           VARCHAR(100),
+      title            VARCHAR(255),
+      company          VARCHAR(255),
+      company_logo     TEXT,
+      location         VARCHAR(255),
+      salary           VARCHAR(255),
+      employment_type  VARCHAR(100),
+      apply_url        TEXT,
+      posted_date      VARCHAR(50),
+      saved_at         DATETIME DEFAULT ${NOW}
+      ${dialect === "mysql" ? ", UNIQUE KEY uq_saved_jobs_user_ext (user_id, external_job_id)" : ", UNIQUE(user_id, external_job_id)"}
+    )
+  `);
+
+  await createTableIfMissing("roadmaps", `
+    CREATE TABLE roadmaps (
+      id              ${AI},
+      user_id         INT,
+      title           VARCHAR(255),
+      target_role     VARCHAR(100),
+      roadmap_content TEXT,
+      created_at      DATETIME DEFAULT ${NOW}
+    )
+  `);
+
+  await createTableIfMissing("interview_sessions", `
+    CREATE TABLE interview_sessions (
+      id                 ${AI},
+      user_id            INT          NOT NULL,
+      role               VARCHAR(255) NOT NULL,
+      difficulty         VARCHAR(255) NOT NULL,
+      status             VARCHAR(50)  DEFAULT 'active',
+      total_questions    INT          DEFAULT 0,
+      answered_questions INT          DEFAULT 0,
+      overall_score      FLOAT        DEFAULT 0,
+      report             TEXT,
+      created_at         DATETIME DEFAULT ${NOW},
+      updated_at         DATETIME DEFAULT ${NOW}
+    )
+  `);
 
   await createTableIfMissing("companies", `
     CREATE TABLE companies (
@@ -191,6 +344,23 @@ async function runMigrations() {
     ["companies", "is_open_now",       "TINYINT(1)"],
     ["companies", "editorial_summary", "TEXT"],
     ["companies", "photo_refs",        "TEXT"],
+    ["companies", "career_valid",      "TINYINT(1)"],
+    ["companies", "career_checked_at", "DATETIME"],
+
+    // users — OTP verification
+    ["users", "otp", "VARCHAR(6)"],
+    ["users", "otp_expires_at", "DATETIME"],
+    ["users", "is_verified", "TINYINT(1) DEFAULT 0"],
+    ["users", "location", "VARCHAR(255)"],
+    ["users", "bio", "TEXT"],
+    ["users", "experience", "TEXT"],
+    ["users", "dob", "DATE"],
+    ["users", "gender", "VARCHAR(50)"],
+    ["users", "college", "VARCHAR(255)"],
+    ["users", "degree", "VARCHAR(100)"],
+    ["users", "branch", "VARCHAR(100)"],
+    ["users", "grad_year", "VARCHAR(10)"],
+    ["users", "languages", "VARCHAR(255)"],
 
     // saved_companies
     ["saved_companies", "external_company_id", "VARCHAR(255)"],
@@ -235,11 +405,6 @@ async function runMigrations() {
     ["jobs", "expires_at",       "DATE"],
     ["jobs", "status",           "VARCHAR(20) DEFAULT 'active'"],
     ["jobs", "applicants",       "TEXT"],
-
-    // resume_analyses
-    ["resume_analyses", "feedback",   "TEXT"],
-    ["resume_analyses", "resume_url", "TEXT"],
-    ["resume_analyses", "ats_score",  "FLOAT"],
   ];
 
   for (const [table, column, definition] of columns) {
@@ -274,6 +439,17 @@ async function startServer() {
     await sequelize.authenticate();
     console.log("✓ Database connected");
 
+    // Log SMTP env visibility (do not print SMTP_PASS)
+    console.log(`[server] SMTP env: host=${process.env.SMTP_HOST || "(missing)"}, port=${process.env.SMTP_PORT || "(missing)"}, user=${process.env.SMTP_USER ? process.env.SMTP_USER.replace(/(.+?)@/, '***@') : "(missing)"}`);
+
+    try {
+      await verifySmtpConnection();
+      console.log("✓ SMTP verification succeeded");
+    } catch (smtpError) {
+      console.error(`${new Date().toISOString()} ${LOG} ❌ SMTP verification failed:`, smtpError.message);
+      console.error(`${new Date().toISOString()} ${LOG} ❌ Email sending will fail until SMTP is configured correctly.`);
+    }
+
     // Run migrations BEFORE sync so columns exist when Sequelize validates
     await runMigrations();
 
@@ -289,12 +465,20 @@ async function startServer() {
 
   /* ── HTTP server ────────────────────────────────────────────────────── */
   const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
+
+  const server = app.listen(PORT, () => {
     log(`🚀 HTTP server running on port ${PORT}`);
-    log(`   POST http://localhost:${PORT}/api/auth/register`);
-    log(`   POST http://localhost:${PORT}/api/auth/login`);
-    log(`   GET  http://localhost:${PORT}/api/jobs`);
-    log(`   GET  http://localhost:${PORT}/api/companies`);
+  });
+
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`\n✗ Port ${PORT} is already in use.`);
+      console.error(`  Stop the other process:  netstat -ano | findstr :${PORT}`);
+      console.error(`  Then kill its PID:       taskkill /PID <pid> /F`);
+      console.error(`  Or use a different port: set PORT=5001 in server/.env\n`);
+      process.exit(1);
+    }
+    throw err;
   });
 }
 

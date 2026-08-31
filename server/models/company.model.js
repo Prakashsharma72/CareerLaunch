@@ -35,6 +35,16 @@ const Company = db.define(
       allowNull: true,
       field:     "career_page",
     },
+    careerValid: {
+      type:         DataTypes.BOOLEAN,
+      allowNull:    true,
+      field:        "career_valid",
+    },
+    careerCheckedAt: {
+      type:      DataTypes.DATE,
+      allowNull: true,
+      field:     "career_checked_at",
+    },
     address: {
       type:      DataTypes.TEXT,
       allowNull: true,

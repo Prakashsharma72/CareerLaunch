@@ -14,8 +14,6 @@
  */
 import { createSlice, createSelector } from "@reduxjs/toolkit";
 
-const PAGE_SIZE = 9;
-
 const initialState = {
   /* ── Location ───────────────────────────────────────────────── */
   location: {
@@ -40,6 +38,7 @@ const initialState = {
     maxRadius: 50,         // km — used for GPS radius chip
     openNow:   false,
     keyword:   "software company",  // sent to Google Places API
+    batchIndex: 0,                   // related provider-query batch already loaded
   },
 
   /* ── UI state ───────────────────────────────────────────────── */
@@ -88,6 +87,23 @@ const placesSlice = createSlice({
     fetchStart(state) {
       state.loading   = true;
       state.error     = null;
+      state.companies = [];
+      state.total     = 0;
+      state.source    = null;
+      state.page      = 1;
+    },
+    appendFetchStart(state) {
+      state.loading = true;
+      state.error = null;
+    },
+    appendFetchSuccess(state, action) {
+      const incoming = action.payload.companies || [];
+      const existingIds = new Set(state.companies.map(company => company.placeId));
+      state.companies = [...state.companies, ...incoming.filter(company => !existingIds.has(company.placeId))]
+        .sort((first, second) => (first.distanceKm ?? Infinity) - (second.distanceKm ?? Infinity));
+      state.total = state.companies.length;
+      state.loading = false;
+      state.source = action.payload.source || state.source;
     },
     fetchSuccess(state, action) {
       const { companies = [], total, source } = action.payload;
@@ -146,6 +162,8 @@ export const {
   setLocationError,
   setManualCity,
   fetchStart,
+  appendFetchStart,
+  appendFetchSuccess,
   fetchSuccess,
   fetchFailure,
   setFilter,

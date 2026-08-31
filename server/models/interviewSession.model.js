@@ -10,44 +10,52 @@ const InterviewSession = db.define(
       primaryKey: true,
     },
     userId: {
-      type: DataTypes.INTEGER,
+      type:      DataTypes.INTEGER,
       allowNull: false,
-      field: "user_id",
+      field:     "user_id",
     },
     role: {
-      type: DataTypes.STRING,
+      type:      DataTypes.STRING,
       allowNull: false,
     },
     difficulty: {
-      type: DataTypes.STRING,
+      type:      DataTypes.STRING,
       allowNull: false,
     },
     status: {
-      // "active" | "completed"
-      type: DataTypes.STRING,
+      type:         DataTypes.STRING,
       defaultValue: "active",
     },
     totalQuestions: {
-      type: DataTypes.INTEGER,
+      type:         DataTypes.INTEGER,
       defaultValue: 0,
+      field:        "total_questions",
     },
     answeredQuestions: {
-      type: DataTypes.INTEGER,
+      type:         DataTypes.INTEGER,
       defaultValue: 0,
+      field:        "answered_questions",
     },
     overallScore: {
-      type: DataTypes.FLOAT,
+      type:         DataTypes.FLOAT,
       defaultValue: 0,
+      field:        "overall_score",
     },
-    // Full AI-generated final report stored as JSON text
     report: {
-      type: DataTypes.TEXT,
+      type:         DataTypes.TEXT,
       defaultValue: null,
+    },
+    // The table uses started_at instead of created_at
+    createdAt: {
+      type:  DataTypes.DATE,
+      field: "started_at",
     },
   },
   {
-    tableName: "interview_sessions",
-    timestamps: true,
+    tableName:  "interview_sessions",
+    // Disable automatic timestamp management — the table has started_at (no updated_at)
+    timestamps:  false,
+    underscored: true,
   }
 );
 

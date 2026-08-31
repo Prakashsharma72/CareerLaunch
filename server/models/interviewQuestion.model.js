@@ -5,49 +5,50 @@ const InterviewQuestion = db.define(
   "InterviewQuestion",
   {
     id: {
-      type: DataTypes.INTEGER,
+      type:          DataTypes.INTEGER,
       autoIncrement: true,
-      primaryKey: true,
+      primaryKey:    true,
     },
     sessionId: {
-      type: DataTypes.INTEGER,
+      type:      DataTypes.INTEGER,
       allowNull: false,
+      field:     "session_id",
     },
     questionNumber: {
-      type: DataTypes.INTEGER,
+      type:      DataTypes.INTEGER,
       allowNull: false,
+      field:     "question_number",
     },
     category: {
-      // "technical" | "behavioral" | "conceptual"
-      type: DataTypes.STRING,
+      type:         DataTypes.STRING,
       defaultValue: "technical",
     },
     question: {
-      type: DataTypes.TEXT,
+      type:      DataTypes.TEXT,
       allowNull: false,
     },
     userAnswer: {
-      type: DataTypes.TEXT,
+      type:         DataTypes.TEXT,
       defaultValue: null,
+      field:        "user_answer",
     },
-    // Full AI feedback object stored as JSON text
     feedback: {
-      type: DataTypes.TEXT,
+      type:         DataTypes.TEXT,
       defaultValue: null,
     },
     score: {
-      // 1–10
-      type: DataTypes.FLOAT,
+      type:         DataTypes.FLOAT,
       defaultValue: null,
     },
     skipped: {
-      type: DataTypes.BOOLEAN,
+      type:         DataTypes.BOOLEAN,
       defaultValue: false,
     },
   },
   {
-    tableName: "interview_questions",
-    timestamps: true,
+    tableName:   "interview_questions",
+    timestamps:  true,          // table has created_at + updated_at
+    underscored: true,
   }
 );
 

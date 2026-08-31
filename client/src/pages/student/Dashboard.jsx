@@ -13,10 +13,10 @@ import { useNavigate }   from "react-router-dom";
 import { motion }        from "framer-motion";
 import { useSelector }   from "react-redux";
 import {
-  FaBriefcase, FaBookmark, FaFileAlt, FaRobot,
+  FaBriefcase, FaBookmark, FaRobot,
   FaArrowRight, FaCheckCircle, FaBrain,
-  FaChartLine, FaRoad, FaMapMarkerAlt, FaStar,
-  FaBolt, FaFire, FaTrophy,
+  FaRoad, FaMapMarkerAlt, FaStar,
+  FaBolt, FaFire, FaTrophy, FaChartLine,
 } from "react-icons/fa";
 import DashboardCard from "../../components/dashboard/DashboardCard";
 import { fetchStats }    from "../../services/authService";
@@ -111,24 +111,26 @@ export default function Dashboard() {
     finally { setJobsLoading(false); }
   }, []);
 
-  useEffect(() => { loadStats(); loadJobs(); }, [loadStats, loadJobs]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadStats();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadJobs();
+  }, [loadStats, loadJobs]);
 
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-  const resumeScore  = stats?.resumeScore ?? 0;
   const interviewPct = Math.min((stats?.interviews ?? 0) * 20, 100);
   const roadmapPct   = Math.min((stats?.roadmaps   ?? 0) * 25, 100);
 
   const progressData = [
-    { label: "Resume Strength",     value: resumeScore,  ringColor: "#22c55e", tw: "from-green-400 to-green-600"    },
     { label: "Interview Readiness", value: interviewPct, ringColor: "#3b82f6", tw: "from-blue-400 to-blue-600"     },
     { label: "Roadmap Completion",  value: roadmapPct,   ringColor: "#8b5cf6", tw: "from-violet-400 to-violet-600" },
   ];
 
   const quickActions = [
-    { label: "Analyze Resume",   color: "from-blue-500 to-blue-600",    icon: FaFileAlt,   action: () => navigate("/student/resume-analyzer")  },
-    { label: "Generate Roadmap", color: "from-green-500 to-green-600",  icon: FaRoad,      action: () => navigate("/student/roadmap-generator") },
+    { label: "Request Roadmap", color: "from-green-500 to-green-600",  icon: FaRoad,      action: () => navigate("/student/roadmap-generator") },
     { label: "Mock Interview",   color: "from-violet-500 to-violet-600",icon: FaRobot,     action: () => navigate("/student/mock-interview")    },
     { label: "Find Jobs",        color: "from-amber-500 to-amber-600",  icon: FaBriefcase, action: () => navigate("/student/jobs")              },
   ];
@@ -136,7 +138,9 @@ export default function Dashboard() {
   const aiInsights = [
     {
       icon:  FaBolt,
-      text:  resumeScore > 0 ? `Your resume score is ${resumeScore}% — keep improving!` : "Analyze your resume to get an AI score.",
+      text:  stats?.interviews > 0
+        ? `You've completed ${stats.interviews} mock interview${stats.interviews > 1 ? "s" : ""}. Keep practising!`
+        : "Start a mock interview to test your skills.",
       color: "text-yellow-500 bg-yellow-50 dark:bg-yellow-500/10",
     },
     {
@@ -146,9 +150,9 @@ export default function Dashboard() {
     },
     {
       icon:  FaChartLine,
-      text:  stats?.appliedJobs > 0
-        ? `You've applied to ${stats.appliedJobs} jobs — great work!`
-        : "Start applying to jobs to track your progress.",
+      text:  stats?.savedJobs > 0
+        ? `You've saved ${stats.savedJobs} jobs — keep exploring!`
+        : "Start saving jobs to track your favourites.",
       color: "text-blue-500 bg-blue-50 dark:bg-blue-500/10",
     },
   ];
@@ -189,14 +193,12 @@ export default function Dashboard() {
               ? <><Shimmer className="w-16 h-12 rounded-xl" /><Shimmer className="w-16 h-12 rounded-xl" /></>
               : <>
                   <div className="text-center bg-white/15 border border-white/20 rounded-xl px-3 py-2">
-                    <div className="text-lg sm:text-xl font-bold text-white">{stats?.appliedJobs ?? 0}</div>
-                    <div className="text-white/60 text-[10px]">Applied</div>
+                    <div className="text-lg sm:text-xl font-bold text-white">{stats?.savedJobs ?? 0}</div>
+                    <div className="text-white/60 text-[10px]">Saved</div>
                   </div>
                   <div className="text-center bg-white/15 border border-white/20 rounded-xl px-3 py-2">
-                    <div className="text-lg sm:text-xl font-bold text-white">
-                      {resumeScore > 0 ? `${resumeScore}%` : "—"}
-                    </div>
-                    <div className="text-white/60 text-[10px]">Resume</div>
+                    <div className="text-lg sm:text-xl font-bold text-white">{stats?.interviews ?? 0}</div>
+                    <div className="text-white/60 text-[10px]">Interviews</div>
                   </div>
                 </>}
           </div>
@@ -210,17 +212,17 @@ export default function Dashboard() {
           ? Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} className="h-24 sm:h-28 rounded-2xl" />)
           : <>
               <DashboardCard
-                title="Applied Jobs"    value={stats?.appliedJobs  ?? 0}
-                icon={<FaBriefcase />}  bgColor="from-blue-500 to-blue-700"
-                onClick={() => navigate("/student/jobs")} />
-              <DashboardCard
                 title="Saved Jobs"      value={stats?.savedJobs    ?? 0}
-                icon={<FaBookmark />}   bgColor="from-green-500 to-green-700"
+                icon={<FaBookmark />}   bgColor="from-blue-500 to-blue-700"
                 onClick={() => navigate("/student/saved-jobs")} />
               <DashboardCard
-                title="Resume Score"    value={resumeScore > 0 ? `${resumeScore}%` : "—"}
-                icon={<FaFileAlt />}    bgColor="from-amber-500 to-amber-600"
-                onClick={() => navigate("/student/resume-analyzer")} />
+                title="Saved Companies" value={stats?.savedCompanies ?? 0}
+                icon={<FaBriefcase />}  bgColor="from-green-500 to-green-700"
+                onClick={() => navigate("/student/saved-companies")} />
+              <DashboardCard
+                title="Roadmaps"        value={stats?.roadmaps    ?? 0}
+                icon={<FaRoad />}       bgColor="from-amber-500 to-amber-600"
+                onClick={() => navigate("/student/roadmap-generator")} />
               <DashboardCard
                 title="Mock Interviews" value={stats?.interviews   ?? 0}
                 icon={<FaRobot />}      bgColor="from-violet-500 to-violet-700"

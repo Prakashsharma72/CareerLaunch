@@ -58,3 +58,19 @@ export const formatSalary = (amount) => {
   if (!amount) return "0";
   return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
+
+export const getThemePreference = () => {
+  if (typeof window === "undefined") return false;
+  const stored = window.localStorage.getItem("theme");
+  if (stored === "dark") return true;
+  if (stored === "light") return false;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+};
+
+export const applyTheme = (darkMode) => {
+  if (typeof document === "undefined") return;
+  document.documentElement.classList.toggle("dark", darkMode);
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem("theme", darkMode ? "dark" : "light");
+  }
+};

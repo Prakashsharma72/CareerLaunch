@@ -2,7 +2,7 @@ import User from "../models/user.model.js";
 
 /** Fields that are safe to return to the client (never include password). */
 const SAFE_ATTRS = {
-  exclude: ["password"],
+  exclude: ["password", "otp", "otpExpiresAt"],
 };
 
 /**
@@ -53,35 +53,27 @@ export async function updateUserProfile(id, body) {
 
 /**
  * Get dashboard stats for a user:
- * - applied jobs count
  * - saved jobs count
  * - saved companies count
  * - interview sessions count
  * - roadmaps count
- * - latest resume analysis score
  */
 export async function getUserStats(userId) {
-  // Lazy-import models to avoid circular dependency issues
   const { default: db } = await import("../config/db.js");
 
   const [[stats]] = await db.query(
     `SELECT
-       (SELECT COUNT(*) FROM applications    WHERE user_id = :uid) AS applied_jobs,
        (SELECT COUNT(*) FROM saved_jobs      WHERE user_id = :uid) AS saved_jobs,
        (SELECT COUNT(*) FROM saved_companies WHERE user_id = :uid) AS saved_companies,
        (SELECT COUNT(*) FROM interview_sessions WHERE user_id = :uid) AS interviews,
-       (SELECT COUNT(*) FROM roadmaps        WHERE user_id = :uid) AS roadmaps,
-       (SELECT ats_score FROM resume_analyses WHERE user_id = :uid
-        ORDER BY created_at DESC LIMIT 1)                          AS resume_score`,
+       (SELECT COUNT(*) FROM roadmaps        WHERE user_id = :uid) AS roadmaps`,
     { replacements: { uid: userId } }
   );
 
   return {
-    appliedJobs:      Number(stats.applied_jobs    || 0),
     savedJobs:        Number(stats.saved_jobs      || 0),
     savedCompanies:   Number(stats.saved_companies || 0),
     interviews:       Number(stats.interviews      || 0),
     roadmaps:         Number(stats.roadmaps        || 0),
-    resumeScore:      stats.resume_score != null ? Number(stats.resume_score) : null,
   };
 }

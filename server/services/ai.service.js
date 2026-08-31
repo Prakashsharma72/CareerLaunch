@@ -1,42 +1,20 @@
-import axios from "axios";
 import Chat from "../models/chat.model.js";
+import { callGemini } from "../ai/geminiClient.js";
 
 /**
- * AI CHAT SERVICE
+ * AI CHAT SERVICE — powered by Gemini
  */
 export const chatWithAIService = async (userId, message) => {
-  const response = await axios.post(
-    "https://api.openai.com/v1/chat/completions",
+  const reply = await callGemini([
     {
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a career assistant helping students with jobs, resumes, and interviews.",
-        },
-        {
-          role: "user",
-          content: message,
-        },
-      ],
+      role:    "system",
+      content: "You are a career assistant helping students with jobs, resumes, and interviews. Give clear and practical advice.",
     },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
+    { role: "user", content: message },
+  ]);
 
-  const aiReply = response.data.choices[0].message.content;
+  // Save chat in DB
+  await Chat.create({ userId, message, response: reply });
 
-  // Save chat in DB (SQL)
-  await Chat.create({
-    userId,
-    message,
-    response: aiReply,
-  });
-
-  return aiReply;
+  return reply;
 };

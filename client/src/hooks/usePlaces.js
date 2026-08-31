@@ -7,7 +7,7 @@
  *  3. fetchByCity passes the current keyword correctly
  *  4. Keyword param is separate from client-side name filter
  */
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   setLocationStatus,
@@ -17,6 +17,10 @@ import {
   fetchStart,
   fetchSuccess,
   fetchFailure,
+  appendFetchStart,
+  appendFetchSuccess,
+  setFilter,
+  setPage,
 } from "../redux/placesSlice";
 import { getNearbyCompanies, searchCompaniesByCity } from "../services/placesService";
 
@@ -41,22 +45,34 @@ export default function usePlaces() {
   const dispatch = useDispatch();
   const location = useSelector(s => s.places.location);
   const filters  = useSelector(s => s.places.filters);
+  const page = useSelector(s => s.places.page);
+  const requestVersion = useRef(0);
 
   /* ── Core fetch — all params explicit, no stale closure ──────── */
-  const doFetch = useCallback(async ({ lat, lon, city, keyword, radius }) => {
-    dispatch(fetchStart());
+  const doFetch = useCallback(async ({ mode, lat, lon, city, keyword, radius, batchIndex = 0, append = false, version }) => {
+    const currentVersion = version ?? ++requestVersion.current;
+    const searchKeyword = keyword?.trim() || "software company";
+    const searchRadius = radius ?? 15;
+    dispatch(append ? appendFetchStart() : fetchStart());
     try {
       let res;
-      if (lat != null && lon != null) {
-        res = await getNearbyCompanies(lat, lon, radius ?? 15, keyword ?? "software company");
-      } else if (city?.trim()) {
-        res = await searchCompaniesByCity(keyword ?? "software company", city.trim(), lat, lon);
+      if (mode === "city" && city?.trim()) {
+        res = await searchCompaniesByCity({
+          city: city.trim(),
+          keyword: searchKeyword,
+          radius: searchRadius,
+          batchIndex,
+        });
+      } else if (mode === "nearby" && lat != null && lon != null) {
+        res = await getNearbyCompanies(lat, lon, searchRadius, searchKeyword, batchIndex);
       } else {
         dispatch(fetchSuccess({ companies: [], total: 0, source: "no_location" }));
         return;
       }
-      dispatch(fetchSuccess(res.data));
+      if (currentVersion !== requestVersion.current) return;
+      dispatch(append ? appendFetchSuccess(res.data) : fetchSuccess(res.data));
     } catch (e) {
+      if (currentVersion !== requestVersion.current) return;
       const payload = e?.response?.data || { reason: e.message || "Failed to fetch companies" };
       dispatch(fetchFailure(payload));
     }
@@ -68,17 +84,21 @@ export default function usePlaces() {
       dispatch(setLocationError("Geolocation is not supported by your browser."));
       return;
     }
+    const version = ++requestVersion.current;
+    dispatch(setFilter({ city: "", batchIndex: 0 }));
     dispatch(setLocationStatus("requesting"));
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lon } = pos.coords;
         const { city, fullCity } = await reverseGeocode(lat, lon);
+        if (version !== requestVersion.current) return;
         dispatch(setLocationGranted({ lat, lon, city, fullCity }));
         // Read current filter values at call time (not stale closure)
         const currentFilters = filters;
-        doFetch({ lat, lon, keyword: currentFilters.keyword, radius: currentFilters.maxRadius });
+        doFetch({ mode: "nearby", lat, lon, keyword: currentFilters.keyword, radius: currentFilters.maxRadius, version });
       },
       (err) => {
+        if (version !== requestVersion.current) return;
         console.warn("[usePlaces] Geolocation denied:", err.message);
         dispatch(setLocationDenied(err.message));
       },
@@ -88,26 +108,42 @@ export default function usePlaces() {
 
   /* ── fetchByCity — triggered by city Search button ───────────── */
   const fetchByCity = useCallback((city, keyword) => {
-    // Use GPS coords if available for distance calculation
-    const lat = location.lat;
-    const lon = location.lon;
-    const kw  = keyword ?? filters.keyword ?? "software company";
+    const trimmedCity = city?.trim();
+    if (!trimmedCity) return;
+    const kw  = keyword?.trim() || filters.keyword || "software company";
     const rad = filters.maxRadius ?? 15;
-    doFetch({ lat, lon, city, keyword: kw, radius: rad });
-  }, [doFetch, location.lat, location.lon, filters.keyword, filters.maxRadius]);
+    const version = ++requestVersion.current;
+    dispatch(setFilter({ batchIndex: 0 }));
+    doFetch({ mode: "city", city: trimmedCity, keyword: kw, radius: rad, version });
+  }, [dispatch, doFetch, filters.keyword, filters.maxRadius]);
 
   /* ── refetch — re-run with current location + filters ────────── */
   const refetch = useCallback(() => {
-    const { lat, lon, city } = location;
-    const effectiveCity = city || filters.city;
-    doFetch({
-      lat,
-      lon,
-      city:    effectiveCity,
-      keyword: filters.keyword ?? "software company",
-      radius:  filters.maxRadius ?? 15,
-    });
+    const { lat, lon } = location;
+    const effectiveCity = filters.city || (location.status === "manual" ? location.city : null);
+    if (effectiveCity?.trim()) {
+      doFetch({ mode: "city", city: effectiveCity.trim(), keyword: filters.keyword ?? "software company", radius: filters.maxRadius ?? 15 });
+      return;
+    }
+    doFetch({ mode: "nearby", lat, lon, keyword: filters.keyword ?? "software company", radius: filters.maxRadius ?? 15 });
   }, [doFetch, location, filters]);
 
-  return { requestLocation, fetchByCity, refetch, doFetch };
+  const loadMore = useCallback(() => {
+    const nextBatch = Number(filters.batchIndex || 0) + 1;
+    if (nextBatch >= 4 || (!location.city && location.lat == null)) return;
+    dispatch({ type: "places/setFilter", payload: { batchIndex: nextBatch } });
+    dispatch(setPage(page + 1));
+    doFetch({
+      mode: filters.city ? "city" : "nearby",
+      lat: location.lat,
+      lon: location.lon,
+      city: location.city || filters.city,
+      keyword: filters.keyword,
+      radius: filters.maxRadius,
+      batchIndex: nextBatch,
+      append: true,
+    });
+  }, [dispatch, doFetch, filters, location, page]);
+
+  return { requestLocation, fetchByCity, refetch, doFetch, loadMore };
 }

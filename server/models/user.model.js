@@ -3,7 +3,8 @@
  *
  * Matches the EXACT MySQL `users` table schema:
  *   id, name, email, password, role, phone,
- *   education, skills, resume_url, profile_image, created_at
+ *   education, skills, resume_url, profile_image, created_at,
+ *   otp, otp_expires_at, is_verified
  *
  * timestamps: false  — table has created_at but NO updatedAt column.
  * createdAt is mapped to the `created_at` column via the field option.
@@ -48,13 +49,64 @@ const User = db.define(
       allowNull: true,
     },
 
+    location: {
+      type:      DataTypes.STRING(255),
+      allowNull: true,
+    },
+
+    bio: {
+      type:      DataTypes.TEXT,
+      allowNull: true,
+    },
+
     education: {
+      type:      DataTypes.TEXT,
+      allowNull: true,
+    },
+
+    experience: {
       type:      DataTypes.TEXT,
       allowNull: true,
     },
 
     skills: {
       type:      DataTypes.TEXT,
+      allowNull: true,
+    },
+
+    dob: {
+      type:      DataTypes.DATEONLY,
+      allowNull: true,
+    },
+
+    gender: {
+      type:      DataTypes.STRING(50),
+      allowNull: true,
+    },
+
+    college: {
+      type:      DataTypes.STRING(255),
+      allowNull: true,
+    },
+
+    degree: {
+      type:      DataTypes.STRING(100),
+      allowNull: true,
+    },
+
+    branch: {
+      type:      DataTypes.STRING(100),
+      allowNull: true,
+    },
+
+    gradYear: {
+      type:      DataTypes.STRING(10),
+      allowNull: true,
+      field:     "grad_year",
+    },
+
+    languages: {
+      type:      DataTypes.STRING(255),
       allowNull: true,
     },
 
@@ -74,6 +126,25 @@ const User = db.define(
     createdAt: {
       type:  DataTypes.DATE,
       field: "created_at",
+    },
+
+    // ── OTP email verification ────────────────────────────────────────────
+    otp: {
+      type:      DataTypes.STRING(6),
+      allowNull: true,
+    },
+
+    otpExpiresAt: {
+      type:      DataTypes.DATE,
+      allowNull: true,
+      field:     "otp_expires_at",
+    },
+
+    isVerified: {
+      type:         DataTypes.BOOLEAN,
+      allowNull:    false,
+      defaultValue: false,
+      field:        "is_verified",
     },
   },
   {
