@@ -6,8 +6,8 @@
  * getNearbyCompanies(lat, lon, radius, keyword)
  *   POST /api/places/nearby
  *
- * searchCompaniesByCity(keyword, city, lat?, lon?)
- *   GET  /api/places/search?keyword=...&city=...&lat=...&lon=...
+ * searchCompaniesByCity({ keyword, city, radius })
+ *   GET  /api/places/search?keyword=...&city=...&radius=...
  *
  * getCompanyDetails(placeId)
  *   GET  /api/places/:placeId
@@ -21,8 +21,8 @@ import api from "./api";
  * @param {number}  [radius=15]   km radius
  * @param {string}  [keyword]     default "software company"
  */
-export const getNearbyCompanies = (lat, lon, radius = 15, keyword = "software company") =>
-  api.post("/places/nearby", { lat, lon, radius, keyword });
+export const getNearbyCompanies = (lat, lon, radius = 15, keyword = "software company", batchIndex = 0) =>
+  api.post("/places/nearby", { lat, lon, radius, keyword, batchIndex });
 
 /**
  * City text search — geocodes the city then searches Google Places.
@@ -31,13 +31,13 @@ export const getNearbyCompanies = (lat, lon, radius = 15, keyword = "software co
  * @param {number}  [lat]   optional user coords (improves distance display)
  * @param {number}  [lon]
  */
-export const searchCompaniesByCity = (keyword, city, lat, lon) =>
+export const searchCompaniesByCity = ({ keyword = "software company", city, radius = 15, batchIndex = 0 }) =>
   api.get("/places/search", {
     params: {
       keyword,
       city,
-      ...(lat != null && { lat }),
-      ...(lon != null && { lon }),
+      radius,
+      batchIndex,
     },
   });
 

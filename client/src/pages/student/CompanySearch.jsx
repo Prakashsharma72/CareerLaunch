@@ -36,7 +36,7 @@ import {
 const PAGE_SIZE = 12;
 
 /* ── Pagination ──────────────────────────────────────────────────── */
-function Pagination({ page, totalPages, onChange }) {
+function Pagination({ page, totalPages, onChange, canLoadMore = false }) {
   if (totalPages <= 1) return null;
   const pages = totalPages <= 7
     ? Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -76,7 +76,7 @@ function Pagination({ page, totalPages, onChange }) {
 
       <button
         onClick={() => onChange(page + 1)}
-        disabled={page === totalPages}
+        disabled={page === totalPages && !canLoadMore}
         className="w-9 h-9 rounded-xl flex items-center justify-center
           bg-white dark:bg-white/8 border border-gray-200 dark:border-white/10
           text-gray-600 dark:text-gray-300 disabled:opacity-30
@@ -145,9 +145,44 @@ function LocationPrompt({ onRequestGPS, onCitySubmit }) {
 }
 
 /* ── Error card ──────────────────────────────────────────────────── */
+function normalizeError(error) {
+  const getText = (value) => {
+    if (!value) return "";
+    if (typeof value === "string") return value.trim();
+    if (value instanceof Error) return value.message?.trim() || "";
+    if (Array.isArray(value)) return value.filter(Boolean).join(" ");
+    return String(value).trim();
+  };
+
+  const defaultReason = "We couldn’t load companies right now. Please check your connection and try again.";
+  const defaultHint = "If this keeps happening, try a different city or refresh the page.";
+
+  if (!error) return { reason: defaultReason, hint: defaultHint };
+
+  const reasonSource =
+    (typeof error === "object" && (error.reason || error.message || error.error || error.detail)) ||
+    error;
+
+  let reason = getText(reasonSource);
+  let hint = getText(typeof error === "object" ? error.hint : "");
+
+  if (!reason) reason = defaultReason;
+
+  if (/network error|failed to fetch|fetch failed/i.test(reason)) {
+    reason = "We couldn’t reach the company search service. Please check your internet connection and try again.";
+  } else if (/request to this api.*blocked|access-control-allow-origin|cors/i.test(reason)) {
+    reason = "The company search is temporarily unavailable in this browser. Please try again in a moment.";
+  } else if (/google maps api key|api key.*invalid|quota|daily search quota/i.test(reason)) {
+    reason = "The company search service is currently unavailable. Please try again later.";
+  }
+
+  if (!hint) hint = defaultHint;
+
+  return { reason, hint };
+}
+
 function ErrorCard({ error, onRetry }) {
-  const reason = typeof error === "object" ? error.reason : (error || "Search failed");
-  const hint   = typeof error === "object" ? error.hint   : null;
+  const { reason, hint } = normalizeError(error);
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
@@ -160,7 +195,7 @@ function ErrorCard({ error, onRetry }) {
       </div>
       <div className="space-y-1.5 max-w-md">
         <h3 className="text-base sm:text-lg font-bold text-red-700 dark:text-red-400">
-          Search Failed
+          We couldn’t find companies near you
         </h3>
         <p className="text-sm text-red-600 dark:text-red-400">{reason}</p>
         {hint && <p className="text-xs text-red-500 italic">{hint}</p>}
@@ -180,7 +215,7 @@ function ErrorCard({ error, onRetry }) {
 ══════════════════════════════════════════════════════════════════ */
 export default function CompanySearch() {
   const dispatch = useDispatch();
-  const { requestLocation, fetchByCity, refetch } = usePlaces();
+  const { requestLocation, fetchByCity, refetch, loadMore } = usePlaces();
   const { isAuthenticated } = useSelector(s => s.auth);
 
   const location    = useSelector(s => s.places.location);
@@ -194,6 +229,7 @@ export default function CompanySearch() {
   const paged       = useSelector(selectPagedCompanies);
   const totalPages  = useSelector(selectTotalPages);
   const total       = allFiltered.length;
+  const hasMoreBatches = (filters.batchIndex ?? 0) < 3;
 
   const hasGPS     = location.status === "granted";
   const hasDenied  = location.status === "denied" || location.status === "manual";
@@ -267,7 +303,9 @@ export default function CompanySearch() {
     }
   }, [dispatch, isAuthenticated, savedMap, location.city]);
 
-  const locationLine = hasGPS && location.city
+  const locationLine = filters.city
+    ? `Showing companies in ${filters.city}`
+    : hasGPS && location.city
     ? `Showing companies near ${location.fullCity || location.city}`
     : location.city
       ? `Showing companies in ${location.city}`
@@ -425,7 +463,11 @@ export default function CompanySearch() {
       <Pagination
         page={page}
         totalPages={totalPages}
-        onChange={p => dispatch(setPage(p))}
+        canLoadMore={hasMoreBatches}
+        onChange={p => {
+          if (p > totalPages && hasMoreBatches) loadMore();
+          else dispatch(setPage(p));
+        }}
       />
     </div>
   );

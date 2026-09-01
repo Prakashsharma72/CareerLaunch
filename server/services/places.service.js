@@ -24,6 +24,8 @@ const err  = (msg, e)  => console.error(`${new Date().toISOString()} ${TAG} ERRO
 /* ─── In-memory cache (6 h TTL) ──────────────────────────────────────── */
 const MEM_CACHE     = new Map();
 const CACHE_TTL_MS  = 24 * 60 * 60 * 1000;  // 24 hours (conserve daily quota)
+const MAX_RESULTS    = 60;
+const GOOGLE_PAGE_SIZE = 20;
 
 function memGet(key) {
   const e = MEM_CACHE.get(key);
@@ -72,6 +74,7 @@ function getApiKey() {
 
 /* ─── Field masks ─────────────────────────────────────────────────────── */
 const SEARCH_FIELDS = [
+  "nextPageToken",
   "places.id",
   "places.displayName",
   "places.formattedAddress",
@@ -150,15 +153,15 @@ export function buildPhotoUrl(photoRef, maxWidth = 400) {
 
 /* ─── Google Places Text Search (with pagination) ────────────────────── */
 /**
- * Fetches up to `maxPages` pages of results (20 per page) using nextPageToken.
- * Google allows max 3 pages = 60 results per query.
+ * Fetches provider pages until Google has no more results or 60 results have
+ * been collected. Google accepts a maximum page size of 20.
  */
-async function googleTextSearch({ textQuery, lat, lon, radiusMeters = 15000, maxPages = 3 }) {
+async function googleTextSearch({ textQuery, lat, lon, radiusMeters = 15000, pageToken = null }) {
   const apiKey = getApiKey();
 
   const baseBody = {
     textQuery,
-    maxResultCount: 20,
+    maxResultCount: GOOGLE_PAGE_SIZE,
     ...(lat != null && lon != null && {
       locationBias: {
         circle: {
@@ -169,46 +172,54 @@ async function googleTextSearch({ textQuery, lat, lon, radiusMeters = 15000, max
     }),
   };
 
-  log(`Google Text Search → "${textQuery}"`, { lat, lon, radiusMeters, maxPages });
+  log(`Google Text Search → "${textQuery}"`, { lat, lon, radiusMeters, hasPageToken: Boolean(pageToken) });
 
-  let allResults = [];
-  let pageToken  = null;
-  let pageNum    = 0;
+  let nextToken = pageToken;
+  let allPlaces = [];
+  let pageCount = 0;
+  const seenTokens = new Set();
 
-  do {
-    pageNum++;
-    const body = pageToken
-      ? { ...baseBody, pageToken }
-      : baseBody;
-
-    const { data } = await axios.post(
-      "https://places.googleapis.com/v1/places:searchText",
-      body,
-      {
-        headers: {
-          "Content-Type":   "application/json",
-          "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": SEARCH_FIELDS,
-        },
-        timeout: 15000,
+  while (allPlaces.length < MAX_RESULTS) {
+    pageCount++;
+    const body = nextToken ? { ...baseBody, pageToken: nextToken } : baseBody;
+    let data;
+    try {
+      ({ data } = await axios.post(
+        "https://places.googleapis.com/v1/places:searchText",
+        body,
+        {
+          headers: {
+            "Content-Type":   "application/json",
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": SEARCH_FIELDS,
+          },
+          timeout: 15000,
+        }
+      ));
+    } catch (error) {
+      if (allPlaces.length > 0) {
+        log(`Google Text Search stopped after ${allPlaces.length} results`, error.message);
+        break;
       }
-    );
-
-    const pageResults = (data.places || []).map(normalisePlace);
-    allResults = allResults.concat(pageResults);
-    pageToken  = data.nextPageToken || null;
-
-    log(`Google Text Search page ${pageNum} ← ${pageResults.length} results (total so far: ${allResults.length})`);
-
-    // Small delay between paginated requests (Google recommends ~2s between pages)
-    if (pageToken && pageNum < maxPages) {
-      await new Promise(r => setTimeout(r, 2000));
+      throw error;
     }
 
-  } while (pageToken && pageNum < maxPages);
+    const pagePlaces = (data.places || []).map(normalisePlace);
+    allPlaces = allPlaces.concat(pagePlaces);
+    const providerToken = data.nextPageToken || null;
+    log(`Google Text Search page ← ${pagePlaces.length} results`, {
+      totalSoFar: allPlaces.length,
+      hasNextPage: Boolean(providerToken),
+    });
 
-  log(`Google Text Search complete — ${allResults.length} total results across ${pageNum} page(s)`);
-  return allResults;
+    if (!providerToken || seenTokens.has(providerToken) || pagePlaces.length === 0) break;
+    seenTokens.add(providerToken);
+    nextToken = providerToken;
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+
+  log(`Google Text Search complete — ${pageCount} provider page(s), ${allPlaces.length} results`);
+  return { places: allPlaces.slice(0, MAX_RESULTS), nextPageToken: null };
 }
 
 /* ─── Google Places Details ───────────────────────────────────────────── */
@@ -352,9 +363,12 @@ async function enrichPlaces(places, { userLat, userLon, city, keyword, skipCaree
  * Keep variants at 1 to stay well within daily quota.
  */
 function buildQueryVariants(keyword = "software company") {
-  // Always use a single query to conserve daily quota (100 req/day on free tier).
-  // Running 5 variants × 3 pages = 15 calls per search, exhausting quota in ~6 searches.
-  return [keyword];
+  return [
+    keyword,
+    `${keyword} development`,
+    `${keyword} technology`,
+    `${keyword} services`,
+  ];
 }
 
 /**
@@ -366,7 +380,7 @@ function mergeAndDedup(settledResults) {
   const out  = [];
   for (const r of settledResults) {
     if (r.status !== "fulfilled") continue;
-    for (const place of r.value) {
+    for (const place of r.value.places || []) {
       if (seen.has(place.placeId)) continue;
       seen.add(place.placeId);
       out.push(place);
@@ -375,39 +389,50 @@ function mergeAndDedup(settledResults) {
   return out;
 }
 
+function filterByRadius(places, userLat, userLon, radiusKm) {
+  if (userLat == null || userLon == null) return places;
+  return places.filter(place => {
+    if (place.latitude == null || place.longitude == null) return true;
+    return haversineKm(userLat, userLon, place.latitude, place.longitude) <= radiusKm;
+  });
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    PUBLIC EXPORTS
 ═══════════════════════════════════════════════════════════════════════ */
 
 /**
  * getNearbyCompanies({ lat, lon, radius, keyword })
- * Runs 5 parallel query variants, 3 pages each → up to 300 raw results → deduplicated.
+ * Runs the configured query variants for one provider page; the cursor enables
+ * subsequent pages without losing the provider's pagination state.
  */
-export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "software company", skipCareerProbe = false }) {
+export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "software company", pageToken = null, batchIndex = 0, skipCareerProbe = false }) {
   if (lat == null || lon == null) throw new Error("lat/lon required");
 
-  const cacheKey = `nearby:${Math.round(lat * 100)}:${Math.round(lon * 100)}:${radius}:${keyword}`;
+  const cacheKey = `places-v4:nearby:${Math.round(lat * 100)}:${Math.round(lon * 100)}:${radius}:${keyword}:${batchIndex}:${pageToken || "first"}`;
   const cached   = memGet(cacheKey);
   if (cached) return cached;
 
   const radiusM   = Math.min(radius * 1000, 50000);
 
-  // Build query variants to maximise coverage
-  const queries = buildQueryVariants(keyword);
+  // Fetch all provider pages available for this query, capped at 60 results.
+  const queryVariants = buildQueryVariants(keyword);
+  const query = queryVariants[batchIndex];
+  if (!query) return { companies: [], total: 0, nextPageToken: null, hasMoreBatches: false, source: "google_places" };
 
-  log(`getNearbyCompanies: running ${queries.length} parallel queries, radius=${radius}km`);
+  log(`getNearbyCompanies: batch ${batchIndex + 1}/${queryVariants.length}, radius=${radius}km`);
 
-  // Fetch all query variants in parallel (1 page = 20 results per query, conserves quota)
+  // Fetch all query variants in parallel (one page per query).
   const allFetches = await Promise.allSettled(
-    queries.map(q => googleTextSearch({
+    [query].map(q => googleTextSearch({
       textQuery:    `${q} near me`,
       lat, lon,
       radiusMeters: radiusM,
-      maxPages:     1,
+      pageToken,
     }))
   );
 
-  const merged = mergeAndDedup(allFetches);
+  const merged = filterByRadius(mergeAndDedup(allFetches), lat, lon, radius).slice(0, MAX_RESULTS);
   log(`getNearbyCompanies: ${merged.length} unique companies after dedup`);
 
   // If all fetches failed, surface the first error so the controller can return a proper error response
@@ -417,8 +442,9 @@ export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "sof
 
   const result = await enrichPlaces(merged, { userLat: lat, userLon: lon, keyword, skipCareerProbe });
 
-  const payload = { companies: result, total: result.length, source: "google_places" };
-  if (!skipCareerProbe) memSet(cacheKey, payload);
+  const nextPageToken = allFetches.find(r => r.status === "fulfilled")?.value?.nextPageToken || null;
+  const payload = { companies: result, total: result.length, nextPageToken, batchIndex, hasMoreBatches: batchIndex < queryVariants.length - 1, source: "google_places" };
+  memSet(cacheKey, payload);
   return payload;
 }
 
@@ -426,10 +452,10 @@ export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "sof
  * searchCompaniesByCity({ keyword, city, userLat, userLon })
  * Runs multiple parallel queries to maximise result count.
  */
-export async function searchCompaniesByCity({ keyword = "software company", city, userLat, userLon, skipCareerProbe = false }) {
+export async function searchCompaniesByCity({ keyword = "software company", city, userLat, userLon, radius = 50, pageToken = null, batchIndex = 0, skipCareerProbe = false }) {
   if (!city?.trim()) throw new Error("city is required");
 
-  const cacheKey = `city:${city.toLowerCase().trim()}:${keyword.toLowerCase().trim()}`;
+  const cacheKey = `places-v4:city:${city.toLowerCase().trim()}:${keyword.toLowerCase().trim()}:${radius}:${batchIndex}:${pageToken || "first"}`;
   const cached   = memGet(cacheKey);
   if (cached) {
     if (userLat != null && cached.companies) {
@@ -450,19 +476,21 @@ export async function searchCompaniesByCity({ keyword = "software company", city
     catch { log(`Geocode failed for "${city}", continuing without bias`); }
   }
 
-  const queries = buildQueryVariants(keyword);
-  log(`searchCompaniesByCity "${city}": running ${queries.length} parallel queries`);
+  const queryVariants = buildQueryVariants(keyword);
+  const query = queryVariants[batchIndex];
+  if (!query) return { companies: [], total: 0, nextPageToken: null, hasMoreBatches: false, source: "google_places" };
+  log(`searchCompaniesByCity "${city}": batch ${batchIndex + 1}/${queryVariants.length}`);
 
   const allFetches = await Promise.allSettled(
-    queries.map(q => googleTextSearch({
+    [query].map(q => googleTextSearch({
       textQuery:    `${q} in ${city}`,
       lat, lon,
-      radiusMeters: 30000,
-      maxPages:     1,
+      radiusMeters: Math.min(radius * 1000, 50000),
+      pageToken,
     }))
   );
 
-  const merged = mergeAndDedup(allFetches);
+  const merged = filterByRadius(mergeAndDedup(allFetches), lat, lon, radius).slice(0, MAX_RESULTS);
   log(`searchCompaniesByCity: ${merged.length} unique companies for "${city}"`);
 
   // If all fetches failed, surface the first error
@@ -472,8 +500,9 @@ export async function searchCompaniesByCity({ keyword = "software company", city
 
   const result = await enrichPlaces(merged, { userLat: lat, userLon: lon, city, keyword, skipCareerProbe });
 
-  const payload = { companies: result, total: result.length, source: "google_places" };
-  if (!skipCareerProbe) memSet(cacheKey, payload);
+  const nextPageToken = allFetches.find(r => r.status === "fulfilled")?.value?.nextPageToken || null;
+  const payload = { companies: result, total: result.length, nextPageToken, batchIndex, hasMoreBatches: batchIndex < queryVariants.length - 1, source: "google_places" };
+  memSet(cacheKey, payload);
   return payload;
 }
 

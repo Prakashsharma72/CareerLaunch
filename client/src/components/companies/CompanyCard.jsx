@@ -9,7 +9,7 @@ import { Link }           from "react-router-dom";
 import { motion }         from "framer-motion";
 import {
   FaStar, FaMapMarkerAlt, FaGlobe, FaPhone,
-  FaBookmark, FaExternalLinkAlt, FaMapMarkedAlt,
+  FaBookmark, FaMapMarkedAlt,
   FaBriefcase, FaChevronRight, FaRegClock,
 } from "react-icons/fa";
 import AvatarIcon from "../common/AvatarIcon";
@@ -54,7 +54,7 @@ function CompanyCard({ company, isSaved = false, onSave }) {
   const [saving, setSaving] = useState(false);
 
   const {
-    placeId, companyName, logo, website, address, phone,
+    placeId, companyName, website, address, phone,
     rating, reviewCount, mapsUrl, businessStatus, isOpenNow,
     careerPage, industry, distanceText,
   } = company;

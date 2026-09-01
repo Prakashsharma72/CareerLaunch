@@ -14,10 +14,6 @@ function ManageRoadmaps() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchRoadmaps();
-  }, []);
-
   const fetchRoadmaps = async () => {
     try {
       setLoading(true);
@@ -30,6 +26,11 @@ function ManageRoadmaps() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchRoadmaps();
+  }, []);
 
   const handleSave = async () => {
     if (!title || !roadmapContent) {

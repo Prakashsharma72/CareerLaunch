@@ -1,7 +1,7 @@
 /**
  * companyCareers.controller.js
  *
- * GET /api/company-careers — nearby companies with verified career pages
+ * GET /api/company-careers — nearby software companies with optional career enrichment
  */
 import { getCompaniesWithCareers } from "../services/companyCareers.service.js";
 
@@ -41,7 +41,7 @@ function errorResponse(res, e) {
  * GET /api/company-careers?lat=&lon=&radius=&keyword=&city=
  */
 export async function listCompanyCareers(req, res) {
-  const { lat, lon, radius, keyword, city } = req.query;
+  const { lat, lon, radius, keyword, city, pageToken } = req.query;
 
   const userLat = lat ? parseFloat(lat) : null;
   const userLon = lon ? parseFloat(lon) : null;
@@ -61,9 +61,10 @@ export async function listCompanyCareers(req, res) {
       radius:  radiusKm,
       keyword: searchKw,
       city:    city?.trim() || null,
+      pageToken: pageToken?.trim() || null,
     });
 
-    return res.status(200).json(result.companies);
+    return res.status(200).json(result);
   } catch (e) {
     return errorResponse(res, e);
   }

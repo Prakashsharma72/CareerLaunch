@@ -49,10 +49,6 @@ function AdminDashboard() {
   const [recentActivities, setRecentActivities] = useState([]);
   const [error, setError] = useState(null);
 
-  useEffect(() => { 
-    fetchDashboardData(); 
-  }, []);
-
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -90,6 +86,11 @@ function AdminDashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchDashboardData();
+  }, []);
 
   if (loading) return <Loader />;
 

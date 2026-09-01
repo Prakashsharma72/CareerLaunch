@@ -40,8 +40,9 @@ export default function useCompanyCareers() {
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState(null);
   const [source, setSource]       = useState(null);
+  const [nextPageToken, setNextPageToken] = useState(null);
 
-  const doFetch = useCallback(async ({ lat, lon, city, keyword, radius }) => {
+  const doFetch = useCallback(async ({ lat, lon, city, keyword, radius, pageToken = null, append = false }) => {
     setLoading(true);
     setError(null);
     try {
@@ -53,6 +54,7 @@ export default function useCompanyCareers() {
           radius:  radius ?? 15,
           keyword: keyword ?? "software company",
           city:    city?.trim() || undefined,
+          pageToken,
         });
       } else if (city?.trim()) {
         res = await getCompanyCareers({
@@ -61,6 +63,7 @@ export default function useCompanyCareers() {
           city:    city.trim(),
           keyword: keyword ?? "software company",
           radius:  radius ?? 15,
+          pageToken,
         });
       } else {
         setCompanies([]);
@@ -69,13 +72,23 @@ export default function useCompanyCareers() {
         return;
       }
 
-      const list = Array.isArray(res.data) ? res.data : (res.data?.companies || []);
-      setCompanies(list);
+      const payload = Array.isArray(res.data) ? { companies: res.data } : res.data;
+      const list = payload?.companies || [];
+      setCompanies(current => {
+        if (!append) {
+          return [...list].sort((first, second) => (first.distanceKm ?? Infinity) - (second.distanceKm ?? Infinity));
+        }
+        const existingIds = new Set(current.map(company => company.placeId));
+        return [...current, ...list.filter(company => !existingIds.has(company.placeId))]
+          .sort((first, second) => (first.distanceKm ?? Infinity) - (second.distanceKm ?? Infinity));
+      });
+      setNextPageToken(payload?.nextPageToken || null);
       setSource("company_careers");
     } catch (e) {
       const payload = e?.response?.data || { reason: e.message || "Failed to load career pages" };
       setError(typeof payload === "string" ? payload : payload.reason || payload.message || "Failed to load");
-      setCompanies([]);
+      if (!append) setCompanies([]);
+      setNextPageToken(null);
       setSource(null);
     } finally {
       setLoading(false);
@@ -129,11 +142,27 @@ export default function useCompanyCareers() {
     });
   }, [doFetch, location, filters]);
 
+  const loadMore = useCallback(() => {
+    if (!nextPageToken || loading) return;
+    const effectiveCity = location.city || filters.city;
+    doFetch({
+      lat: location.lat,
+      lon: location.lon,
+      city: effectiveCity,
+      keyword: filters.keyword ?? "software company",
+      radius: filters.maxRadius ?? 15,
+      pageToken: nextPageToken,
+      append: true,
+    });
+  }, [doFetch, filters, loading, location, nextPageToken]);
+
   return {
     companies,
     loading,
     error,
     source,
+    nextPageToken,
+    loadMore,
     requestLocation,
     fetchByCity,
     refetch,

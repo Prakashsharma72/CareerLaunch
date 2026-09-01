@@ -49,13 +49,64 @@ const User = db.define(
       allowNull: true,
     },
 
+    location: {
+      type:      DataTypes.STRING(255),
+      allowNull: true,
+    },
+
+    bio: {
+      type:      DataTypes.TEXT,
+      allowNull: true,
+    },
+
     education: {
+      type:      DataTypes.TEXT,
+      allowNull: true,
+    },
+
+    experience: {
       type:      DataTypes.TEXT,
       allowNull: true,
     },
 
     skills: {
       type:      DataTypes.TEXT,
+      allowNull: true,
+    },
+
+    dob: {
+      type:      DataTypes.DATEONLY,
+      allowNull: true,
+    },
+
+    gender: {
+      type:      DataTypes.STRING(50),
+      allowNull: true,
+    },
+
+    college: {
+      type:      DataTypes.STRING(255),
+      allowNull: true,
+    },
+
+    degree: {
+      type:      DataTypes.STRING(100),
+      allowNull: true,
+    },
+
+    branch: {
+      type:      DataTypes.STRING(100),
+      allowNull: true,
+    },
+
+    gradYear: {
+      type:      DataTypes.STRING(10),
+      allowNull: true,
+      field:     "grad_year",
+    },
+
+    languages: {
+      type:      DataTypes.STRING(255),
       allowNull: true,
     },
 

@@ -12,8 +12,6 @@ function ManageUsers() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showModal,    setShowModal]    = useState(false);
 
-  useEffect(() => { fetchUsers(); }, []);
-
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -28,6 +26,11 @@ function ManageUsers() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchUsers();
+  }, []);
 
   const handleDeleteUser = (userId) => {
     if (!window.confirm("Delete this user?")) return;

@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import { useDispatch, useSelector }                  from "react-redux";
-import { useNavigate }                               from "react-router-dom";
+import { useNavigate, useSearchParams }              from "react-router-dom";
 import { motion, AnimatePresence }                   from "framer-motion";
 import {
   FaBriefcase, FaBookmark, FaSyncAlt, FaMapMarkerAlt,
@@ -144,6 +144,7 @@ function LocationPrompt({ onRequestGPS, onCitySubmit }) {
 ══════════════════════════════════════════════════════════════════ */
 export default function Jobs() {
   const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
   const {
     companies,
     loading,
@@ -152,6 +153,8 @@ export default function Jobs() {
     requestLocation,
     fetchByCity,
     refetch,
+    nextPageToken,
+    loadMore,
   } = useCompanyCareers();
 
   const { isAuthenticated } = useSelector(s => s.auth);
@@ -160,6 +163,18 @@ export default function Jobs() {
   const page       = useSelector(s => s.places.page);
   const savedMap   = useSelector(s => s.places.savedMap);
   const navigate   = useNavigate();
+
+  useEffect(() => {
+    const keyword = searchParams.get("keyword")?.trim();
+    const location = searchParams.get("location")?.trim();
+
+    if (keyword || location) {
+      dispatch(setFilter({
+        search: keyword || "",
+        city: location || "",
+      }));
+    }
+  }, [dispatch, searchParams]);
 
   const allFiltered = useMemo(() => {
     let list = companies;
@@ -185,6 +200,8 @@ export default function Jobs() {
   }, [companies, filters.search, filters.minRating, filters.maxRadius]);
 
   const total       = allFiltered.length;
+  const loadedTotal = companies.length;
+  const verifiedCareerCount = companies.filter(company => company.careerVerified).length;
   const totalPages  = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const paged       = allFiltered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -279,7 +296,7 @@ export default function Jobs() {
             Find Jobs
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm flex items-center gap-2 flex-wrap">
-            Companies with verified career pages on their official websites
+            Software companies from Google Places
             {source === "company_careers" && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold
                 px-2 py-0.5 rounded-full
@@ -296,7 +313,10 @@ export default function Jobs() {
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold
               bg-emerald-50 dark:bg-emerald-900/25 text-emerald-600 dark:text-emerald-400
               px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-500/30">
-              {total} with career pages
+              {loadedTotal} software companies loaded
+              <span className="text-gray-400 dark:text-gray-500 font-normal">
+                ({verifiedCareerCount} with verified career pages)
+              </span>
             </span>
             <button
               onClick={() => navigate("/student/saved-jobs")}
@@ -367,7 +387,7 @@ export default function Jobs() {
           </strong>
           {" "}of{" "}
           <strong className="text-gray-800 dark:text-white">{total}</strong>
-          {" "}companies with career pages
+          {" "}software companies
           {location.city && (
             <> near{" "}
               <strong className="text-blue-600 dark:text-blue-400">{location.city}</strong>
@@ -379,7 +399,7 @@ export default function Jobs() {
       {/* ── Card grid ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 items-stretch">
 
-        {loading && Array.from({ length: PAGE_SIZE }).map((_, i) => (
+        {loading && companies.length === 0 && Array.from({ length: PAGE_SIZE }).map((_, i) => (
           <CareerCardSkeleton key={i} />
         ))}
 
@@ -429,11 +449,10 @@ export default function Jobs() {
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white">
-                No verified career pages found
+                No software companies found
               </h3>
               <p className="text-gray-400 text-sm mt-1 max-w-md mx-auto">
-                Nearby companies were checked, but none had a reachable careers or jobs page.
-                Try a different city or expand the search radius.
+                No software companies were returned for this search. Try a different city or expand the search radius.
               </p>
             </div>
             <button
@@ -445,7 +464,7 @@ export default function Jobs() {
           </motion.div>
         )}
 
-        {!loading && !error && paged.map(company => (
+        {!error && paged.map(company => (
           <CareerCard
             key={company.placeId}
             company={company}
@@ -460,6 +479,17 @@ export default function Jobs() {
         totalPages={totalPages}
         onChange={p => dispatch(setPage(p))}
       />
+
+      {!loading && nextPageToken && (
+        <div className="flex justify-center mt-5">
+          <button
+            onClick={loadMore}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700
+              text-white text-sm font-semibold shadow-sm shadow-blue-500/20 transition-colors">
+            <FaBriefcase className="text-xs" /> Load More Companies
+          </button>
+        </div>
+      )}
     </div>
   );
 }

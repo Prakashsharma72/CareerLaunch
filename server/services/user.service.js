@@ -2,7 +2,7 @@ import User from "../models/user.model.js";
 
 /** Fields that are safe to return to the client (never include password). */
 const SAFE_ATTRS = {
-  exclude: ["password"],
+  exclude: ["password", "otp", "otpExpiresAt"],
 };
 
 /**

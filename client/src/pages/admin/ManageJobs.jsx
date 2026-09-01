@@ -7,7 +7,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   FaSearch, FaBuilding, FaStar, FaMapMarkerAlt,
-  FaGlobe, FaPhone, FaSyncAlt, FaExternalLinkAlt,
+  FaGlobe, FaPhone, FaSyncAlt,
 } from "react-icons/fa";
 import api from "../../services/api";
 
