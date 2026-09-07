@@ -53,8 +53,6 @@ const useAuth = () => {
       const res = await registerUser(userData);
       // Returns { message, email, otpSent: true } — no JWT yet
       return res.data;
-    } catch (err) {
-      throw err;
     } finally {
       setLocalLoading(false);
     }
@@ -85,8 +83,6 @@ const useAuth = () => {
     try {
       const res = await resendOtpApi({ email });
       return res.data;
-    } catch (err) {
-      throw err;
     } finally {
       setLocalLoading(false);
     }

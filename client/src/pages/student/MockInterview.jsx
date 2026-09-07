@@ -483,6 +483,8 @@ function MockInterview() {
         setError("Gemini API key is invalid. Check GEMINI_API_KEY in server/.env");
       } else if (code === "RATE_LIMIT") {
         setError("Gemini rate limit reached. Please wait a moment and try again.");
+      } else if (code === "MODEL_UNAVAILABLE") {
+        setError("The configured Gemini AI model is unavailable. Please contact the administrator to update the server AI configuration.");
       } else {
         setError(err?.response?.data?.message || "Failed to start interview. Check server logs.");
       }
@@ -581,41 +583,27 @@ function MockInterview() {
 
   /* ── RENDER ── */
   return (
-    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-
-      {/* Page header */}
-      <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-3">
+    <div className="mx-auto max-w-[1180px] space-y-4 pb-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-            <FaRobot className="text-blue-500 shrink-0" /> AI Mock Interview
+          <h1 className="flex items-center gap-3 text-[clamp(1.7rem,2vw,2.4rem)] font-bold text-white leading-none">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-800/80 ring-1 ring-white/10 shadow-[0_12px_24px_-18px_rgba(96,165,250,0.9)]">
+              <FaRobot className="text-sm text-blue-400" />
+            </span>
+            AI Mock Interview
           </h1>
-          <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-            Practice interviews with AI and improve your confidence.
-          </p>
+          <p className="mt-1 text-sm text-slate-400">Practice. Improve. Get hired.</p>
         </div>
-        <div className="flex gap-2 shrink-0">
-          {view !== "history" && (
-            <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}
-              onClick={handleOpenHistory} disabled={histLoading}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-medium
-                text-neutral-600 dark:text-neutral-300
-                bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10
-                hover:border-blue-300 dark:hover:border-blue-500/40 transition-colors disabled:opacity-50">
-              {histLoading ? <FaSpinner className="animate-spin text-xs" /> : <FaHistory className="text-xs" />}
-              <span className="hidden xs:inline">History</span>
-            </motion.button>
-          )}
-          {view === "interview" && (
-            <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }} onClick={handleRestart}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-medium
-                text-neutral-600 dark:text-neutral-300
-                bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10
-                hover:border-neutral-300 transition-colors">
-              <FaRedo className="text-xs" />
-              <span className="hidden xs:inline">Restart</span>
-            </motion.button>
-          )}
-        </div>
+
+        <button
+          type="button"
+          onClick={handleOpenHistory}
+          disabled={histLoading}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 px-3.5 py-2 text-sm font-semibold text-slate-200 transition hover:border-blue-400/40 hover:bg-slate-800/90 hover:text-white"
+        >
+          {histLoading ? <FaSpinner className="animate-spin text-xs" /> : <FaHistory className="text-xs" />}
+          Interview History
+        </button>
       </div>
 
       {/* Error banner */}
@@ -650,71 +638,174 @@ function MockInterview() {
         {view === "setup" && (
           <motion.div key="setup" initial={{ opacity:0,y:12 }} animate={{ opacity:1,y:0 }}
             exit={{ opacity:0,y:-12 }} transition={{ duration:0.3 }}>
-            <Card className="p-4 sm:p-6 md:p-8">
-              <div className="flex items-center gap-3 mb-5 sm:mb-6">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background:"linear-gradient(135deg,#0ba5ff,#8b5cf6)" }}>
-                  <FaPlay className="text-white text-sm" />
+            <div className="grid gap-4 lg:grid-cols-[1.12fr_0.88fr]">
+              <div className="rounded-[22px] border border-slate-700/80 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_rgba(15,23,42,0.96)_28%,_rgba(2,6,23,1)_78%)] p-3.5 shadow-[0_20px_60px_-48px_rgba(59,130,246,0.9)] sm:p-4">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 ring-1 ring-blue-400/20">
+                      <FaPlay className="text-xs text-blue-300" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-300/90">CareerLaunch AI</p>
+                      <h2 className="text-[clamp(1.3rem,1.8vw,1.9rem)] font-bold leading-tight text-white">Interview Launcher</h2>
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                    Ready
+                  </span>
                 </div>
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-neutral-800 dark:text-white">Interview Setup</h2>
-                  <p className="text-xs text-neutral-400">Configure your 12-question AI mock interview</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 mb-5 sm:mb-6">
-                {/* Role select */}
-                <div>
-                  <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-                    Select Role
-                  </label>
-                  <select value={role} onChange={e => setRole(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-white/10
-                      bg-white/60 dark:bg-white/5 text-sm font-medium text-neutral-800 dark:text-white
-                      focus:outline-none focus:border-blue-500/70 focus:ring-2 focus:ring-blue-500/20 transition-all">
-                    {ROLES.map(r => <option key={r}>{r}</option>)}
-                  </select>
-                </div>
-                {/* Difficulty */}
-                <div>
-                  <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-                    Difficulty Level
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {DIFFICULTIES.map(d => (
-                      <button key={d} type="button" onClick={() => setDifficulty(d)}
-                        className={`py-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all
-                          ${difficulty === d
-                            ? "bg-blue-500 border-blue-500 text-white shadow-md"
-                            : "bg-white/60 dark:bg-white/5 border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:border-blue-300"}`}>
-                        {d}
-                      </button>
-                    ))}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Role</label>
+                    <div className="relative">
+                      <select
+                        value={role}
+                        onChange={(e) => setRole(e.target.value)}
+                        className="w-full appearance-none rounded-xl border border-white/10 bg-slate-900/80 px-3.5 py-2.5 pr-10 text-base font-medium text-white outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-500/20"
+                      >
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
+                        <FaChevronDown className="text-xs" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Difficulty</label>
+                    <div className="grid gap-2.5 md:grid-cols-3">
+                      {DIFFICULTIES.map((d) => {
+                        const selected = difficulty === d;
+                        const labels = {
+                          Beginner: "Fundamentals",
+                          Intermediate: "Scenario-based",
+                          Advanced: "Deep-dive",
+                        };
+
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => setDifficulty(d)}
+                            className={`rounded-xl border p-2.5 text-left transition-all duration-200 ${
+                              selected
+                                ? "border-blue-400/60 bg-blue-500/10 shadow-[0_12px_28px_-18px_rgba(59,130,246,0.85)]"
+                                : "border-white/10 bg-slate-900/70 hover:border-blue-400/35 hover:bg-slate-900/90"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-semibold text-white">{d}</span>
+                              <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[9px] font-bold ${
+                                selected
+                                  ? "border-blue-400 bg-blue-500 text-white"
+                                  : "border-slate-500 bg-transparent text-transparent"
+                              }`}>{selected ? "✓" : ""}</span>
+                            </div>
+                            <span className="mt-1.5 block text-[11px] text-slate-400">{labels[d]}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-slate-900/70 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-white">Session Setup</p>
+                        <p className="text-[11px] text-slate-400">AI interview flow</p>
+                      </div>
+                      <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-200">
+                        12 questions
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
+                      {[
+                        { label: "Duration", value: "~15 min" },
+                        { label: "Format", value: "Live Q&A" },
+                        { label: "Focus", value: "Real-world" },
+                      ].map((item) => (
+                        <div key={item.label} className="rounded-lg border border-white/10 bg-slate-950/60 p-2.5">
+                          <p className="text-[9px] uppercase tracking-[0.16em] text-slate-500">{item.label}</p>
+                          <p className="mt-1.5 text-xs font-semibold text-white">{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-              {/* Info chips — wrap on mobile */}
-              <div className="flex flex-wrap gap-2 mb-5 sm:mb-6">
-                {["12 Questions","AI Feedback","Instant Scoring","Full Report"].map(t => (
-                  <span key={t} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
-                    bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300
-                    border border-blue-200/60 dark:border-blue-500/20">
-                    <FaCheckCircle className="text-[10px]" />{t}
-                  </span>
-                ))}
-              </div>
-              {/* Start button — full-width on mobile */}
-              <motion.button onClick={handleStart} disabled={aiLoading}
-                whileHover={!aiLoading ? { y:-1, boxShadow:"0 12px 32px rgba(11,165,255,0.35)" } : {}}
-                whileTap={!aiLoading ? { scale:0.97 } : {}}
-                className="w-full sm:w-auto flex items-center justify-center gap-2.5
-                  px-6 sm:px-8 py-3.5 rounded-xl text-sm font-bold text-white
-                  bg-linear-to-r from-blue-500 to-violet-500
-                  disabled:opacity-60 disabled:cursor-not-allowed shadow-md transition-shadow">
-                {aiLoading
-                  ? <><FaSpinner className="animate-spin" /> Preparing Interview…</>
-                  : <><FaPlay className="text-xs" /> Start Interview</>}
-              </motion.button>
-            </Card>
+
+              <aside className="rounded-[22px] border border-blue-500/20 bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.16),_rgba(15,23,42,0.98)_38%,_rgba(2,6,23,1)_100%)] p-3.5 shadow-[0_20px_60px_-48px_rgba(96,165,250,0.9)] sm:p-4">
+                <div className="mb-4 flex justify-center">
+                  <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-blue-400/30 bg-blue-500/10 shadow-[0_0_30px_rgba(96,165,250,0.25)]">
+                    <div className="absolute inset-3 rounded-full border border-blue-400/20" />
+                    <FaRobot className="text-3xl text-blue-300" />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-300/90">AI session preview</p>
+                    <h3 className="mt-1.5 text-[clamp(1.7rem,2vw,2.5rem)] font-black leading-tight tracking-tight text-white">Ready to Practice?</h3>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3.5">
+                    <div className="flex items-center justify-between gap-3 text-sm text-slate-300">
+                      <span>Role</span>
+                      <span className="font-semibold text-white">{role}</span>
+                    </div>
+                    <div className="mt-2.5 flex items-center justify-between gap-3 text-sm text-slate-300">
+                      <span>Level</span>
+                      <span className="font-semibold text-white">{difficulty}</span>
+                    </div>
+                    <div className="mt-2.5 flex items-center justify-between gap-3 text-sm text-slate-300">
+                      <span>Questions</span>
+                      <span className="font-semibold text-white">12 total</span>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-2.5 text-sm text-slate-300">
+                    {[
+                      "AI-generated interview flow",
+                      "Actionable scoring and feedback",
+                      "Personalized improvement tips",
+                      "Final performance summary",
+                    ].map((feature) => (
+                      <li key={feature} className="flex items-center gap-3">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/15 text-[9px] text-emerald-300 ring-1 ring-emerald-400/20">
+                          ✓
+                        </span>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <motion.button
+                    onClick={handleStart}
+                    disabled={aiLoading}
+                    whileHover={!aiLoading ? { y: -1, boxShadow: "0 18px 32px -18px rgba(96,165,250,0.9)" } : {}}
+                    whileTap={!aiLoading ? { scale: 0.98 } : {}}
+                    className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-violet-500 px-5 py-2.5 text-sm font-bold text-white shadow-[0_18px_32px_-20px_rgba(96,165,250,0.9)] transition disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {aiLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <FaSpinner className="animate-spin" />
+                        Preparing Interview...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <FaPlay className="text-xs" />
+                        Start Mock Interview
+                      </span>
+                    )}
+                  </motion.button>
+                </div>
+              </aside>
+            </div>
           </motion.div>
         )}
 

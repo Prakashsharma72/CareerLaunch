@@ -87,6 +87,11 @@ export default function AdminSettings() {
   const [toast,   setToast]   = useState(null); // { type: "success"|"error", msg }
 
   /* fetch masked current values */
+  const showToast = (type, msg) => {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -99,11 +104,6 @@ export default function AdminSettings() {
       }
     })();
   }, []);
-
-  const showToast = (type, msg) => {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 4000);
-  };
 
   const handleSave = async (e) => {
     e.preventDefault();

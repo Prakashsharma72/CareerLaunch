@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   FaTachometerAlt, FaBriefcase, FaBook,
   FaUsers, FaBars, FaTimes, FaSignOutAlt,
-  FaUserShield, FaRocket, FaChevronLeft, FaCog,
+  FaUserShield, FaRocket, FaCog,
   FaPencilAlt,
 } from "react-icons/fa";
 
@@ -27,12 +27,63 @@ const MENU = [
 
 const SIDEBAR_W = 260;
 
+function SidebarContent({ location, setOpen, handleLogout }) {
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center" style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
+            <FaRocket className="text-white text-xs" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-bold text-white text-sm truncate">CareerLaunch AI</p>
+            <p className="text-white/40 text-[10px]">Admin Panel</p>
+          </div>
+        </div>
+        <button onClick={() => setOpen(false)} className="lg:hidden w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-white/60 hover:bg-white/20 transition-colors shrink-0">
+          <FaTimes className="text-xs" />
+        </button>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+        {MENU.map((item) => {
+          const Icon = item.icon;
+          const active = location.pathname.startsWith(item.path);
+          return (
+            <NavLink key={item.path} to={item.path} className={() => `relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium ${active ? "bg-indigo-500/25 text-white border border-indigo-400/20" : "text-white/55 hover:bg-white/8 hover:text-white/90"}`}>
+              {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-indigo-400" />}
+              <Icon className={`shrink-0 text-sm ${active ? "text-indigo-300" : ""}`} />
+              <span>{item.name}</span>
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      <div className="p-3 border-t border-white/10 space-y-2">
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5">
+          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
+            <FaUserShield className="text-white text-sm" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-white text-sm font-semibold truncate">Administrator</p>
+            <p className="text-white/40 text-xs truncate">System Manager</p>
+          </div>
+        </div>
+        <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-red-500/15 text-red-400 hover:bg-red-500/25 hover:text-red-300 border border-red-500/20 transition-colors">
+          <FaSignOutAlt className="text-sm" /> Logout
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminLayout() {
   const navigate  = useNavigate();
   const location  = useLocation();
   const [open, setOpen] = useState(false);
 
   /* close drawer on route change */
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setOpen(false); }, [location.pathname]);
 
   const pageName = MENU.find(m => location.pathname.startsWith(m.path))?.name ?? "Admin";
@@ -42,75 +93,6 @@ export default function AdminLayout() {
     localStorage.removeItem("user");
     navigate("/login");
   };
-
-  /* ── shared sidebar content ── */
-  function SidebarContent() {
-    return (
-      <div className="flex flex-col h-full">
-
-        {/* Logo */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
-              <FaRocket className="text-white text-xs" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-bold text-white text-sm truncate">CareerLaunch AI</p>
-              <p className="text-white/40 text-[10px]">Admin Panel</p>
-            </div>
-          </div>
-          {/* close btn — mobile only */}
-          <button onClick={() => setOpen(false)}
-            className="lg:hidden w-7 h-7 flex items-center justify-center rounded-lg
-              bg-white/10 text-white/60 hover:bg-white/20 transition-colors shrink-0">
-            <FaTimes className="text-xs" />
-          </button>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-          {MENU.map(item => {
-            const Icon   = item.icon;
-            const active = location.pathname.startsWith(item.path);
-            return (
-              <NavLink key={item.path} to={item.path}
-                className={() => `relative flex items-center gap-3 px-3 py-2.5 rounded-xl
-                  transition-all duration-200 text-sm font-medium
-                  ${active
-                    ? "bg-indigo-500/25 text-white border border-indigo-400/20"
-                    : "text-white/55 hover:bg-white/8 hover:text-white/90"}`}>
-                {active && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-indigo-400" />
-                )}
-                <Icon className={`shrink-0 text-sm ${active ? "text-indigo-300" : ""}`} />
-                <span>{item.name}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        {/* Admin badge + logout */}
-        <div className="p-3 border-t border-white/10 space-y-2">
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
-              <FaUserShield className="text-white text-sm" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-white text-sm font-semibold truncate">Administrator</p>
-              <p className="text-white/40 text-xs truncate">System Manager</p>
-            </div>
-          </div>
-          <button onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold
-              bg-red-500/15 text-red-400 hover:bg-red-500/25 hover:text-red-300 border border-red-500/20
-              transition-colors">
-            <FaSignOutAlt className="text-sm" /> Logout
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex bg-slate-100 dark:bg-[#080810] transition-colors">
@@ -133,7 +115,7 @@ export default function AdminLayout() {
             transition={{ type: "spring", damping: 28, stiffness: 280 }}
             className="fixed top-0 left-0 h-full z-50 lg:hidden"
             style={{ width: SIDEBAR_W, background: "linear-gradient(180deg,#1e1b4b 0%,#1a1035 100%)" }}>
-            <SidebarContent />
+            <SidebarContent location={location} setOpen={setOpen} handleLogout={handleLogout} />
           </motion.aside>
         )}
       </AnimatePresence>
@@ -141,7 +123,7 @@ export default function AdminLayout() {
       {/* ── Desktop sidebar (always visible lg+) ── */}
       <aside className="hidden lg:flex flex-col fixed top-0 left-0 h-full z-30"
         style={{ width: SIDEBAR_W, background: "linear-gradient(180deg,#1e1b4b 0%,#1a1035 100%)" }}>
-        <SidebarContent />
+        <SidebarContent location={location} setOpen={setOpen} handleLogout={handleLogout} />
       </aside>
 
       {/* ── Main content ── */}

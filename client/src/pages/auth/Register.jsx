@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash,
-  FaCheckCircle, FaExclamationCircle, FaGoogle,
+  FaCheckCircle, FaExclamationCircle,
   FaRocket, FaBrain, FaChartLine, FaShieldAlt,
 } from "react-icons/fa";
 import useAuth from "../../hooks/useAuth";

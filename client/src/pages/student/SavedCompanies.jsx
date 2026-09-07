@@ -175,7 +175,10 @@ export default function SavedCompanies() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
   const handleRemove = async (savedId) => {
     setRemoving(savedId);

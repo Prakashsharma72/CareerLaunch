@@ -55,7 +55,6 @@ async function createAdmin() {
     console.log(`   ID:       ${admin.id}`);
     console.log(`   Name:     ${admin.name}`);
     console.log(`   Email:    ${admin.email}`);
-    console.log(`   Password: ${ADMIN_PASSWORD}`);
     console.log(`   Role:     ${admin.role}`);
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 

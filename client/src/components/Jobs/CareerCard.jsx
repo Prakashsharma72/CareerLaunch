@@ -22,7 +22,7 @@ function CareerCard({ company, isSaved = false, onSave }) {
   const [saving, setSaving] = useState(false);
 
   const {
-    placeId, companyName, logo, website, careerUrl,
+    companyName, website, careerUrl, careerVerified, mapsUrl,
     address, distance,
   } = company;
 
@@ -67,7 +67,7 @@ function CareerCard({ company, isSaved = false, onSave }) {
             <p className="mt-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400
               inline-flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-              Verified careers page
+              {careerVerified ? "Verified careers page" : website ? "Official website" : "Google Maps listing"}
             </p>
           </div>
 
@@ -110,7 +110,7 @@ function CareerCard({ company, isSaved = false, onSave }) {
             </div>
           )}
 
-          {website && (
+          {website && !careerUrl && (
             <div className="flex items-center gap-2 min-w-0">
               <FaGlobe className="shrink-0 text-violet-500 text-xs" />
               <a href={website} target="_blank" rel="noopener noreferrer"
@@ -133,15 +133,14 @@ function CareerCard({ company, isSaved = false, onSave }) {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-gray-100 dark:border-white/6 mt-auto">
-          {careerUrl && (
-            <a href={careerUrl} target="_blank" rel="noopener noreferrer"
+          {(careerUrl || website || mapsUrl) && (
+            <a href={careerUrl || website || mapsUrl} target="_blank" rel="noopener noreferrer"
               onClick={e => e.stopPropagation()}
-              className="flex-1 flex items-center justify-center gap-1.5
-                bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800
-                text-white text-xs font-semibold px-3 py-2.5 rounded-xl
-                transition-colors shadow-sm shadow-emerald-500/20 whitespace-nowrap">
+              className={`flex-1 flex items-center justify-center gap-1.5
+                text-white text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors
+                ${careerUrl ? "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800" : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"}`}>
               <FaExternalLinkAlt className="text-[9px] shrink-0" />
-              Visit Careers
+              {careerUrl ? "View Careers" : website ? "Visit Website" : "View on Google Maps"}
             </a>
           )}
         </div>

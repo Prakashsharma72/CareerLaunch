@@ -184,7 +184,7 @@ Incoming request
 Check JWT_SECRET is configured
    │
    ▼
-Read Authorization header
+Read Authorization header  
    │
    ├─ missing/malformed ──► 401 NO_TOKEN
    │

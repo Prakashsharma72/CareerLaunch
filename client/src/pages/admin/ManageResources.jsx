@@ -15,8 +15,6 @@ function ManageResources() {
   const [editingResource,  setEditingResource]  = useState(null);
   const [formData,         setFormData]         = useState({ title: "", category: "", description: "", link: "" });
 
-  useEffect(() => { fetchResources(); }, []);
-
   const fetchResources = async () => {
     try {
       setLoading(true);
@@ -31,6 +29,11 @@ function ManageResources() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchResources();
+  }, []);
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
