@@ -19,17 +19,12 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-
-
-
-
-
 /* ── Step 2: guarantee a strong JWT_SECRET ──────────────────────────────── */
 import { ensureJwtSecret } from "./config/ensureSecret.js";
 ensureJwtSecret();
 
 /* ── Remaining imports (safe to import after env is ready) ──────────────── */
-import app       from "./app.js";
+import app from "./app.js";
 import sequelize from "./config/db.js";
 import { verifySmtpConnection } from "./services/email.service.js";
 
@@ -325,26 +320,26 @@ async function runMigrations() {
   // ── 2. Add missing columns to existing tables ───────────────────────────
   const columns = [
     // interview_sessions
-    ["interview_sessions", "user_id",           "INT"],
-    ["interview_sessions", "role",              "VARCHAR(255)"],
-    ["interview_sessions", "difficulty",        "VARCHAR(255)"],
-    ["interview_sessions", "status",            "VARCHAR(50) DEFAULT 'active'"],
-    ["interview_sessions", "total_questions",   "INT DEFAULT 0"],
-    ["interview_sessions", "answered_questions","INT DEFAULT 0"],
-    ["interview_sessions", "overall_score",     "FLOAT DEFAULT 0"],
-    ["interview_sessions", "report",            "TEXT"],
+    ["interview_sessions", "user_id", "INT"],
+    ["interview_sessions", "role", "VARCHAR(255)"],
+    ["interview_sessions", "difficulty", "VARCHAR(255)"],
+    ["interview_sessions", "status", "VARCHAR(50) DEFAULT 'active'"],
+    ["interview_sessions", "total_questions", "INT DEFAULT 0"],
+    ["interview_sessions", "answered_questions", "INT DEFAULT 0"],
+    ["interview_sessions", "overall_score", "FLOAT DEFAULT 0"],
+    ["interview_sessions", "report", "TEXT"],
 
     // companies — Google Places v2 columns
-    ["companies", "logo",              "TEXT"],
-    ["companies", "industry",          "VARCHAR(100)"],
-    ["companies", "state",             "VARCHAR(100)"],
-    ["companies", "country",           "VARCHAR(100)"],
-    ["companies", "short_address",     "TEXT"],
-    ["companies", "review_count",      "INT"],
-    ["companies", "is_open_now",       "TINYINT(1)"],
+    ["companies", "logo", "TEXT"],
+    ["companies", "industry", "VARCHAR(100)"],
+    ["companies", "state", "VARCHAR(100)"],
+    ["companies", "country", "VARCHAR(100)"],
+    ["companies", "short_address", "TEXT"],
+    ["companies", "review_count", "INT"],
+    ["companies", "is_open_now", "TINYINT(1)"],
     ["companies", "editorial_summary", "TEXT"],
-    ["companies", "photo_refs",        "TEXT"],
-    ["companies", "career_valid",      "TINYINT(1)"],
+    ["companies", "photo_refs", "TEXT"],
+    ["companies", "career_valid", "TINYINT(1)"],
     ["companies", "career_checked_at", "DATETIME"],
 
     // users — OTP verification
@@ -364,47 +359,47 @@ async function runMigrations() {
 
     // saved_companies
     ["saved_companies", "external_company_id", "VARCHAR(255)"],
-    ["saved_companies", "source",              "VARCHAR(100)"],
-    ["saved_companies", "company_name",        "VARCHAR(255)"],
-    ["saved_companies", "logo",                "TEXT"],
-    ["saved_companies", "website",             "TEXT"],
-    ["saved_companies", "address",             "TEXT"],
-    ["saved_companies", "phone",               "VARCHAR(50)"],
-    ["saved_companies", "rating",              "FLOAT"],
-    ["saved_companies", "maps_url",            "TEXT"],
-    ["saved_companies", "career_page",         "TEXT"],
-    ["saved_companies", "industry",            "VARCHAR(100)"],
-    ["saved_companies", "city",                "VARCHAR(100)"],
+    ["saved_companies", "source", "VARCHAR(100)"],
+    ["saved_companies", "company_name", "VARCHAR(255)"],
+    ["saved_companies", "logo", "TEXT"],
+    ["saved_companies", "website", "TEXT"],
+    ["saved_companies", "address", "TEXT"],
+    ["saved_companies", "phone", "VARCHAR(50)"],
+    ["saved_companies", "rating", "FLOAT"],
+    ["saved_companies", "maps_url", "TEXT"],
+    ["saved_companies", "career_page", "TEXT"],
+    ["saved_companies", "industry", "VARCHAR(100)"],
+    ["saved_companies", "city", "VARCHAR(100)"],
 
     // saved_jobs
     ["saved_jobs", "external_job_id", "VARCHAR(255)"],
-    ["saved_jobs", "source",          "VARCHAR(100)"],
-    ["saved_jobs", "title",           "VARCHAR(255)"],
-    ["saved_jobs", "company",         "VARCHAR(255)"],
-    ["saved_jobs", "company_logo",    "TEXT"],
-    ["saved_jobs", "location",        "VARCHAR(255)"],
-    ["saved_jobs", "salary",          "VARCHAR(255)"],
+    ["saved_jobs", "source", "VARCHAR(100)"],
+    ["saved_jobs", "title", "VARCHAR(255)"],
+    ["saved_jobs", "company", "VARCHAR(255)"],
+    ["saved_jobs", "company_logo", "TEXT"],
+    ["saved_jobs", "location", "VARCHAR(255)"],
+    ["saved_jobs", "salary", "VARCHAR(255)"],
     ["saved_jobs", "employment_type", "VARCHAR(100)"],
-    ["saved_jobs", "apply_url",       "TEXT"],
-    ["saved_jobs", "posted_date",     "VARCHAR(50)"],
+    ["saved_jobs", "apply_url", "TEXT"],
+    ["saved_jobs", "posted_date", "VARCHAR(50)"],
 
     // jobs
-    ["jobs", "external_job_id",  "VARCHAR(255)"],
-    ["jobs", "source",           "VARCHAR(100) DEFAULT 'manual'"],
-    ["jobs", "google_place_id",  "VARCHAR(255)"],
-    ["jobs", "company_logo",     "TEXT"],
-    ["jobs", "website",          "VARCHAR(512)"],
-    ["jobs", "career_page",      "VARCHAR(512)"],
-    ["jobs", "employment_type",  "VARCHAR(50)"],
-    ["jobs", "salary",           "VARCHAR(100)"],
-    ["jobs", "apply_url",        "TEXT"],
-    ["jobs", "company_rating",   "FLOAT"],
-    ["jobs", "latitude",         "DOUBLE"],
-    ["jobs", "longitude",        "DOUBLE"],
-    ["jobs", "posted_date",      "DATE"],
-    ["jobs", "expires_at",       "DATE"],
-    ["jobs", "status",           "VARCHAR(20) DEFAULT 'active'"],
-    ["jobs", "applicants",       "TEXT"],
+    ["jobs", "external_job_id", "VARCHAR(255)"],
+    ["jobs", "source", "VARCHAR(100) DEFAULT 'manual'"],
+    ["jobs", "google_place_id", "VARCHAR(255)"],
+    ["jobs", "company_logo", "TEXT"],
+    ["jobs", "website", "VARCHAR(512)"],
+    ["jobs", "career_page", "VARCHAR(512)"],
+    ["jobs", "employment_type", "VARCHAR(50)"],
+    ["jobs", "salary", "VARCHAR(100)"],
+    ["jobs", "apply_url", "TEXT"],
+    ["jobs", "company_rating", "FLOAT"],
+    ["jobs", "latitude", "DOUBLE"],
+    ["jobs", "longitude", "DOUBLE"],
+    ["jobs", "posted_date", "DATE"],
+    ["jobs", "expires_at", "DATE"],
+    ["jobs", "status", "VARCHAR(20) DEFAULT 'active'"],
+    ["jobs", "applicants", "TEXT"],
   ];
 
   for (const [table, column, definition] of columns) {
