@@ -88,8 +88,8 @@ function Navbar() {
       <nav
         className={`fixed left-0 right-0 top-0 z-50 border-b transition-all duration-300 ${
           scrolled
-            ? "border-slate-800 bg-slate-950/85 backdrop-blur-xl shadow-lg shadow-slate-950/20"
-            : "border-slate-800 bg-slate-950/85 backdrop-blur"
+            ? "border-[var(--cl-border)] bg-[var(--cl-surface)]/80 backdrop-blur-xl shadow-[var(--cl-shadow)]"
+            : "border-[var(--cl-border)] bg-[var(--cl-surface)]/75 backdrop-blur"
         }`}
       >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -98,8 +98,8 @@ function Navbar() {
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 shadow-lg shadow-blue-950/30">
                 <FaRocket className="text-sm text-white" />
               </div>
-              <span className="text-base font-bold text-white">
-                CareerLaunch <span className="text-blue-300">AI</span>
+              <span className="text-base font-bold text-[var(--cl-text)]">
+                CareerLaunch <span className="text-[var(--cl-primary)]">AI</span>
               </span>
             </Link>
 
@@ -110,7 +110,7 @@ function Navbar() {
                   to={link.to}
                   className={({ isActive }) =>
                     `relative rounded-lg px-3 py-2 text-sm font-medium transition ${
-                      isActive ? "text-blue-300" : "text-slate-300 hover:text-white"
+                      isActive ? "text-[var(--cl-primary)]" : "text-[var(--cl-text-muted)] hover:text-[var(--cl-text)]"
                     }`
                   }
                 >
@@ -129,9 +129,9 @@ function Navbar() {
             <div className="hidden items-center gap-2 md:flex">
               <button
                 type="button"
-                aria-label="Toggle dark mode"
+                aria-label="Toggle light and dark theme"
                 onClick={toggleDark}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 text-slate-200 transition hover:border-blue-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] text-[var(--cl-text)] transition hover:border-[var(--cl-primary)] hover:text-[var(--cl-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-focus)]"
               >
                 {darkMode ? "☀️" : "🌙"}
               </button>
@@ -140,7 +140,7 @@ function Navbar() {
                 <>
                   <Link
                     to="/login"
-                    className="rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                    className="rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--cl-text)] transition hover:border-[var(--cl-primary)] hover:text-[var(--cl-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-focus)]"
                   >
                     Sign In
                   </Link>
@@ -157,7 +157,7 @@ function Navbar() {
                   <button
                     type="button"
                     onClick={() => setDropOpen((value) => !value)}
-                    className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-2.5 py-1.5 text-sm font-medium text-slate-200 transition hover:border-blue-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                    className="flex items-center gap-2 rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] px-2.5 py-1.5 text-sm font-medium text-[var(--cl-text)] transition hover:border-[var(--cl-primary)] hover:text-[var(--cl-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-focus)]"
                   >
                     <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-blue-500 to-violet-500 text-xs font-bold text-white">
                       {userAvatar ? <img src={userAvatar} alt="User avatar" className="h-full w-full object-cover" /> : userInitial}
@@ -172,11 +172,11 @@ function Navbar() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl shadow-slate-950/60"
+                        className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-2xl border border-[var(--cl-border)] bg-[var(--cl-surface)] shadow-[var(--cl-shadow)]"
                       >
-                        <div className="border-b border-slate-800 px-3 py-3">
-                          <p className="truncate text-sm font-semibold text-white">{userFullName}</p>
-                          <p className="truncate text-xs text-slate-400">{userEmail}</p>
+                        <div className="border-b border-[var(--cl-border)] px-3 py-3">
+                          <p className="truncate text-sm font-semibold text-[var(--cl-text)]">{userFullName}</p>
+                          <p className="truncate text-xs text-[var(--cl-text-muted)]">{userEmail}</p>
                         </div>
 
                         {USER_MENU.map(({ icon: Icon, label, to }) => (
@@ -184,9 +184,9 @@ function Navbar() {
                             key={to}
                             to={to}
                             onClick={() => setDropOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-200 transition hover:bg-slate-900 hover:text-white"
+                            className="flex items-center gap-3 px-3 py-2.5 text-sm text-[var(--cl-text)] transition hover:bg-[var(--cl-surface-soft)] hover:text-[var(--cl-text)]"
                           >
-                            <Icon className="text-xs text-slate-400" />
+                            <Icon className="text-xs text-[var(--cl-text-muted)]" />
                             {label}
                           </Link>
                         ))}
@@ -194,7 +194,7 @@ function Navbar() {
                         <button
                           type="button"
                           onClick={handleLogout}
-                          className="flex w-full items-center gap-3 border-t border-slate-800 px-3 py-2.5 text-left text-sm text-rose-300 transition hover:bg-slate-900 hover:text-rose-200"
+                          className="flex w-full items-center gap-3 border-t border-[var(--cl-border)] px-3 py-2.5 text-left text-sm text-[var(--cl-danger)] transition hover:bg-[var(--cl-surface-soft)]"
                         >
                           <FaSignOutAlt className="text-xs" />
                           Sign out
@@ -210,7 +210,7 @@ function Navbar() {
               type="button"
               aria-label="Toggle menu"
               onClick={() => setMobileOpen((value) => !value)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 text-slate-200 transition hover:border-blue-400 hover:text-white md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] text-[var(--cl-text)] transition hover:border-[var(--cl-primary)] hover:text-[var(--cl-text)] md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-focus)]"
             >
               {mobileOpen ? <FaTimes className="text-sm" /> : <FaBars className="text-sm" />}
             </button>
@@ -234,7 +234,7 @@ function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 260, damping: 22 }}
-              className="fixed right-0 top-0 z-50 flex h-full w-80 flex-col border-l border-slate-800 bg-slate-950 px-4 py-4 md:hidden"
+              className="fixed right-0 top-0 z-50 flex h-full w-80 flex-col border-l border-[var(--cl-border)] bg-[var(--cl-surface)] px-4 py-4 md:hidden"
             >
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -247,20 +247,20 @@ function Navbar() {
                   type="button"
                   aria-label="Close menu"
                   onClick={() => setMobileOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 text-slate-300 transition hover:border-blue-400 hover:text-white"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--cl-border)] text-[var(--cl-text-muted)] transition hover:border-[var(--cl-primary)] hover:text-[var(--cl-text)]"
                 >
                   <FaTimes className="text-xs" />
                 </button>
               </div>
 
               {user && (
-                <div className="mb-4 flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
+                <div className="mb-4 flex items-center gap-3 rounded-2xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] p-3">
                   <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 text-sm font-bold text-white">
                     {userAvatar ? <img src={userAvatar} alt="User avatar" className="h-full w-full object-cover" /> : userInitial}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-white">{userFullName}</p>
-                    <p className="truncate text-xs text-slate-400">{userEmail}</p>
+                    <p className="truncate text-sm font-semibold text-[var(--cl-text)]">{userFullName}</p>
+                    <p className="truncate text-xs text-[var(--cl-text-muted)]">{userEmail}</p>
                   </div>
                 </div>
               )}
@@ -273,7 +273,7 @@ function Navbar() {
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
                       `block rounded-xl px-3 py-3 text-sm font-medium transition ${
-                        isActive ? "bg-blue-500/10 text-blue-300" : "text-slate-200 hover:bg-slate-900"
+                        isActive ? "bg-[var(--cl-primary-soft)] text-[var(--cl-primary)]" : "text-[var(--cl-text)] hover:bg-[var(--cl-surface-soft)]"
                       }`
                     }
                   >
@@ -282,11 +282,12 @@ function Navbar() {
                 ))}
               </nav>
 
-              <div className="mt-auto space-y-3 border-t border-slate-800 pt-4">
+              <div className="mt-auto space-y-3 border-t border-[var(--cl-border)] pt-4">
                 <button
                   type="button"
                   onClick={toggleDark}
-                  className="flex w-full items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-3 text-sm font-medium text-slate-200"
+                  aria-label="Toggle light and dark theme"
+                  className="flex w-full items-center justify-between rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] px-3 py-3 text-sm font-medium text-[var(--cl-text)]"
                 >
                   <span>Theme</span>
                   <span>{darkMode ? "Light" : "Dark"}</span>
@@ -297,7 +298,7 @@ function Navbar() {
                     <Link
                       to="/login"
                       onClick={() => setMobileOpen(false)}
-                      className="block rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-3 text-center text-sm font-semibold text-slate-200"
+                      className="block rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] px-3 py-3 text-center text-sm font-semibold text-[var(--cl-text)]"
                     >
                       Sign In
                     </Link>

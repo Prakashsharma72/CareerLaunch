@@ -5,6 +5,7 @@
  */
 import express from "express";
 import { getDashboardStats, getRecentActivities, getAdminUsers } from "../controllers/admin.controller.js";
+import { getAdminCompanies, getAdminCompany, createAdminCompany, updateAdminCompany } from "../controllers/company.controller.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -30,5 +31,9 @@ router.get("/users", getAdminUsers);
  * Get recent platform activities
  */
 router.get("/activities", getRecentActivities);
+router.get("/companies", getAdminCompanies);
+router.get("/companies/:id", getAdminCompany);
+router.post("/companies", createAdminCompany);
+router.put("/companies/:id", updateAdminCompany);
 
 export default router;

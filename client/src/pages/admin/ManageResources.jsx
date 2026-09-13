@@ -1,30 +1,41 @@
 import { useEffect, useState } from "react";
-import {
-  FaPlus, FaEdit, FaTrash, FaSearch, FaTimes, FaBook,
-} from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaTimes, FaBook } from "react-icons/fa";
 import Loader from "../../components/common/Loader";
+import { RESOURCE_CATEGORIES, getResourceCategory } from "../../constants/resourceCategories";
+import { addResource, deleteResource, getAdminResources, updateResource } from "../../services/resourceService";
 
-const CATEGORIES = ["All", "React", "Node.js", "JavaScript", "DSA", "Database"];
+const RESOURCE_TYPES = ["Video", "Article", "Course", "Documentation", "PDF"];
+const STATUSES = ["draft", "published"];
+const EMPTY_FORM = {
+  title: "",
+  description: "",
+  category: "web-development",
+  resourceType: "Article",
+  link: "",
+  status: "published",
+  file: null,
+};
 
 function ManageResources() {
-  const [resources,        setResources]        = useState([]);
-  const [loading,          setLoading]          = useState(true);
-  const [searchTerm,       setSearchTerm]       = useState("");
-  const [categoryFilter,   setCategoryFilter]   = useState("All");
-  const [showModal,        setShowModal]        = useState(false);
-  const [editingResource,  setEditingResource]  = useState(null);
-  const [formData,         setFormData]         = useState({ title: "", category: "", description: "", link: "" });
+  const [resources, setResources] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [showModal, setShowModal] = useState(false);
+  const [editingResource, setEditingResource] = useState(null);
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   const fetchResources = async () => {
+    setLoading(true);
+    setError("");
     try {
-      setLoading(true);
-      setResources([
-        { id: 1, title: "React Complete Guide", category: "React",  description: "Complete React learning resource.", link: "https://react.dev"   },
-        { id: 2, title: "Node.js Docs",          category: "Node.js",description: "Official Node.js documentation.",  link: "https://nodejs.org"  },
-        { id: 3, title: "DSA Sheet",             category: "DSA",   description: "Important DSA questions.",          link: "#"                  },
-      ]);
-    } catch (err) {
-      console.error(err);
+      const { data } = await getAdminResources();
+      setResources(Array.isArray(data) ? data : []);
+    } catch (fetchError) {
+      console.error("Failed to fetch admin resources:", fetchError);
+      setError(fetchError.response?.data?.message || "Unable to load resources");
     } finally {
       setLoading(false);
     }
@@ -32,233 +43,407 @@ function ManageResources() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchResources();
+    void fetchResources();
+    const refresh = () => void fetchResources();
+    window.addEventListener("focus", refresh);
+    window.addEventListener("resources:changed", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("resources:changed", refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, []);
-
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const openAddModal = () => {
     setEditingResource(null);
-    setFormData({ title: "", category: "", description: "", link: "" });
+    setFormData({ ...EMPTY_FORM });
+    setError("");
     setShowModal(true);
   };
 
   const openEditModal = (resource) => {
     setEditingResource(resource);
-    setFormData({ title: resource.title, category: resource.category, description: resource.description, link: resource.link });
+    setFormData({
+      title: resource.title || "",
+      description: resource.description || "",
+      category: resource.category || "web-development",
+      resourceType: resource.resourceType || "Article",
+      link: resource.link || resource.fileUrl || "",
+      status: resource.status || "draft",
+      file: null,
+    });
+    setError("");
     setShowModal(true);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (editingResource) {
-      setResources(resources.map((r) => r.id === editingResource.id ? { ...r, ...formData } : r));
-    } else {
-      setResources([{ id: Date.now(), ...formData }, ...resources]);
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!formData.link && !formData.file) {
+      setError("Provide a URL or upload a file.");
+      return;
     }
-    setShowModal(false);
+
+    setSaving(true);
+    setError("");
+
+    try {
+      const response = editingResource
+        ? await updateResource(editingResource.id, formData)
+        : await addResource(formData);
+
+      const savedResource = response.data;
+      setResources((current) => editingResource
+        ? current.map((resource) => resource.id === savedResource.id ? savedResource : resource)
+        : [savedResource, ...current]
+      );
+      setShowModal(false);
+    } catch (saveError) {
+      setError(saveError.response?.data?.message || "Unable to save resource");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm("Delete this resource?")) return;
-    setResources(resources.filter((r) => r.id !== id));
+
+    try {
+      await deleteResource(id);
+      setResources((current) => current.filter((resource) => resource.id !== id));
+    } catch (deleteError) {
+      setError(deleteError.response?.data?.message || "Unable to delete resource");
+    }
   };
 
-  const filtered = resources.filter((r) => {
-    const matchSearch   = r.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchCategory = categoryFilter === "All" || r.category === categoryFilter;
+  const filtered = resources.filter((resource) => {
+    const matchSearch = resource.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchCategory = categoryFilter === "All" || resource.category === categoryFilter;
     return matchSearch && matchCategory;
   });
+
+  const updateField = (name, value) =>
+    setFormData((current) => ({ ...current, [name]: value }));
 
   if (loading) return <Loader />;
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-
-      {/* ── Header ── */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="cl-page p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--cl-text)] sm:text-3xl">
             Manage Resources
           </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 mt-1 text-sm">
+          <p className="mt-1 text-sm text-[var(--cl-text-muted)]">
             Add, update and delete learning resources.
           </p>
         </div>
+
         <button
+          type="button"
           onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700
-            text-white font-semibold text-sm rounded-xl transition-colors self-start md:self-auto"
+          className="cl-primary-btn flex items-center justify-center gap-2 self-start px-4 py-2.5 text-sm md:self-auto"
         >
-          <FaPlus /> Add Resource
+          <FaPlus />
+          Add Resource
         </button>
       </div>
 
-      {/* ── Search + Filter ── */}
-      <div className="bg-white dark:bg-[#0f1123] rounded-2xl border border-neutral-200 dark:border-white/8 shadow-sm p-4">
-        <div className="grid md:grid-cols-2 gap-4">
+      {error && !showModal && (
+        <div className="flex flex-col gap-3 rounded-xl border border-[var(--cl-danger)]/20 bg-[var(--cl-danger-soft)] px-4 py-3 text-sm text-[var(--cl-danger)] sm:flex-row sm:items-center sm:justify-between">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => void fetchResources()}
+            className="font-semibold underline underline-offset-2"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      <div className="cl-card p-4 sm:p-5">
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="relative">
-            <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" />
+            <FaSearch className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[var(--cl-text-soft)]" />
             <input
               type="text"
-              placeholder="Search resources…"
+              placeholder="Search resources..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl
-                bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10
-                text-gray-800 dark:text-white placeholder-gray-400
-                focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition"
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="cl-control w-full pl-10 pr-4 py-2.5 text-sm"
             />
           </div>
+
           <select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="py-2.5 px-3 text-sm rounded-xl
-              bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10
-              text-gray-800 dark:text-white
-              focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition"
+            onChange={(event) => setCategoryFilter(event.target.value)}
+            className="cl-control px-3 py-2.5 text-sm"
           >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c} className="bg-white dark:bg-[#0f1123]">{c === "All" ? "All Categories" : c}</option>
+            <option value="All">All Categories</option>
+            {RESOURCE_CATEGORIES.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* ── Table ── */}
-      <div className="bg-white dark:bg-[#0f1123] rounded-2xl border border-neutral-200 dark:border-white/8 shadow-sm overflow-hidden">
+      <div className="cl-card overflow-hidden">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-white/8 flex items-center justify-center">
-              <FaBook className="text-2xl text-gray-400" />
+          <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--cl-surface-soft)]">
+              <FaBook className="text-2xl text-[var(--cl-text-soft)]" />
             </div>
-            <h3 className="font-bold text-gray-700 dark:text-white">No resources found</h3>
-            <p className="text-sm text-gray-400 max-w-xs">Try adjusting your search or add a new resource.</p>
+            <h3 className="text-lg font-bold text-[var(--cl-text)]">No resources found</h3>
+            <p className="max-w-xs text-sm text-[var(--cl-text-muted)]">
+              Try adjusting your search or add a new resource.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[760px] text-sm">
               <thead>
-                <tr className="bg-gray-50 dark:bg-white/4 border-b border-gray-100 dark:border-white/8 text-left">
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Title</th>
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Category</th>
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Description</th>
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Actions</th>
+                <tr className="border-b border-[var(--cl-border)] bg-[var(--cl-surface-soft)] text-left">
+                  <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Title
+                  </th>
+                  <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Category
+                  </th>
+                  <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Status
+                  </th>
+                  <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Actions
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-white/6">
-                {filtered.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-white/4 transition-colors">
-                    <td className="px-5 py-4 font-medium text-gray-900 dark:text-white">{r.title}</td>
-                    <td className="px-5 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
-                        bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
-                        {r.category}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-gray-600 dark:text-gray-300 max-w-xs truncate">{r.description}</td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => openEditModal(r)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center
-                            bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400
-                            hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 transition-colors"
-                          title="Edit"
+
+              <tbody>
+                {filtered.map((resource) => {
+                  const category = getResourceCategory(resource.category);
+
+                  return (
+                    <tr
+                      key={resource.id}
+                      className="border-b border-[var(--cl-border)] transition-colors last:border-b-0 hover:bg-[var(--cl-surface-soft)]"
+                    >
+                      <td className="px-5 py-4 align-top">
+                        <div className="font-medium text-[var(--cl-text)]">{resource.title}</div>
+                        <div className="mt-1 max-w-xs truncate text-xs text-[var(--cl-text-muted)]">
+                          {resource.description}
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 align-top">
+                        <span className="inline-flex rounded-full bg-[var(--cl-primary-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--cl-primary-strong)]">
+                          {category?.name || resource.category}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4 align-top">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                            resource.status === "published"
+                              ? "bg-[var(--cl-success-soft)] text-[var(--cl-success)]"
+                              : "bg-[var(--cl-warning-soft)] text-[var(--cl-warning)]"
+                          }`}
                         >
-                          <FaEdit className="text-xs" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(r.id)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center
-                            bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400
-                            hover:bg-red-600 hover:text-white dark:hover:bg-red-600 transition-colors"
-                          title="Delete"
-                        >
-                          <FaTrash className="text-xs" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {resource.status}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4 align-top">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(resource)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] px-2.5 py-1.5 text-xs font-medium text-[var(--cl-text)] transition-colors hover:bg-[var(--cl-surface-elevated)]"
+                          >
+                            <FaEdit className="text-[10px]" />
+                            Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => void handleDelete(resource.id)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cl-danger)]/20 bg-[var(--cl-danger-soft)] px-2.5 py-1.5 text-xs font-medium text-[var(--cl-danger)] transition-colors hover:bg-[var(--cl-danger)] hover:text-[var(--cl-button-text)]"
+                          >
+                            <FaTrash className="text-[10px]" />
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* ── Modal ── */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-white dark:bg-[#0f1123] border border-neutral-200 dark:border-white/10
-            rounded-2xl shadow-2xl w-full max-w-lg">
-
-            {/* Modal header */}
-            <div className="flex justify-between items-center px-6 py-4 border-b border-neutral-100 dark:border-white/8">
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cl-overlay)] p-4 backdrop-blur-sm">
+          <div className="cl-card w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[var(--cl-border)] px-6 py-4">
+              <h2 className="text-lg font-bold text-[var(--cl-text)]">
                 {editingResource ? "Edit Resource" : "Add Resource"}
               </h2>
+
               <button
+                type="button"
                 onClick={() => setShowModal(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center
-                  bg-gray-100 dark:bg-white/8 text-gray-500 dark:text-gray-400
-                  hover:bg-gray-200 dark:hover:bg-white/15 transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--cl-surface-soft)] text-[var(--cl-text-muted)] transition-colors hover:bg-[var(--cl-surface-elevated)]"
               >
                 <FaTimes className="text-xs" />
               </button>
             </div>
 
-            {/* Modal body */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {[
-                { name: "title",       placeholder: "Resource title",    type: "text" },
-                { name: "category",    placeholder: "Category",          type: "text" },
-                { name: "link",        placeholder: "Resource URL",      type: "url"  },
-              ].map(({ name, placeholder, type }) => (
+            <form onSubmit={handleSubmit} className="space-y-4 p-6">
+              {error && (
+                <p className="rounded-lg border border-[var(--cl-danger)]/20 bg-[var(--cl-danger-soft)] p-3 text-sm text-[var(--cl-danger)]">
+                  {error}
+                </p>
+              )}
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[var(--cl-text)]">
+                  Resource title
+                </label>
                 <input
-                  key={name}
-                  type={type}
-                  name={name}
-                  placeholder={placeholder}
-                  value={formData[name]}
-                  onChange={handleChange}
+                  name="title"
+                  placeholder="Resource title"
+                  value={formData.title}
+                  onChange={(event) => updateField("title", event.target.value)}
                   required
-                  className="w-full px-4 py-2.5 text-sm rounded-xl
-                    bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10
-                    text-gray-800 dark:text-white placeholder-gray-400
-                    focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition"
+                  className="cl-control w-full px-4 py-2.5 text-sm"
                 />
-              ))}
-              <textarea
-                rows={3}
-                name="description"
-                placeholder="Description"
-                value={formData.description}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2.5 text-sm rounded-xl resize-none
-                  bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10
-                  text-gray-800 dark:text-white placeholder-gray-400
-                  focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition"
-              />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[var(--cl-text)]">
+                  Description
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Description"
+                  value={formData.description}
+                  onChange={(event) => updateField("description", event.target.value)}
+                  required
+                  className="cl-control w-full resize-none px-4 py-2.5 text-sm"
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--cl-text)]">
+                    Category
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(event) => updateField("category", event.target.value)}
+                    className="cl-control w-full px-3 py-2.5 text-sm"
+                  >
+                    {RESOURCE_CATEGORIES.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--cl-text)]">
+                    Type
+                  </label>
+                  <select
+                    value={formData.resourceType}
+                    onChange={(event) => updateField("resourceType", event.target.value)}
+                    className="cl-control w-full px-3 py-2.5 text-sm"
+                  >
+                    {RESOURCE_TYPES.map((type) => (
+                      <option key={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[var(--cl-text)]">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(event) => updateField("status", event.target.value)}
+                  className="cl-control w-full px-3 py-2.5 text-sm"
+                >
+                  {STATUSES.map((status) => (
+                    <option key={status}>{status}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[var(--cl-text)]">
+                  Resource URL
+                </label>
+                <input
+                  type="url"
+                  placeholder="Resource URL (optional when uploading a file)"
+                  value={formData.link}
+                  disabled={Boolean(formData.file)}
+                  onChange={(event) => updateField("link", event.target.value)}
+                  className="cl-control w-full px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+
+              <div className="rounded-xl border border-dashed border-[var(--cl-border)] bg-[var(--cl-surface-soft)] p-3">
+                <label className="block text-sm font-medium text-[var(--cl-text)]">
+                  Upload resource file
+                  <span className="ml-1 font-normal text-[var(--cl-text-muted)]">
+                    (optional if a URL is provided)
+                  </span>
+                </label>
+
+                <input
+                  type="file"
+                  name="file"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.png,.jpg,.jpeg,.webp,.mp4,.webm"
+                  onChange={(event) =>
+                    setFormData((current) => ({
+                      ...current,
+                      file: event.target.files?.[0] || null,
+                      link: "",
+                    }))
+                  }
+                  className="mt-2 block w-full text-sm text-[var(--cl-text-muted)] file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--cl-primary-soft)] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-[var(--cl-primary-strong)] file:transition-colors hover:file:bg-[var(--cl-primary)] hover:file:text-[var(--cl-button-text)]"
+                />
+
+                {formData.file && (
+                  <p className="mt-2 text-xs text-[var(--cl-primary-strong)]">
+                    Selected: {formData.file.name}
+                  </p>
+                )}
+              </div>
+
               <div className="flex gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 py-2.5 text-sm font-semibold rounded-xl
-                    border border-gray-200 dark:border-white/10
-                    text-gray-600 dark:text-gray-300
-                    hover:bg-gray-100 dark:hover:bg-white/8 transition-colors"
+                  className="cl-secondary-btn flex-1"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 text-sm font-semibold rounded-xl
-                    bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                  disabled={saving}
+                  className="cl-primary-btn flex-1 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {editingResource ? "Update Resource" : "Add Resource"}
+                  {saving ? "Saving..." : editingResource ? "Update Resource" : "Add Resource"}
                 </button>
               </div>
             </form>

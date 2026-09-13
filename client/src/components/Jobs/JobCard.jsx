@@ -29,11 +29,11 @@ function avatarGradient(name = "") {
 }
 
 const JOB_TYPE_COLORS = {
-  "full time":  "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-500/30",
-  "part time":  "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-500/30",
-  "internship": "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-500/30",
-  "remote":     "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30",
-  "contract":   "bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-500/30",
+  "full time":  "bg-[var(--cl-primary-soft)] text-[var(--cl-primary)] border-[var(--cl-primary)]/30",
+  "part time":  "bg-violet-500/10 text-violet-600 border-violet-500/30 dark:text-violet-300 dark:border-violet-400/40",
+  "internship": "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300 dark:border-amber-400/40",
+  "remote":     "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 dark:border-emerald-400/40",
+  "contract":   "bg-orange-500/10 text-orange-700 border-orange-500/30 dark:text-orange-300 dark:border-orange-400/40",
 };
 
 function jobTypeBadge(type = "") {
@@ -78,7 +78,9 @@ function JobCard({ job, isSaved = false, onSaveJob, distanceKm = null }) {
   const distLabel      = formatKm(resolvedDistKm);
 
   const displayType  = type || jobType || "";
-  const skills       = Array.isArray(skillsRequired) ? skillsRequired : [];
+  const skills       = Array.isArray(skillsRequired)
+    ? skillsRequired
+    : String(skillsRequired || "").split(",").map(skill => skill.trim()).filter(Boolean);
   const [g1, g2]     = avatarGradient(company || title);
 
   return (
@@ -87,9 +89,9 @@ function JobCard({ job, isSaved = false, onSaveJob, distanceKm = null }) {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -3, transition: { duration: 0.18 } }}
       transition={{ duration: 0.22 }}
-      className="flex flex-col bg-white dark:bg-[#0f1123]
-        border border-gray-200 dark:border-white/8
-        rounded-2xl shadow-sm hover:shadow-xl hover:shadow-black/8 dark:hover:shadow-black/40
+      className="flex flex-col bg-[var(--cl-surface)]
+        border border-[var(--cl-border)]
+        rounded-2xl shadow-[var(--cl-shadow)] hover:shadow-[var(--cl-shadow)]
         overflow-hidden transition-shadow duration-300"
     >
       {/* Coloured top bar */}
@@ -109,10 +111,10 @@ function JobCard({ job, isSaved = false, onSaveJob, distanceKm = null }) {
 
           {/* Title + company */}
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 dark:text-white text-[15px] leading-tight line-clamp-1">
+            <h3 className="font-bold text-[var(--cl-text)] text-[15px] leading-tight line-clamp-1">
               {title}
             </h3>
-            <div className="flex items-center gap-1.5 mt-1 text-gray-500 dark:text-gray-400 text-sm">
+            <div className="flex items-center gap-1.5 mt-1 text-[var(--cl-text-muted)] text-sm">
               <FaBuilding className="text-xs shrink-0" />
               <span className="truncate">{company}</span>
             </div>
@@ -125,15 +127,15 @@ function JobCard({ job, isSaved = false, onSaveJob, distanceKm = null }) {
             title={isSaved ? "Unsave job" : "Save job"}
             className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all
               ${isSaved
-                ? "bg-blue-600 text-white shadow-md shadow-blue-500/30"
-                : "bg-gray-100 dark:bg-white/8 text-gray-400 dark:text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400"}`}
+                ? "bg-[var(--cl-primary)] text-white shadow-md shadow-blue-500/30"
+                : "bg-[var(--cl-surface-soft)] text-[var(--cl-text-muted)] hover:bg-[var(--cl-primary-soft)] hover:text-[var(--cl-primary)]"}`}
           >
             <FaBookmark className="text-sm" />
           </motion.button>
         </div>
 
         {/* ── Meta info ───────────────────────────────────────── */}
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-[var(--cl-text-muted)]">
           {location && (
             <span className="flex items-center gap-1.5">
               <FaMapMarkerAlt className="text-blue-500 text-xs shrink-0" />
@@ -141,7 +143,7 @@ function JobCard({ job, isSaved = false, onSaveJob, distanceKm = null }) {
             </span>
           )}
           {distLabel && (
-            <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-semibold text-xs">
+            <span className="flex items-center gap-1.5 text-[var(--cl-primary)] font-semibold text-xs">
               <FaLocationArrow className="text-[10px] shrink-0" />
               {distLabel} away
             </span>
@@ -166,13 +168,13 @@ function JobCard({ job, isSaved = false, onSaveJob, distanceKm = null }) {
           <div className="flex flex-wrap gap-1.5">
             {skills.slice(0, 5).map((skill) => (
               <span key={skill}
-                className="text-xs bg-gray-100 dark:bg-white/8 text-gray-600 dark:text-gray-400
-                  border border-gray-200 dark:border-white/10 px-2.5 py-0.5 rounded-full">
+                className="text-xs bg-[var(--cl-surface-soft)] text-[var(--cl-text-muted)]
+                  border border-[var(--cl-border)] px-2.5 py-0.5 rounded-full">
                 {skill}
               </span>
             ))}
             {skills.length > 5 && (
-              <span className="text-xs text-gray-400 dark:text-gray-500 px-1 py-0.5">
+              <span className="text-xs text-[var(--cl-text-soft)] px-1 py-0.5">
                 +{skills.length - 5} more
               </span>
             )}
@@ -181,14 +183,14 @@ function JobCard({ job, isSaved = false, onSaveJob, distanceKm = null }) {
 
         {/* ── Description ─────────────────────────────────────── */}
         {description && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed flex-1">
+          <p className="text-sm text-[var(--cl-text-muted)] line-clamp-2 leading-relaxed flex-1">
             {description}
           </p>
         )}
 
         {/* ── Footer ──────────────────────────────────────────── */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-white/6">
-          <span className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+        <div className="flex items-center justify-between pt-3 border-t border-[var(--cl-border)]">
+          <span className="flex items-center gap-1.5 text-xs text-[var(--cl-text-soft)]">
             <FaClock className="text-[10px]" />
             {formatDate(createdAt)}
           </span>
@@ -203,6 +205,16 @@ function JobCard({ job, isSaved = false, onSaveJob, distanceKm = null }) {
             View Details
             <FaArrowRight className="text-[9px]" />
           </Link>
+          {job.applyUrl && (
+            <a
+              href={job.applyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs font-semibold bg-[var(--cl-success)] hover:opacity-90 text-[var(--cl-button-text)] px-4 py-2 rounded-xl transition-colors"
+            >
+              Apply
+            </a>
+          )}
         </div>
       </div>
     </motion.div>

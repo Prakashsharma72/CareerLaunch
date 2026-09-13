@@ -9,11 +9,12 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { getThemePreference, applyTheme } from "../utils/helpers";
 import {
   FaTachometerAlt, FaBriefcase, FaBook,
   FaUsers, FaBars, FaTimes, FaSignOutAlt,
   FaUserShield, FaRocket, FaCog,
-  FaPencilAlt,
+  FaPencilAlt, FaBuilding,
 } from "react-icons/fa";
 
 const MENU = [
@@ -22,55 +23,73 @@ const MENU = [
   { name: "Manage Resources", icon: FaBook,          path: "/admin/resources"  },
   { name: "Manage Users",     icon: FaUsers,         path: "/admin/users"      },
   { name: "Manage Roadmaps",  icon: FaPencilAlt,     path: "/admin/roadmaps"   },
+  { name: "Manage Companies", icon: FaBuilding,     path: "/admin/companies"  },
   { name: "API Settings",     icon: FaCog,           path: "/admin/settings"   },
 ];
 
-const SIDEBAR_W = 260;
+const SIDEBAR_W = 240;
 
 function SidebarContent({ location, setOpen, handleLogout }) {
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center" style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
-            <FaRocket className="text-white text-xs" />
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-[var(--cl-border)] px-5 py-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+            style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}
+          >
+            <FaRocket className="text-xs text-white" />
           </div>
           <div className="min-w-0">
-            <p className="font-bold text-white text-sm truncate">CareerLaunch AI</p>
-            <p className="text-white/40 text-[10px]">Admin Panel</p>
+            <p className="truncate text-sm font-bold text-[var(--cl-text)]">CareerLaunch AI</p>
+            <p className="text-[10px] text-[var(--cl-text-muted)]">Admin Panel</p>
           </div>
         </div>
-        <button onClick={() => setOpen(false)} className="lg:hidden w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-white/60 hover:bg-white/20 transition-colors shrink-0">
+        <button
+          onClick={() => setOpen(false)}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--cl-surface-soft)] text-[var(--cl-text-muted)] transition-colors hover:bg-[var(--cl-surface-elevated)] lg:hidden"
+        >
           <FaTimes className="text-xs" />
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
         {MENU.map((item) => {
           const Icon = item.icon;
           const active = location.pathname.startsWith(item.path);
           return (
-            <NavLink key={item.path} to={item.path} className={() => `relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium ${active ? "bg-indigo-500/25 text-white border border-indigo-400/20" : "text-white/55 hover:bg-white/8 hover:text-white/90"}`}>
-              {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-indigo-400" />}
-              <Icon className={`shrink-0 text-sm ${active ? "text-indigo-300" : ""}`} />
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={() => `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${active
+                ? "border border-[var(--cl-admin-active-strong)] bg-[var(--cl-admin-active)] text-[var(--cl-admin-active-text)] shadow-[0_10px_24px_-18px_rgba(109,40,217,0.55)]"
+                : "text-[var(--cl-text-muted)] hover:bg-[var(--cl-surface-soft)] hover:text-[var(--cl-text)]"}`}
+            >
+              {active && <div className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[var(--cl-admin-active-text)]" />}
+              <Icon className={`shrink-0 text-sm ${active ? "text-[var(--cl-admin-active-text)]" : "text-[var(--cl-text-muted)]"}`} />
               <span>{item.name}</span>
             </NavLink>
           );
         })}
       </nav>
 
-      <div className="p-3 border-t border-white/10 space-y-2">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5">
-          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
-            <FaUserShield className="text-white text-sm" />
+      <div className="space-y-2 border-t border-[var(--cl-border)] p-3">
+        <div className="flex items-center gap-3 rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] px-3 py-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--cl-primary)]">
+            <FaUserShield className="text-sm text-white" />
           </div>
           <div className="min-w-0">
-            <p className="text-white text-sm font-semibold truncate">Administrator</p>
-            <p className="text-white/40 text-xs truncate">System Manager</p>
+            <p className="truncate text-sm font-semibold text-[var(--cl-text)]">Administrator</p>
+            <p className="truncate text-xs text-[var(--cl-text-muted)]">System Manager</p>
           </div>
         </div>
-        <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-red-500/15 text-red-400 hover:bg-red-500/25 hover:text-red-300 border border-red-500/20 transition-colors">
-          <FaSignOutAlt className="text-sm" /> Logout
+        <button
+          onClick={handleLogout}
+          className="w-full rounded-xl border border-[var(--cl-danger)]/20 bg-[var(--cl-danger-soft)] py-2.5 text-sm font-semibold text-[var(--cl-danger)] transition-colors hover:bg-[var(--cl-danger)] hover:text-[var(--cl-button-text)]"
+        >
+          <span className="inline-flex items-center justify-center gap-2">
+            <FaSignOutAlt className="text-sm" /> Logout
+          </span>
         </button>
       </div>
     </div>
@@ -81,6 +100,11 @@ export default function AdminLayout() {
   const navigate  = useNavigate();
   const location  = useLocation();
   const [open, setOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(getThemePreference);
+
+  useEffect(() => {
+    applyTheme(darkMode);
+  }, [darkMode]);
 
   /* close drawer on route change */
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -113,54 +137,91 @@ export default function AdminLayout() {
           <motion.aside key="drawer"
             initial={{ x: -SIDEBAR_W }} animate={{ x: 0 }} exit={{ x: -SIDEBAR_W }}
             transition={{ type: "spring", damping: 28, stiffness: 280 }}
-            className="fixed top-0 left-0 h-full z-50 lg:hidden"
-            style={{ width: SIDEBAR_W, background: "linear-gradient(180deg,#1e1b4b 0%,#1a1035 100%)" }}>
+            className="fixed left-0 top-0 z-50 h-full bg-[var(--cl-sidebar)] lg:hidden"
+            style={{ width: SIDEBAR_W }}>
             <SidebarContent location={location} setOpen={setOpen} handleLogout={handleLogout} />
           </motion.aside>
         )}
       </AnimatePresence>
 
       {/* ── Desktop sidebar (always visible lg+) ── */}
-      <aside className="hidden lg:flex flex-col fixed top-0 left-0 h-full z-30"
-        style={{ width: SIDEBAR_W, background: "linear-gradient(180deg,#1e1b4b 0%,#1a1035 100%)" }}>
+      <aside className="fixed left-0 top-0 z-30 hidden h-full flex-col bg-[var(--cl-sidebar)] lg:flex"
+        style={{ width: SIDEBAR_W }}>
         <SidebarContent location={location} setOpen={setOpen} handleLogout={handleLogout} />
       </aside>
 
       {/* ── Main content ── */}
-      <div className="flex-1 flex flex-col lg:ml-65 min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col bg-[var(--cl-page)] lg:ml-60">
 
         {/* Header */}
-        <header className="sticky top-0 z-20 flex items-center justify-between
-          px-4 sm:px-6 lg:px-8 py-3
-          bg-white dark:bg-[#0d0f1e] border-b border-neutral-200 dark:border-white/8
-          shadow-sm">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[var(--cl-border)] bg-[var(--cl-surface)] px-4 sm:px-6 lg:px-7">
 
           <div className="flex items-center gap-3 min-w-0">
             {/* Hamburger — mobile only */}
             <button onClick={() => setOpen(true)} aria-label="Open menu"
-              className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl
-                bg-neutral-100 dark:bg-white/8 text-neutral-600 dark:text-neutral-300
-                hover:bg-neutral-200 dark:hover:bg-white/15 transition-colors shrink-0">
+              className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--cl-surface-muted)] text-[var(--cl-text-muted)] transition-colors shrink-0">
               <FaBars className="text-sm" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white truncate">
+              <h1 className="truncate text-sm font-bold text-[var(--cl-text)] sm:text-base">
                 {pageName}
               </h1>
-              <p className="text-xs text-neutral-400 hidden sm:block">
+              <p className="hidden text-xs text-[var(--cl-text-muted)] sm:block">
                 {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
               </p>
             </div>
           </div>
 
-          {/* Right: admin badge */}
+          {/* Right: actions */}
           <div className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-              <FaUserShield className="text-white text-sm" />
-            </div>
-            <div className="hidden sm:block">
-              <p className="text-sm font-semibold text-neutral-800 dark:text-white leading-tight">Administrator</p>
-              <p className="text-xs text-neutral-400">System Manager</p>
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => setDarkMode(!darkMode)}
+              aria-label="Toggle dark mode"
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--cl-surface-muted)] text-[var(--cl-text-muted)] transition-colors"
+            >
+              <AnimatePresence mode="wait">
+                {darkMode ? (
+                  <motion.svg
+                    key="sun"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                  </motion.svg>
+                ) : (
+                  <motion.svg
+                    key="moon"
+                    initial={{ rotate: 90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                  </motion.svg>
+                )}
+              </AnimatePresence>
+            </motion.button>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
+                <FaUserShield className="text-white text-sm" />
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-sm font-semibold leading-tight text-[var(--cl-text)]">Administrator</p>
+                <p className="text-xs text-[var(--cl-text-muted)]">System Manager</p>
+              </div>
             </div>
           </div>
         </header>

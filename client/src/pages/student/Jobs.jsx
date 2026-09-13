@@ -16,6 +16,7 @@ import {
 
 import CareerCard         from "../../components/Jobs/CareerCard";
 import CareerCardSkeleton from "../../components/Jobs/CareerCardSkeleton";
+import JobCard            from "../../components/Jobs/JobCard";
 import CompanyFilters     from "../../components/companies/CompanyFilters";
 import useCompanyCareers  from "../../hooks/useCompanyCareers";
 import {
@@ -27,6 +28,7 @@ import {
   getSavedCompanies,
   removeSavedCompany,
 } from "../../services/companyService";
+import { saveJobBookmark, getSavedJobs, removeSavedJob } from "../../services/jobService";
 
 const PAGE_SIZE = 12;
 
@@ -46,23 +48,23 @@ function Pagination({ page, totalPages, onChange }) {
         onClick={() => onChange(page - 1)}
         disabled={page === 1}
         className="w-9 h-9 rounded-xl flex items-center justify-center
-          bg-white dark:bg-white/8 border border-gray-200 dark:border-white/10
-          text-gray-600 dark:text-gray-300 disabled:opacity-30
-          hover:bg-gray-50 dark:hover:bg-white/15 transition-colors">
+          bg-[var(--cl-surface)] border border-[var(--cl-border)]
+          text-[var(--cl-text-muted)] disabled:opacity-30
+          hover:bg-[var(--cl-surface-soft)] transition-colors">
         <FaChevronLeft className="text-xs" />
       </button>
 
       {pages.map((p, i) => (
         <span key={p} className="flex items-center gap-1.5 sm:gap-2">
           {pages[i - 1] && p - pages[i - 1] > 1 && (
-            <span className="text-gray-400 text-sm">…</span>
+            <span className="text-[var(--cl-text-soft)] text-sm">…</span>
           )}
           <button
             onClick={() => onChange(p)}
             className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all ${
               p === page
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/25 scale-105"
-                : "bg-white dark:bg-white/8 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/15"
+                ? "bg-[var(--cl-primary)] text-[var(--cl-button-text)] shadow-lg scale-105"
+                : "bg-[var(--cl-surface)] border border-[var(--cl-border)] text-[var(--cl-text-muted)] hover:bg-[var(--cl-surface-soft)]"
             }`}>
             {p}
           </button>
@@ -73,9 +75,9 @@ function Pagination({ page, totalPages, onChange }) {
         onClick={() => onChange(page + 1)}
         disabled={page === totalPages}
         className="w-9 h-9 rounded-xl flex items-center justify-center
-          bg-white dark:bg-white/8 border border-gray-200 dark:border-white/10
-          text-gray-600 dark:text-gray-300 disabled:opacity-30
-          hover:bg-gray-50 dark:hover:bg-white/15 transition-colors">
+          bg-[var(--cl-surface)] border border-[var(--cl-border)]
+          text-[var(--cl-text-muted)] disabled:opacity-30
+          hover:bg-[var(--cl-surface-soft)] transition-colors">
         <FaChevronRight className="text-xs" />
       </button>
     </div>
@@ -89,18 +91,18 @@ function LocationPrompt({ onRequestGPS, onCitySubmit }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="col-span-full bg-white dark:bg-[#0f1123]
-        border border-gray-100 dark:border-white/8 rounded-2xl
+      className="col-span-full bg-[var(--cl-surface)]
+        border border-[var(--cl-border)] rounded-2xl
         p-8 sm:p-12 md:p-14 flex flex-col items-center text-center gap-5">
-      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/25
+      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[var(--cl-primary-soft)]
         flex items-center justify-center shrink-0">
-        <FaMapMarkerAlt className="text-2xl sm:text-3xl text-blue-500" />
+        <FaMapMarkerAlt className="text-2xl sm:text-3xl text-[var(--cl-primary)]" />
       </div>
       <div className="max-w-sm">
-        <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-lg sm:text-xl font-bold text-[var(--cl-text)] mb-2">
           Allow location or enter a city
         </h3>
-        <p className="text-gray-400 dark:text-gray-500 text-sm">
+        <p className="text-[var(--cl-text-muted)] text-sm">
           We find nearby software companies and verify which ones have working career pages on their websites.
         </p>
       </div>
@@ -108,11 +110,11 @@ function LocationPrompt({ onRequestGPS, onCitySubmit }) {
         <button
           onClick={onRequestGPS}
           className="flex-1 flex items-center justify-center gap-2
-            bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm
-            px-5 py-3 rounded-xl transition-colors shadow-md shadow-blue-500/20">
+            bg-[var(--cl-primary)] hover:bg-[var(--cl-primary-strong)] text-[var(--cl-button-text)] font-semibold text-sm
+            px-5 py-3 rounded-xl transition-colors shadow-md">
           <FaLocationArrow className="text-xs shrink-0" /> Use My Location
         </button>
-        <span className="self-center text-gray-400 text-sm hidden sm:block">or</span>
+        <span className="self-center text-[var(--cl-text-soft)] text-sm hidden sm:block">or</span>
         <form
           className="flex-1 flex gap-2"
           onSubmit={e => { e.preventDefault(); city.trim() && onCitySubmit(city.trim()); }}>
@@ -122,14 +124,13 @@ function LocationPrompt({ onRequestGPS, onCitySubmit }) {
             value={city}
             onChange={e => setCity(e.target.value)}
             className="flex-1 min-w-0 px-4 py-3 text-sm rounded-xl
-              border border-gray-200 dark:border-white/10
-              bg-gray-50 dark:bg-white/5 text-gray-800 dark:text-white
-              placeholder-gray-400 focus:outline-none focus:ring-2
-              focus:ring-blue-500/40 transition" />
+              border border-[var(--cl-border)]
+              bg-[var(--cl-surface-soft)] text-[var(--cl-text)] placeholder:text-[var(--cl-text-soft)]
+              focus:outline-none focus:ring-2 focus:ring-[var(--cl-ring)] transition" />
           <button
             type="submit"
             disabled={!city.trim()}
-            className="shrink-0 px-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900
+            className="shrink-0 px-4 py-3 bg-[var(--cl-text)] text-[var(--cl-button-text)]
               font-semibold text-sm rounded-xl disabled:opacity-40 transition-colors">
             <FaSearch />
           </button>
@@ -150,6 +151,9 @@ export default function Jobs() {
     loading,
     error,
     source,
+    activeLocation,
+    dataLocation,
+    providerSource,
     requestLocation,
     fetchByCity,
     refetch,
@@ -163,6 +167,10 @@ export default function Jobs() {
   const page       = useSelector(s => s.places.page);
   const savedMap   = useSelector(s => s.places.savedMap);
   const navigate   = useNavigate();
+  const [savedJobMap, setSavedJobMap] = useState({});
+  const isJobResults = source === "database_jobs";
+  const resolvedLocation = filters.city?.trim() || activeLocation || location.city || "your area";
+  const displayLocation = loading && dataLocation ? dataLocation : resolvedLocation;
 
   useEffect(() => {
     const keyword = searchParams.get("keyword")?.trim();
@@ -173,6 +181,7 @@ export default function Jobs() {
         search: keyword || "",
         city: location || "",
       }));
+      if (location) dispatch(setManualCity(location));
     }
   }, [dispatch, searchParams]);
 
@@ -188,7 +197,7 @@ export default function Jobs() {
       );
     }
 
-    if (filters.minRating > 0) {
+    if (!isJobResults && filters.minRating > 0) {
       list = list.filter(c => c.rating != null && c.rating >= filters.minRating);
     }
 
@@ -197,7 +206,7 @@ export default function Jobs() {
     }
 
     return list;
-  }, [companies, filters.search, filters.minRating, filters.maxRadius]);
+  }, [companies, filters.search, filters.minRating, filters.maxRadius, isJobResults]);
 
   const total       = allFiltered.length;
   const loadedTotal = companies.length;
@@ -217,8 +226,14 @@ export default function Jobs() {
     dispatch(setPage(1));
     if (didInit.current) return;
     didInit.current = true;
+
+    if (filters.city?.trim()) {
+      fetchByCity(filters.city, filters.keyword);
+      return;
+    }
+
     if (source === null || source === "no_location") requestLocation();
-  }, []); // eslint-disable-line
+  }, [dispatch, fetchByCity, filters.city, filters.keyword, requestLocation, source]);
 
   /* ── Reset page when filters or data change ── */
   useEffect(() => {
@@ -236,6 +251,18 @@ export default function Jobs() {
       dispatch(setSavedMap(map));
     }).catch(() => {});
   }, [isAuthenticated, dispatch]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    getSavedJobs().then(({ data }) => {
+      const map = {};
+      for (const job of data || []) {
+        const id = job.externalJobId || job.id;
+        if (id != null) map[id] = job.savedId ?? job.id;
+      }
+      setSavedJobMap(map);
+    }).catch(() => {});
+  }, [isAuthenticated]);
 
   /* ── Handlers ── */
   const handleCitySubmit = useCallback((city) => {
@@ -283,26 +310,68 @@ export default function Jobs() {
     }
   }, [dispatch, isAuthenticated, savedMap, location.city]);
 
+  const handleSaveJob = useCallback(async (job) => {
+    if (!isAuthenticated) return;
+    const externalJobId = job.externalJobId || `db-job-${job.id}`;
+    const savedId = savedJobMap[externalJobId];
+    if (savedId) {
+      setSavedJobMap(current => { const next = { ...current }; delete next[externalJobId]; return next; });
+      try { await removeSavedJob(savedId); }
+      catch { setSavedJobMap(current => ({ ...current, [externalJobId]: savedId })); }
+      return;
+    }
+    setSavedJobMap(current => ({ ...current, [externalJobId]: "tmp" }));
+    try {
+      const { data } = await saveJobBookmark({
+        externalJobId,
+        source: "database_jobs",
+        title: job.title,
+        company: job.company,
+        companyLogo: job.companyLogo || null,
+        location: job.location || null,
+        salary: job.salary || null,
+        employmentType: job.employmentType || job.type || null,
+        applyUrl: job.applyUrl || null,
+        postedDate: job.postedDate || null,
+      });
+      setSavedJobMap(current => ({ ...current, [externalJobId]: data.savedId ?? data.id }));
+    } catch {
+      setSavedJobMap(current => { const next = { ...current }; delete next[externalJobId]; return next; });
+    }
+  }, [isAuthenticated, savedJobMap]);
+
   /* ══════════════════════════════════════════════════════════════
      RENDER
   ══════════════════════════════════════════════════════════════ */
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-[#080810] p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-5">
+    <div className="cl-page min-h-full p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-5">
 
       {/* ── Page header ──────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--cl-text)] tracking-tight">
             Find Jobs
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm flex items-center gap-2 flex-wrap">
-            Software companies from Google Places
+          <p className="text-[var(--cl-text-muted)] mt-1 text-sm flex items-center gap-2 flex-wrap">
+            {isJobResults
+              ? `Showing stored job listings for ${displayLocation}`
+              : `Software companies from Google Places near ${displayLocation}`}
+            {isJobResults && (
+              <span className="text-[11px] text-[var(--cl-text-soft)]">
+                Updated {companies[0]?.freshness ? new Date(companies[0].freshness).toLocaleDateString() : "recently"}
+              </span>
+            )}
             {source === "company_careers" && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold
                 px-2 py-0.5 rounded-full
-                bg-green-100 text-green-700 dark:bg-green-900/25 dark:text-green-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+                bg-[var(--cl-success-soft)] text-[var(--cl-success)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--cl-success)] animate-pulse inline-block" />
                 Verified
+              </span>
+            )}
+            {isJobResults && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--cl-primary-soft)] text-[var(--cl-primary)]">
+                Database fallback · Actual jobs{providerSource === "provider_empty" ? " · Live search returned no results" : " · Live search unavailable"}
               </span>
             )}
           </p>
@@ -311,26 +380,24 @@ export default function Jobs() {
         {!loading && total > 0 && (
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold
-              bg-emerald-50 dark:bg-emerald-900/25 text-emerald-600 dark:text-emerald-400
-              px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-500/30">
-              {loadedTotal} software companies loaded
-              <span className="text-gray-400 dark:text-gray-500 font-normal">
-                ({verifiedCareerCount} with verified career pages)
-              </span>
+              bg-[var(--cl-success-soft)] text-[var(--cl-success)]
+              px-3 py-1.5 rounded-full border border-[var(--cl-success)]/25">
+              {isJobResults ? `${total} job listings loaded` : `${loadedTotal} software companies loaded`}
+              {!isJobResults && <span className="text-[var(--cl-text-muted)] font-normal">({verifiedCareerCount} with verified career pages)</span>}
             </span>
             <button
               onClick={() => navigate("/student/saved-jobs")}
               title="View saved jobs"
               className="inline-flex items-center gap-2 text-sm font-semibold
-                bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-colors">
+                bg-[var(--cl-primary)] hover:bg-[var(--cl-primary-strong)] text-[var(--cl-button-text)] px-4 py-2 rounded-xl transition-colors">
               <FaBookmark className="text-xs" /> Saved Jobs
             </button>
             <button
               onClick={refetch}
               title="Refresh"
               className="w-8 h-8 rounded-xl flex items-center justify-center
-                bg-white dark:bg-white/8 border border-gray-200 dark:border-white/10
-                text-gray-500 hover:bg-gray-50 dark:hover:bg-white/15 transition-colors">
+                bg-[var(--cl-surface)] border border-[var(--cl-border)]
+                text-[var(--cl-text-muted)] hover:bg-[var(--cl-surface-soft)] transition-colors">
               <FaSyncAlt className={`text-xs ${loading ? "animate-spin" : ""}`} />
             </button>
           </div>
@@ -343,10 +410,10 @@ export default function Jobs() {
           <motion.div
             key="req"
             initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/15
-              border border-blue-200 dark:border-blue-500/30 rounded-xl px-4 py-3 text-sm">
-            <FaLocationArrow className="text-blue-500 animate-pulse shrink-0" />
-            <span className="text-blue-700 dark:text-blue-300 font-medium">
+            className="flex items-center gap-3 bg-[var(--cl-primary-soft)]
+              border border-[var(--cl-primary)]/30 rounded-xl px-4 py-3 text-sm">
+            <FaLocationArrow className="text-[var(--cl-primary)] animate-pulse shrink-0" />
+            <span className="text-[var(--cl-primary-strong)] font-medium">
               Detecting your location…
             </span>
           </motion.div>
@@ -359,10 +426,10 @@ export default function Jobs() {
           <motion.div
             key="verify"
             initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/15
-              border border-emerald-200 dark:border-emerald-500/30 rounded-xl px-4 py-3 text-sm">
-            <FaBriefcase className="text-emerald-500 animate-pulse shrink-0" />
-            <span className="text-emerald-700 dark:text-emerald-300 font-medium">
+            className="flex items-center gap-3 bg-[var(--cl-success-soft)]
+              border border-[var(--cl-success)]/25 rounded-xl px-4 py-3 text-sm">
+            <FaBriefcase className="text-[var(--cl-success)] animate-pulse shrink-0" />
+            <span className="text-[var(--cl-success)] font-medium">
               Finding nearby companies and verifying career pages — this may take a moment…
             </span>
           </motion.div>
@@ -377,22 +444,23 @@ export default function Jobs() {
         hasGPS={hasGPS}
         loading={loading}
       />
+      {isJobResults && (
+        <p className="text-xs text-[var(--cl-text-muted)]">
+          Rating and Open Now filters apply to company discovery only, so they are not used for these job listings.
+        </p>
+      )}
 
       {/* ── Status line ───────────────────────────────────────── */}
       {!loading && !error && total > 0 && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-[var(--cl-text-muted)]">
           Showing{" "}
-          <strong className="text-gray-800 dark:text-white">
+          <strong className="text-[var(--cl-text)]">
             {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)}
           </strong>
           {" "}of{" "}
-          <strong className="text-gray-800 dark:text-white">{total}</strong>
-          {" "}software companies
-          {location.city && (
-            <> near{" "}
-              <strong className="text-blue-600 dark:text-blue-400">{location.city}</strong>
-            </>
-          )}
+          <strong className="text-[var(--cl-text)]">{total}</strong>
+          {isJobResults ? " job listings" : " software companies"} near{" "}
+          <strong className="text-[var(--cl-primary)]">{displayLocation}</strong>
         </p>
       )}
 
@@ -413,58 +481,69 @@ export default function Jobs() {
         {!loading && error && (
           <motion.div
             initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-            className="col-span-full flex flex-col items-center bg-red-50 dark:bg-red-900/10
-              border border-red-200 dark:border-red-500/20 rounded-2xl
+            className="col-span-full flex flex-col items-center bg-[var(--cl-danger-soft)]
+              border border-[var(--cl-danger)]/25 rounded-2xl
               p-8 sm:p-12 text-center gap-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-red-100 dark:bg-red-900/30
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[var(--cl-danger-soft)]
               flex items-center justify-center shrink-0">
               <FaExclamationTriangle className="text-xl sm:text-2xl text-red-500" />
             </div>
             <div className="max-w-md space-y-1.5">
-              <h3 className="text-base sm:text-lg font-bold text-red-700 dark:text-red-400">
+              <h3 className="text-base sm:text-lg font-bold text-[var(--cl-danger)]">
                 Failed to load
               </h3>
-              <p className="text-sm text-red-600 dark:text-red-400">
+              <p className="text-sm text-[var(--cl-danger)]">
                 {typeof error === "object" ? error.reason : error}
               </p>
             </div>
             <button
               onClick={refetch}
-              className="flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700
-                text-white text-sm font-semibold rounded-xl transition-colors">
+              className="flex items-center gap-2 px-6 py-2.5 bg-[var(--cl-danger)] hover:opacity-90
+                text-[var(--cl-button-text)] text-sm font-semibold rounded-xl transition-colors">
               <FaSyncAlt className="text-xs" /> Retry
             </button>
           </motion.div>
         )}
 
-        {!loading && !error && !showPrompt && total === 0 && source === "company_careers" && (
+        {!loading && !error && !showPrompt && total === 0 && ["company_careers", "database_jobs"].includes(source) && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="col-span-full flex flex-col items-center justify-center
-              bg-white dark:bg-[#0f1123] border border-gray-100 dark:border-white/8
+              bg-[var(--cl-surface)] border border-[var(--cl-border)]
               rounded-2xl p-10 sm:p-16 text-center gap-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gray-100 dark:bg-white/8
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[var(--cl-surface-soft)]
               flex items-center justify-center shrink-0">
-              <FaBriefcase className="text-xl sm:text-2xl text-gray-400" />
+              <FaBriefcase className="text-xl sm:text-2xl text-[var(--cl-text-soft)]" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white">
-                No software companies found
+              <h3 className="text-base sm:text-lg font-bold text-[var(--cl-text)]">
+                {source === "database_jobs" ? "No stored job listings found" : "No software companies found"}
               </h3>
-              <p className="text-gray-400 text-sm mt-1 max-w-md mx-auto">
-                No software companies were returned for this search. Try a different city or expand the search radius.
+              <p className="text-[var(--cl-text-muted)] text-sm mt-1 max-w-md mx-auto">
+                {source === "database_jobs"
+                  ? `No published jobs match ${resolvedLocation}. Try another city or view all locations.`
+                  : "No software companies were returned for this search. Try a different city or expand the search radius."}
               </p>
             </div>
             <button
-              onClick={() => dispatch(setFilter({ minRating: 0, openNow: false, maxRadius: 50, search: "" }))}
-              className="px-5 py-2.5 text-sm font-semibold bg-blue-600 hover:bg-blue-700
-                text-white rounded-xl transition-colors">
-              Clear Filters
+              onClick={() => dispatch(setFilter(source === "database_jobs"
+                ? { city: "", minRating: 0, openNow: false, maxRadius: 50, search: "" }
+                : { minRating: 0, openNow: false, maxRadius: 50, search: "" }))}
+              className="px-5 py-2.5 text-sm font-semibold bg-[var(--cl-primary)] hover:bg-[var(--cl-primary-strong)]
+                text-[var(--cl-button-text)] rounded-xl transition-colors">
+              {source === "database_jobs" ? "Clear location filter" : "Clear Filters"}
             </button>
           </motion.div>
         )}
 
-        {!error && paged.map(company => (
+        {!error && paged.map(company => isJobResults ? (
+          <JobCard
+            key={company.externalJobId || company.id}
+            job={{ ...company, id: company.externalJobId || company.id }}
+            isSaved={!!savedJobMap[company.externalJobId || `db-job-${company.id}`]}
+            onSaveJob={() => handleSaveJob(company)}
+          />
+        ) : (
           <CareerCard
             key={company.placeId}
             company={company}
@@ -484,8 +563,8 @@ export default function Jobs() {
         <div className="flex justify-center mt-5">
           <button
             onClick={loadMore}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700
-              text-white text-sm font-semibold shadow-sm shadow-blue-500/20 transition-colors">
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--cl-primary)] hover:bg-[var(--cl-primary-strong)]
+              text-[var(--cl-button-text)] text-sm font-semibold shadow-sm transition-colors">
             <FaBriefcase className="text-xs" /> Load More Companies
           </button>
         </div>

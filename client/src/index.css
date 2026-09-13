@@ -3,7 +3,77 @@
 
 @import "tailwindcss";
 
-/* ── Base resets & typography ── */
+:root {
+  color-scheme: light;
+  --cl-page: #edf3fb;
+  --cl-surface: #ffffff;
+  --cl-surface-elevated: #f8fbff;
+  --cl-surface-soft: #eef4fb;
+  --cl-surface-muted: #edf3fb;
+  --cl-border: #d9e2ef;
+  --cl-border-strong: #bfd0e8;
+  --cl-text: #182334;
+  --cl-text-muted: #5f6f86;
+  --cl-text-soft: #7a869a;
+  --cl-primary: #2f7df6;
+  --cl-primary-strong: #1e63d8;
+  --cl-primary-soft: rgba(47, 125, 246, 0.12);
+  --cl-sidebar: #ffffff;
+  --cl-sidebar-muted: rgba(24, 35, 52, 0.74);
+  --cl-admin-active: rgba(139, 92, 246, 0.14);
+  --cl-admin-active-strong: rgba(139, 92, 246, 0.25);
+  --cl-admin-active-text: #6d28d9;
+  --cl-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  --cl-success: #1d9d65;
+  --cl-success-soft: rgba(29, 157, 101, 0.14);
+  --cl-warning: #d97706;
+  --cl-warning-soft: rgba(217, 119, 6, 0.12);
+  --cl-danger: #d14855;
+  --cl-danger-soft: rgba(209, 72, 85, 0.12);
+  --cl-track: rgba(148, 163, 184, 0.38);
+  --cl-track-strong: rgba(71, 85, 105, 0.44);
+  --cl-ring: rgba(47, 125, 246, 0.18);
+  --cl-focus: #2f7df6;
+  --cl-button-text: #ffffff;
+  --cl-overlay: rgba(15, 23, 42, 0.46);
+  --cl-radius: 12px;
+}
+
+html.dark {
+  color-scheme: dark;
+  --cl-page: #071120;
+  --cl-surface: #0f1b2d;
+  --cl-surface-elevated: #13243d;
+  --cl-surface-soft: #0b1527;
+  --cl-surface-muted: #13243d;
+  --cl-border: #223754;
+  --cl-border-strong: #304d75;
+  --cl-text: #edf5ff;
+  --cl-text-muted: #9bb0c9;
+  --cl-text-soft: #86a1c1;
+  --cl-primary: #6ba8ff;
+  --cl-primary-strong: #4a90ff;
+  --cl-primary-soft: rgba(107, 168, 255, 0.16);
+  --cl-sidebar: #0a1326;
+  --cl-sidebar-muted: rgba(255, 255, 255, 0.72);
+  --cl-admin-active: rgba(168, 139, 250, 0.18);
+  --cl-admin-active-strong: rgba(168, 139, 250, 0.34);
+  --cl-admin-active-text: #ddd6fe;
+  --cl-shadow: 0 18px 36px rgba(2, 6, 23, 0.38);
+  --cl-success: #57d69b;
+  --cl-success-soft: rgba(87, 214, 155, 0.14);
+  --cl-warning: #f7b955;
+  --cl-warning-soft: rgba(247, 185, 85, 0.12);
+  --cl-danger: #f27989;
+  --cl-danger-soft: rgba(242, 121, 137, 0.12);
+  --cl-track: rgba(148, 163, 184, 0.2);
+  --cl-track-strong: rgba(148, 163, 184, 0.38);
+  --cl-ring: rgba(107, 168, 255, 0.22);
+  --cl-focus: #7aaeff;
+  --cl-button-text: #f8fbff;
+  --cl-overlay: rgba(1, 4, 10, 0.68);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -18,79 +88,122 @@ html {
 
 body {
   margin: 0;
-  background-color: #f8fafc;
-  color: #1c1917;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+  background: var(--cl-page);
+  color: var(--cl-text);
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* ── Dark mode base ── */
-html.dark body {
-  background-color: #0a0a14;
-  color: #f5f5f4;
+html, body, #root {
+  min-height: 100%;
 }
 
-/* ── Scrollbar: light ── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #d6d3d1;
-  border-radius: 999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #a8a29e;
+button, input, select, textarea {
+  font: inherit;
 }
 
-/* ── Scrollbar: dark ── */
-html.dark ::-webkit-scrollbar-thumb {
-  background: #44403c;
-}
-html.dark ::-webkit-scrollbar-thumb:hover {
-  background: #57534e;
+button {
+  cursor: pointer;
 }
 
-/* ── Selection colors ── */
+img {
+  max-width: 100%;
+  display: block;
+}
+
+::placeholder {
+  color: var(--cl-text-soft);
+  opacity: 1;
+}
+
 ::selection {
-  background: rgba(11, 165, 255, 0.2);
-  color: inherit;
-}
-html.dark ::selection {
-  background: rgba(11, 165, 255, 0.3);
+  background: var(--cl-primary-soft);
+  color: var(--cl-text);
 }
 
-/* ── Focus ring reset (we use custom rings via Tailwind) ── */
 :focus {
   outline: none;
 }
+
 :focus-visible {
-  outline: 2px solid #0ba5ff;
+  outline: 2px solid var(--cl-focus);
   outline-offset: 2px;
   border-radius: 6px;
 }
 
-/* ── Ripple keyframe (used by login button) ── */
-@keyframes ripple-out {
-  0%   { transform: scale(0); opacity: 0.5; }
-  100% { transform: scale(4); opacity: 0; }
+.cl-page {
+  min-height: 100%;
+  background: var(--cl-page);
+  color: var(--cl-text);
 }
 
-/* ── Glassmorphism utility (opt-in via class) ── */
+.cl-card {
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  background: var(--cl-surface);
+  box-shadow: var(--cl-shadow);
+}
+
+.cl-control {
+  min-height: 42px;
+  border: 1px solid var(--cl-border);
+  border-radius: 10px;
+  background: var(--cl-surface-soft);
+  color: var(--cl-text);
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.cl-control:focus {
+  border-color: var(--cl-primary);
+  box-shadow: 0 0 0 3px var(--cl-ring);
+}
+
+.cl-primary-btn {
+  min-height: 42px;
+  border-radius: 10px;
+  background: var(--cl-primary);
+  color: var(--cl-button-text);
+  font-weight: 700;
+  transition: background 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+
+.cl-primary-btn:hover {
+  background: var(--cl-primary-strong);
+}
+
+.cl-primary-btn:active {
+  transform: translateY(1px);
+}
+
+.cl-secondary-btn {
+  min-height: 42px;
+  border: 1px solid var(--cl-border);
+  border-radius: 10px;
+  background: var(--cl-surface-soft);
+  color: var(--cl-text);
+  font-weight: 600;
+}
+
+.cl-secondary-btn:hover {
+  border-color: var(--cl-primary);
+}
+
+.max-w-\[1000px\] {
+  max-width: 72.5rem;
+}
+
 .glass {
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
+
 html.dark .glass {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* ── Gradient text utility ── */
 .gradient-text {
   background: linear-gradient(135deg, #0ba5ff 0%, #8b5cf6 100%);
   -webkit-background-clip: text;
@@ -98,19 +211,18 @@ html.dark .glass {
   background-clip: text;
 }
 
-/* ── Animated gradient border utility ── */
 .gradient-border {
   position: relative;
   background: linear-gradient(white, white) padding-box,
               linear-gradient(135deg, #0ba5ff, #8b5cf6) border-box;
   border: 1.5px solid transparent;
 }
+
 html.dark .gradient-border {
   background: linear-gradient(#0d0f1e, #0d0f1e) padding-box,
               linear-gradient(135deg, #0ba5ff, #8b5cf6) border-box;
 }
 
-/* ── Input autofill override ── */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
@@ -119,10 +231,43 @@ input:-webkit-autofill:focus {
   caret-color: #1c1917;
   transition: background-color 9999s ease-in-out 0s;
 }
+
 html.dark input:-webkit-autofill,
 html.dark input:-webkit-autofill:hover,
 html.dark input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 1000px rgba(13,15,30,0.95) inset;
   -webkit-text-fill-color: #f5f5f4;
   caret-color: #f5f5f4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cl-track-strong);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cl-text-soft);
+}
+
+@keyframes ripple-out {
+  0%   { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(4); opacity: 0; }
 }

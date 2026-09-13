@@ -115,6 +115,27 @@ const Company = db.define(
       allowNull: true,
       field:     "photo_refs",
     },
+    source: {
+      type:      DataTypes.STRING(64),
+      allowNull: false,
+      defaultValue: "google_places",
+    },
+    fetchedAt: {
+      type:      DataTypes.DATE,
+      allowNull: true,
+      field:     "fetched_at",
+    },
+    expiresAt: {
+      type:      DataTypes.DATE,
+      allowNull: true,
+      field:     "expires_at",
+    },
+    adminManaged: {
+      type:      DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field:     "admin_managed",
+    },
   },
   {
     tableName:  "companies",

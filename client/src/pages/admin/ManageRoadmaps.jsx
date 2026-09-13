@@ -1,177 +1,61 @@
 import { useEffect, useState } from "react";
-import { FaSearch } from "react-icons/fa";
-import Loader from "../../components/common/Loader";
+import { FaArrowDown, FaArrowUp, FaEye, FaPlus, FaTrash } from "react-icons/fa";
 import api from "../../services/api";
 
-function ManageRoadmaps() {
-  const [roadmaps, setRoadmaps] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [title, setTitle] = useState("");
-  const [targetRole, setTargetRole] = useState("");
-  const [roadmapContent, setRoadmapContent] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
+const RULES = {
+  Documentation: { source: "file", accept: ".pdf,.doc,.docx,.txt", formats: "PDF, DOC, DOCX or TXT", limit: "50 MB" },
+  Video: { source: "file", accept: ".mp4,.webm", formats: "MP4 or WEBM", limit: "50 MB" },
+  Article: { source: "link", accept: ".pdf,.txt", formats: "PDF or TXT", limit: "50 MB" },
+  Exercise: { source: "link", accept: ".pdf,.doc,.docx,.txt,.zip", formats: "PDF, DOC, DOCX, TXT or ZIP", limit: "50 MB" },
+};
+const TYPES = Object.keys(RULES);
+const uid = () => `new-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const emptyResource = (type = "Article") => ({ clientId: uid(), label: "", type, sourceType: RULES[type].source, url: "", file: null, uploadState: "idle", uploadProgress: 0, uploadError: "" });
+const emptyStep = () => ({ title: "", description: "", topics: "", estimatedTime: "", practiceTask: "", resources: [] });
+const initialForm = { title: "", shortDescription: "", category: "Web Development", difficulty: "Beginner", durationWeeks: "", cover: null, pdf: null, steps: [{ ...emptyStep(), resources: [emptyResource()] }] };
+const fieldClass = "mt-1 w-full rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface-elevated)] px-3 py-2.5 text-sm text-[var(--cl-text)] outline-none focus:border-[var(--cl-primary)]";
+const notifyRoadmapChange = () => {
+  localStorage.setItem("roadmaps:last-change", String(Date.now()));
+  window.dispatchEvent(new Event("roadmaps:changed"));
+};
 
-  const fetchRoadmaps = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get("/roadmaps");
-      setRoadmaps(response.data.data || []);
-    } catch (err) {
-      console.error(err);
-      setRoadmaps([]);
-    } finally {
-      setLoading(false);
-    }
+function ResourceRow({ resource, onChange, onRemove }) {
+  const rule = RULES[resource.type];
+  const hasValue = Boolean(resource.url || resource.file || resource.originalName);
+  const resetValue = () => onChange({ ...resource, url: "", file: null, originalName: null, storagePublicId: null, uploadState: "idle", uploadProgress: 0, uploadError: "" });
+  const changeType = (type) => {
+    if (hasValue && !window.confirm("Changing the resource type will discard its current source. Continue?")) return;
+    onChange({ ...resetResource(resource), type, sourceType: RULES[type].source });
   };
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchRoadmaps();
-  }, []);
-
-  const handleSave = async () => {
-    if (!title || !roadmapContent) {
-      setError("Title and roadmap content are required.");
-      setSuccess("");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const response = await api.post("/roadmaps", {
-        title,
-        targetRole,
-        roadmapContent,
-      });
-      setSuccess(response.data.message || "Roadmap uploaded successfully.");
-      setError("");
-      setTitle("");
-      setTargetRole("");
-      setRoadmapContent("");
-      fetchRoadmaps();
-    } catch (err) {
-      setError(err?.response?.data?.message || err.message || "Failed to upload roadmap.");
-      setSuccess("");
-    } finally {
-      setSaving(false);
-    }
+  const changeSource = (sourceType) => {
+    if (hasValue && !window.confirm("Changing the source will discard the current file or URL. Continue?")) return;
+    onChange({ ...resetResource(resource), sourceType });
   };
-
-  const filteredRoadmaps = roadmaps.filter((roadmap) => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return true;
-    return (
-      roadmap.title?.toLowerCase().includes(query) ||
-      roadmap.targetRole?.toLowerCase().includes(query) ||
-      roadmap.roadmapContent?.toLowerCase().includes(query)
-    );
-  });
-
-  if (loading) return <Loader />;
-
-  return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-neutral-900 dark:text-white tracking-tight">Manage Roadmaps</h1>
-        <p className="text-neutral-500 dark:text-neutral-400 mt-1 text-sm">Upload generic roadmaps and let authenticated users search the roadmap library.</p>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
-        <div className="rounded-2xl border border-neutral-200 dark:border-white/8 bg-white dark:bg-[#0f1123] shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">Upload New Roadmap</h2>
-          <div className="mt-5 space-y-4">
-            <div>
-              <label className="text-xs uppercase tracking-[0.18em] text-slate-400">Title</label>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Roadmap title"
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs uppercase tracking-[0.18em] text-slate-400">Target Role</label>
-              <input
-                value={targetRole}
-                onChange={(e) => setTargetRole(e.target.value)}
-                placeholder="Optional role, e.g. React Developer"
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs uppercase tracking-[0.18em] text-slate-400">Roadmap Content</label>
-              <textarea
-                value={roadmapContent}
-                onChange={(e) => setRoadmapContent(e.target.value)}
-                rows={8}
-                placeholder="Write the roadmap details here..."
-                className="mt-2 w-full rounded-3xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
-              />
-            </div>
-
-            {error && <p className="text-sm text-red-400">{error}</p>}
-            {success && <p className="text-sm text-emerald-300">{success}</p>}
-
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {saving ? "Uploading..." : "Upload Roadmap"}
-            </button>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-neutral-200 dark:border-white/8 bg-white dark:bg-[#0f1123] shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">Roadmap Library</h2>
-          <div className="relative mt-4">
-            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search uploaded roadmaps"
-              className="w-full pl-12 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
-            />
-          </div>
-
-          <div className="mt-6 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-white/4 border-b border-gray-100 dark:border-white/8 text-left">
-                  <th className="px-4 py-3 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Title</th>
-                  <th className="px-4 py-3 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Target Role</th>
-                  <th className="px-4 py-3 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-white/6">
-                {filteredRoadmaps.length > 0 ? (
-                  filteredRoadmaps.map((roadmap) => (
-                    <tr key={roadmap.id} className="hover:bg-gray-50 dark:hover:bg-white/4 transition-colors">
-                      <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">{roadmap.title}</td>
-                      <td className="px-4 py-4 text-gray-600 dark:text-gray-300">{roadmap.targetRole || "—"}</td>
-                      <td className="px-4 py-4 text-gray-500 dark:text-gray-400 text-xs">{new Date(roadmap.createdAt).toLocaleDateString()}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={3}>
-                      No roadmaps match your search.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const upload = async (file) => {
+    if (!file) return;
+    const extension = `.${file.name.split(".").pop().toLowerCase()}`;
+    const allowed = rule.accept.split(",").map((item) => item.trim());
+    if (!allowed.includes(extension)) { onChange({ ...resource, uploadState: "failed", uploadError: `Invalid format. Allowed: ${rule.formats}.` }); return; }
+    const data = new FormData(); data.append("resourceType", resource.type); data.append("file", file);
+    onChange({ ...resource, file, originalName: file.name, fileSize: file.size, uploadState: "uploading", uploadProgress: 0, uploadError: "" });
+    try {
+      const response = await api.post("/roadmaps/resource-upload", data, { onUploadProgress: (event) => onChange({ ...resource, file, originalName: file.name, fileSize: file.size, uploadState: "uploading", uploadProgress: Math.round((event.loaded * 100) / (event.total || file.size || 1)), uploadError: "" }) });
+      onChange({ ...resource, ...response.data.data, file, uploadState: "uploaded", uploadProgress: 100, uploadError: "" });
+    } catch (error) { onChange({ ...resource, file, uploadState: "failed", uploadError: error?.response?.data?.message || "Upload failed. Try again." }); }
+  };
+  return <div className="space-y-2 rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] p-3"><div className="grid gap-2 sm:grid-cols-[1fr_150px_150px_auto]"><input placeholder="Label / title" className={fieldClass} value={resource.label} onChange={(event) => onChange({ ...resource, label: event.target.value })} /><select className={fieldClass} value={resource.type} onChange={(event) => changeType(event.target.value)}>{TYPES.map((type) => <option key={type}>{type}</option>)}</select><select className={fieldClass} value={resource.sourceType} onChange={(event) => changeSource(event.target.value)}><option value="file">Upload File</option><option value="link">External Link</option></select><button type="button" title="Remove resource" onClick={onRemove} className="px-2 text-[var(--cl-danger)]"><FaTrash /></button></div>{resource.sourceType === "link" ? <input type="url" placeholder={`${resource.type} URL (https://...)`} className={fieldClass} value={resource.url || ""} onChange={(event) => onChange({ ...resource, url: event.target.value, uploadError: "" })} /> : <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); upload(event.dataTransfer.files[0]); }} className="rounded-xl border border-dashed border-[var(--cl-border-strong)] bg-[var(--cl-primary-soft)] p-4 text-sm text-[var(--cl-text-soft)]"><label className="block cursor-pointer"><span className="font-semibold text-[var(--cl-text)]">Upload {resource.type.toLowerCase()}</span><span className="ml-2 text-xs text-[var(--cl-text-muted)]">{rule.formats} · max {rule.limit}</span><input type="file" accept={rule.accept} className="mt-2 block w-full text-xs" onChange={(event) => upload(event.target.files[0])} /></label>{resource.originalName && <div className="mt-2 flex items-center justify-between text-xs"><span className="truncate">{resource.originalName} · {Math.ceil((resource.fileSize || 0) / 1024)} KB</span>{resource.uploadState === "uploaded" && <span className="text-[var(--cl-success)]">Uploaded</span>}</div>}{resource.uploadState === "uploading" && <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--cl-surface-muted)]"><div className="h-full bg-[var(--cl-primary)] transition-all" style={{ width: `${resource.uploadProgress}%` }} /></div>}{resource.uploadState === "failed" && <p className="mt-2 text-xs text-[var(--cl-danger)]">{resource.uploadError} <button type="button" onClick={() => upload(resource.file)} className="underline">Retry</button></p>}{resource.uploadState === "uploaded" && <button type="button" onClick={() => resetValue()} className="mt-2 text-xs text-[var(--cl-primary)]">Replace or remove file</button>}</div>}</div>;
 }
+function resetResource(resource) { return { ...resource, url: "", file: null, originalName: null, storagePublicId: null, mimeType: null, fileSize: null, uploadState: "idle", uploadProgress: 0, uploadError: "" }; }
+function toForm(item) { return { ...initialForm, ...item, durationWeeks: item.durationWeeks || "", cover: null, pdf: null, steps: (item.steps?.length ? item.steps : [emptyStep()]).map((step) => ({ ...step, topics: Array.isArray(step.topics) ? step.topics.join(", ") : step.topics || "", resources: (step.resources || []).map((resource) => ({ ...resource, sourceType: resource.sourceType === "file" ? "file" : "link", clientId: `saved-${resource.id}`, uploadState: resource.sourceType === "file" ? "uploaded" : "idle", uploadProgress: resource.sourceType === "file" ? 100 : 0, uploadError: "", file: null })) })) }; }
 
-export default ManageRoadmaps;
+export default function ManageRoadmaps() {
+  const [items, setItems] = useState([]); const [form, setForm] = useState(initialForm); const [editing, setEditing] = useState(null); const [status, setStatus] = useState("all"); const [search, setSearch] = useState(""); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [saving, setSaving] = useState(false);
+  const load = async () => { try { const response = await api.get("/roadmaps/admin", { params: { status, search } }); setItems(response.data.data || []); } catch (err) { setError(err?.response?.data?.message || "Unable to load roadmaps."); } };
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { load(); }, [status, search]);
+  const update = (name, value) => setForm((current) => ({ ...current, [name]: value }));
+  const updateStep = (index, value) => setForm((current) => ({ ...current, steps: current.steps.map((step, stepIndex) => stepIndex === index ? value : step) }));
+  const save = async (publish = false) => { const resources = form.steps.flatMap((step) => step.resources); if (resources.some((resource) => ["uploading", "failed"].includes(resource.uploadState))) { setError("Wait for resource uploads to finish and fix failed uploads before saving."); return; } setSaving(true); setError(""); setMessage(""); const data = new FormData(); Object.entries(form).forEach(([key, value]) => { if (!["steps", "cover", "pdf"].includes(key) && value !== "") data.append(key, value); }); data.append("steps", JSON.stringify(form.steps.map((step) => ({ ...step, resources: step.resources.map((resource) => { const payload = { ...resource }; delete payload.file; delete payload.clientId; delete payload.uploadState; delete payload.uploadProgress; delete payload.uploadError; return payload; }) })))); if (form.cover) data.append("cover", form.cover); if (form.pdf) data.append("pdf", form.pdf); try { const path = editing ? `/roadmaps/${editing}` : "/roadmaps"; const response = await api[editing ? "put" : "post"](path, data); let id = editing || response.data.data?.id; if (publish && id) await api.post(`/roadmaps/${id}/publish`); setMessage(publish ? "Roadmap published." : "Draft saved."); notifyRoadmapChange(); setForm(initialForm); setEditing(null); load(); } catch (err) { setError(err?.response?.data?.message || "Unable to save roadmap."); } finally { setSaving(false); } };
+  const moveStep = (index, direction) => setForm((current) => { const steps = [...current.steps]; const target = index + direction; if (target < 0 || target >= steps.length) return current; [steps[index], steps[target]] = [steps[target], steps[index]]; return { ...current, steps }; });
+  return <div className="mx-auto max-w-7xl space-y-6"><div><h1 className="text-3xl font-bold text-[var(--cl-text)]">Manage Roadmaps</h1><p className="mt-1 text-sm text-[var(--cl-text-muted)]">Create structured learning paths and publish them to students.</p></div><div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]"><section className="rounded-2xl border border-[var(--cl-border)] bg-[var(--cl-surface)] p-5"><div className="flex items-center justify-between"><h2 className="text-xl font-bold text-[var(--cl-text)]">{editing ? "Edit roadmap" : "Create roadmap"}</h2>{editing && <button onClick={() => { setEditing(null); setForm(initialForm); }} className="text-sm text-[var(--cl-text-muted)]">New roadmap</button>}</div><div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="sm:col-span-2 text-xs text-[var(--cl-text-muted)]">Title<input className={fieldClass} value={form.title} onChange={(event) => update("title", event.target.value)} /></label><label className="sm:col-span-2 text-xs text-[var(--cl-text-muted)]">Short description<textarea className={fieldClass} rows="2" value={form.shortDescription} onChange={(event) => update("shortDescription", event.target.value)} /></label><label className="text-xs text-[var(--cl-text-muted)]">Category<select className={fieldClass} value={form.category} onChange={(event) => update("category", event.target.value)}>{["Web Development", "Backend", "Data Science", "DevOps", "Mobile", "AI / ML", "Cyber Security"].map((item) => <option key={item}>{item}</option>)}</select></label><label className="text-xs text-[var(--cl-text-muted)]">Difficulty<select className={fieldClass} value={form.difficulty} onChange={(event) => update("difficulty", event.target.value)}>{["Beginner", "Intermediate", "Advanced"].map((item) => <option key={item}>{item}</option>)}</select></label><label className="text-xs text-[var(--cl-text-muted)]">Duration in weeks<input type="number" min="1" className={fieldClass} value={form.durationWeeks} onChange={(event) => update("durationWeeks", event.target.value)} /></label><label className="text-xs text-[var(--cl-text-muted)]">Cover image<input type="file" accept="image/jpeg,image/png,image/webp" className={fieldClass} onChange={(event) => update("cover", event.target.files[0])} /></label><label className="text-xs text-[var(--cl-text-muted)]">Roadmap PDF<input type="file" accept="application/pdf" className={fieldClass} onChange={(event) => update("pdf", event.target.files[0])} /></label></div><div className="mt-6 flex items-center justify-between"><h3 className="font-bold text-[var(--cl-text)]">Learning steps</h3><button onClick={() => update("steps", [...form.steps, { ...emptyStep(), resources: [emptyResource()] }])} className="inline-flex items-center gap-2 text-sm text-[var(--cl-primary)]"><FaPlus /> Add step</button></div><div className="mt-3 space-y-4">{form.steps.map((step, index) => <div key={step.id || index} className="rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] p-4"><div className="mb-3 flex items-center justify-between"><span className="text-sm font-semibold text-[var(--cl-primary)]">Step {index + 1}</span><div className="flex gap-3"><button type="button" title="Move up" onClick={() => moveStep(index, -1)}><FaArrowUp /></button><button type="button" title="Move down" onClick={() => moveStep(index, 1)}><FaArrowDown /></button><button type="button" title="Remove step" onClick={() => update("steps", form.steps.filter((_, itemIndex) => itemIndex !== index))}><FaTrash className="text-[var(--cl-danger)]" /></button></div></div><div className="grid gap-3 sm:grid-cols-2"><input placeholder="Step title" className={fieldClass} value={step.title} onChange={(event) => updateStep(index, { ...step, title: event.target.value })} /><input placeholder="Estimated time" className={fieldClass} value={step.estimatedTime || ""} onChange={(event) => updateStep(index, { ...step, estimatedTime: event.target.value })} /><textarea placeholder="Description" className={`${fieldClass} sm:col-span-2`} rows="2" value={step.description} onChange={(event) => updateStep(index, { ...step, description: event.target.value })} /><input placeholder="Topics, separated by commas" className={`${fieldClass} sm:col-span-2`} value={step.topics} onChange={(event) => updateStep(index, { ...step, topics: event.target.value })} /><textarea placeholder="Optional practice task" className={`${fieldClass} sm:col-span-2`} rows="2" value={step.practiceTask || ""} onChange={(event) => updateStep(index, { ...step, practiceTask: event.target.value })} /></div><div className="mt-4 space-y-2">{step.resources.map((resource, resourceIndex) => <ResourceRow key={resource.clientId || resource.id} resource={resource} onChange={(value) => updateStep(index, { ...step, resources: step.resources.map((item, itemIndex) => itemIndex === resourceIndex ? value : item) })} onRemove={() => updateStep(index, { ...step, resources: step.resources.filter((_, itemIndex) => itemIndex !== resourceIndex) })} />)}<button type="button" onClick={() => updateStep(index, { ...step, resources: [...step.resources, emptyResource()] })} className="text-sm text-[var(--cl-primary)]">+ Add resource</button></div></div>)}</div>{message && <p className="mt-4 text-sm text-[var(--cl-success)]">{message}</p>}{error && <p className="mt-4 text-sm text-[var(--cl-danger)]">{error}</p>}<div className="mt-5 flex flex-wrap gap-2"><button disabled={saving} onClick={() => save(false)} className="rounded-xl border border-[var(--cl-border)] px-4 py-2.5 text-sm text-[var(--cl-text)]">Save Draft</button><button disabled={saving} onClick={() => save(true)} className="cl-primary-btn px-4 py-2.5 text-sm font-semibold">{saving ? "Saving..." : "Publish Roadmap"}</button></div></section><section className="rounded-2xl border border-[var(--cl-border)] bg-[var(--cl-surface)] p-5"><div className="flex gap-2"><input placeholder="Search" className={fieldClass} value={search} onChange={(event) => setSearch(event.target.value)} /><select className={fieldClass} value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">All</option><option value="draft">Drafts</option><option value="published">Published</option></select></div><div className="mt-5 space-y-3">{items.map((item) => <div key={item.id} className="rounded-xl border border-[var(--cl-border)] p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold text-[var(--cl-text)]">{item.title || "Untitled draft"}</h3><p className="mt-1 text-xs text-[var(--cl-text-muted)]">{item.category || "No category"} · {item.difficulty || "No difficulty"} · {item.status}</p></div><span className="text-xs text-[var(--cl-text-muted)]">{item.steps?.length || 0} steps</span></div><div className="mt-3 flex gap-3 text-xs"><button onClick={() => { setEditing(item.id); setForm(toForm(item)); }} className="text-[var(--cl-primary)]">Edit</button><a href={`/admin/roadmaps/${item.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[var(--cl-text-soft)]"><FaEye /> Preview</a></div></div>)}{!items.length && <p className="py-8 text-center text-sm text-[var(--cl-text-muted)]">No roadmaps found.</p>}</div></section></div></div>;
+}

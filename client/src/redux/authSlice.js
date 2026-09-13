@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { clearBrowserCache } from "../utils/cache";
 import { getValidToken } from "../utils/jwt";
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -93,6 +94,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.error           = null;
       state.bootstrapping   = false;
+      clearBrowserCache();
       localStorage.removeItem("token");
       localStorage.removeItem("user");
     },

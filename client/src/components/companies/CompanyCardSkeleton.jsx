@@ -6,17 +6,17 @@ import { memo } from "react";
 
 function Shimmer({ className = "" }) {
   return (
-    <div className={`animate-pulse bg-gray-200 dark:bg-white/8 rounded-lg ${className}`} />
+    <div className={`animate-pulse bg-[var(--cl-surface-soft)] rounded-lg ${className}`} />
   );
 }
 
 function CompanyCardSkeleton() {
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#0f1123]
-      border border-gray-100 dark:border-white/8 rounded-2xl shadow-sm overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--cl-surface)]
+      border border-[var(--cl-border)] rounded-2xl shadow-sm overflow-hidden">
 
       {/* Accent bar */}
-      <div className="h-1.5 w-full bg-gray-200 dark:bg-white/8 animate-pulse shrink-0" />
+      <div className="h-1.5 w-full bg-[var(--cl-surface-soft)] animate-pulse shrink-0" />
 
       <div className="flex flex-col flex-1 p-4 sm:p-5 gap-3">
 
@@ -42,7 +42,7 @@ function CompanyCardSkeleton() {
         </div>
 
         {/* Button row */}
-        <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-white/6 mt-auto">
+        <div className="flex gap-2 pt-3 border-t border-[var(--cl-border)] mt-auto">
           <Shimmer className="flex-1 h-9 rounded-xl" />
           <Shimmer className="w-16 h-9 rounded-xl shrink-0" />
         </div>

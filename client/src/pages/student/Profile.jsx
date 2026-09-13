@@ -20,15 +20,21 @@ import {
   FaCalendarAlt, FaBuilding, FaSpinner, FaBolt,
 } from "react-icons/fa";
 import { updateProfile as updateProfileApi, fetchStats, uploadResumeFile, uploadAvatarFile } from "../../services/authService";
+
+const isPdfResumeUrl = (value = "") => {
+  try {
+    const url = new URL(value);
+    return url.pathname.toLowerCase().endsWith(".pdf") || url.pathname.includes("/raw/upload/");
+  } catch {
+    return false;
+  }
+};
 import { refreshProfile } from "../../redux/authSlice";
 
 /* ── Shared primitives ── */
 function Card({ children, className = "" }) {
   return (
-    <div className={`bg-white dark:bg-white/3
-      border border-neutral-200/70 dark:border-white/8
-      rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.06)]
-      dark:shadow-[0_2px_24px_rgba(0,0,0,0.3)] ${className}`}>
+    <div className={`cl-card ${className}`}>
       {children}
     </div>
   );
@@ -37,10 +43,10 @@ function Card({ children, className = "" }) {
 function SectionTitle({ children, sub }) {
   return (
     <div className="mb-4 sm:mb-5">
-      <h3 className="text-xs font-bold text-neutral-800 dark:text-white uppercase tracking-widest">
+      <h3 className="text-xs font-bold text-[var(--cl-text)] uppercase tracking-widest">
         {children}
       </h3>
-      {sub && <p className="text-xs text-neutral-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-[var(--cl-text-muted)] mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -49,23 +55,23 @@ function Field({ id, label, type = "text", name, value, onChange, readOnly, icon
   const [focused, setFocused] = useState(false);
   const active = focused || (value && String(value).length > 0);
   const base = `w-full pl-10 pr-4 ${multiline ? "pt-5 pb-2" : "pt-5 pb-1.5"} rounded-xl border text-sm font-medium
-    bg-white/60 dark:bg-white/5 text-neutral-900 dark:text-white
-    placeholder-neutral-400 dark:placeholder-neutral-600 outline-none resize-none transition-all duration-200
+    bg-[var(--cl-surface-soft)] text-[var(--cl-text)] placeholder:text-[var(--cl-text-soft)]
+    outline-none resize-none transition-all duration-200
     ${readOnly ? "opacity-60 cursor-default" : ""}
     ${focused
-      ? "border-blue-500/70 ring-2 ring-blue-500/20"
-      : "border-neutral-200 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20"}`;
+      ? "border-[var(--cl-primary)] shadow-[0_0_0_3px_var(--cl-ring)]"
+      : "border-[var(--cl-border)] hover:border-[var(--cl-border-strong)]"}`;
   return (
     <div className="relative">
       <label htmlFor={id}
         className={`absolute left-10 pointer-events-none z-10 font-medium transition-all duration-200
           ${active
-            ? "top-1.5 text-[10px] text-blue-500"
-            : "top-1/2 -translate-y-1/2 text-sm text-neutral-400 dark:text-neutral-500"}`}>
+            ? "top-1.5 text-[10px] text-[var(--cl-primary)]"
+            : "top-1/2 -translate-y-1/2 text-sm text-[var(--cl-text-soft)]"}`}>
         {label}
       </label>
       <Icon className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-sm transition-colors duration-200
-        ${focused ? "text-blue-500" : "text-neutral-400 dark:text-neutral-500"}`} />
+        ${focused ? "text-[var(--cl-primary)]" : "text-[var(--cl-text-soft)]"}`} />
       {multiline
         ? <textarea id={id} name={name} value={value ?? ""} onChange={onChange}
             rows={rows} readOnly={readOnly}
@@ -103,7 +109,7 @@ function Ring({ value, size = 76, stroke = 6, color = "#3b82f6" }) {
   return (
     <svg width={size} height={size} className="-rotate-90">
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke}
-        className="text-neutral-200 dark:text-white/10" />
+        className="text-[var(--cl-border)]" />
       <motion.circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
         strokeLinecap="round" strokeDasharray={circ}
         initial={{ strokeDashoffset: circ }}
@@ -213,6 +219,14 @@ export default function Profile() {
   const handleResumeUpload = async (file) => {
     setResumeError(null);
     setResumeSuccess(false);
+    if (!file || file.type !== "application/pdf" || !file.name.toLowerCase().endsWith(".pdf")) {
+      setResumeError("Only PDF resume files are supported.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setResumeError("Resume PDF must be 5 MB or smaller.");
+      return;
+    }
     setResumeUploading(true);
     setResumeProgress(0);
     try {
@@ -398,17 +412,17 @@ export default function Profile() {
 
           {/* Tab bar — horizontally scrollable on mobile */}
           <div className="overflow-x-auto pb-0.5 -mx-1 px-1">
-            <div className="flex gap-1 p-1 bg-neutral-100/80 dark:bg-white/5 rounded-xl w-fit min-w-full sm:min-w-0">
+            <div className="flex gap-1 p-1 bg-[var(--cl-surface-soft)] rounded-xl w-fit min-w-full sm:min-w-0 border border-[var(--cl-border)]">
               {tabs.map(t => (
                 <button key={t.id} type="button" onClick={() => setActiveTab(t.id)}
                   className={`relative px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium
                     whitespace-nowrap transition-all duration-200
                     ${activeTab === t.id
-                      ? "text-neutral-900 dark:text-white"
-                      : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300"}`}>
+                      ? "text-[var(--cl-primary)]"
+                      : "text-[var(--cl-text-muted)] hover:text-[var(--cl-text)]"}`}>
                   {activeTab === t.id && (
                     <motion.div layoutId="tab-bg"
-                      className="absolute inset-0 bg-white dark:bg-white/10 rounded-lg shadow-sm"
+                      className="absolute inset-0 rounded-lg border border-[var(--cl-primary)] bg-[var(--cl-primary-soft)] shadow-sm"
                       transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />
                   )}
                   <span className="relative z-10">{t.label}</span>
@@ -434,7 +448,7 @@ export default function Profile() {
                   initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }}>
                   <Card className="p-4 sm:p-6 md:p-7">
-                    <SectionTitle sub="Fetched live from your database account">
+                    <SectionTitle sub="Your personal details.">
                       Personal Information
                     </SectionTitle>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -481,15 +495,14 @@ export default function Profile() {
                       </div>
                       <div className="flex gap-2">
                         <div className="flex-1 relative min-w-0">
-                          <FaCode className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-neutral-400" />
+                          <FaCode className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-[var(--cl-text-soft)]" />
                           <input value={skillInput}
                             onChange={e => setSkillInput(e.target.value)}
                             onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addSkill())}
                             placeholder="Add a skill and press Enter"
-                            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-white/10
-                              bg-white/60 dark:bg-white/5 text-sm text-neutral-800 dark:text-white
-                              placeholder-neutral-400 outline-none
-                              focus:border-blue-500/70 focus:ring-2 focus:ring-blue-500/20 transition-all" />
+                            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[var(--cl-border)]
+                              bg-[var(--cl-surface-soft)] text-sm text-[var(--cl-text)] placeholder:text-[var(--cl-text-soft)]
+                              outline-none focus:border-[var(--cl-primary)] focus:ring-2 focus:ring-[var(--cl-ring)] transition-all" />
                         </div>
                         <button type="button" onClick={addSkill}
                           className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl text-sm font-semibold
@@ -538,23 +551,22 @@ export default function Profile() {
                       onDrop={async e => {
                         e.preventDefault();
                         const f = e.dataTransfer.files[0];
-                        if (f) resumeRef.current && handleResumeUpload(f);
+                        if (f) handleResumeUpload(f);
                       }}
                       className="relative flex flex-col items-center justify-center gap-3 p-8
-                        border-2 border-dashed border-neutral-300 dark:border-white/15
+                        border-2 border-dashed border-[var(--cl-border-strong)]
                         rounded-2xl cursor-pointer
-                        hover:border-blue-400 dark:hover:border-blue-500/60
-                        hover:bg-blue-50/40 dark:hover:bg-blue-500/5
+                        hover:border-[var(--cl-primary)] hover:bg-[var(--cl-primary-soft)]
                         transition-all duration-200">
                       <div className="w-12 h-12 rounded-xl flex items-center justify-center
-                        bg-blue-100 dark:bg-blue-500/15">
-                        <FaFileAlt className="text-blue-500 dark:text-blue-400 text-xl" />
+                        bg-[var(--cl-primary-soft)]">
+                        <FaFileAlt className="text-[var(--cl-primary)] text-xl" />
                       </div>
                       <div className="text-center">
-                        <p className="text-sm font-semibold text-neutral-700 dark:text-white">
+                        <p className="text-sm font-semibold text-[var(--cl-text)]">
                           {resumeUploading ? "Uploading…" : "Click or drag & drop your resume"}
                         </p>
-                        <p className="text-xs text-neutral-400 mt-0.5">PDF only · max 5 MB</p>
+                        <p className="text-xs text-[var(--cl-text-muted)] mt-0.5">PDF only · max 5 MB</p>
                       </div>
                       <input ref={resumeRef} type="file" accept="application/pdf" className="hidden"
                         onChange={e => {
@@ -568,12 +580,12 @@ export default function Profile() {
                     {resumeUploading && (
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
-                            <FaSpinner className="animate-spin text-blue-500" /> Uploading to Cloudinary…
+                          <span className="text-[var(--cl-text-muted)] flex items-center gap-1.5">
+                            <FaSpinner className="animate-spin text-[var(--cl-primary)]" /> Uploading to Cloudinary…
                           </span>
-                          <span className="font-bold text-blue-500">{resumeProgress}%</span>
+                          <span className="font-bold text-[var(--cl-primary)]">{resumeProgress}%</span>
                         </div>
-                        <div className="h-2 bg-neutral-100 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-2 bg-[var(--cl-surface-soft)] rounded-full overflow-hidden">
                           <motion.div className="h-full rounded-full bg-linear-to-r from-blue-500 to-violet-500"
                             animate={{ width: `${resumeProgress}%` }}
                             transition={{ duration: 0.3 }} />
@@ -597,19 +609,21 @@ export default function Profile() {
                         border border-green-200/60 dark:border-green-500/20">
                         <FaFileAlt className="text-green-600 dark:text-green-400 text-lg shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                          <p className="text-xs font-semibold text-[var(--cl-text-muted)]">
                             {resumeSuccess ? "✅ Resume uploaded successfully!" : "Current resume"}
                           </p>
-                          <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
+                          <p className="text-xs text-[var(--cl-text-muted)] truncate mt-0.5">
                             {form.resumeUrl}
                           </p>
                         </div>
-                        <a href={form.resumeUrl} target="_blank" rel="noreferrer"
+                        {isPdfResumeUrl(form.resumeUrl) && (
+                          <a href={form.resumeUrl} target="_blank" rel="noopener noreferrer"
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
                             text-blue-600 dark:text-blue-400
                             bg-blue-50 dark:bg-blue-500/15 hover:bg-blue-100 transition-colors shrink-0">
-                          <FaDownload className="text-[10px]" /> Open
-                        </a>
+                            <FaDownload className="text-[10px]" /> Open PDF
+                          </a>
+                        )}
                       </div>
                     )}
                   </Card>
@@ -629,7 +643,7 @@ export default function Profile() {
                 bg-linear-to-br from-blue-500 to-violet-500">
                 <FaChartLine className="text-white text-[10px]" />
               </div>
-              <h3 className="text-sm font-bold text-neutral-800 dark:text-white">Career Progress</h3>
+              <h3 className="text-sm font-bold text-[var(--cl-text)]">Career Progress</h3>
             </div>
             {[
               { label: "Profile Completion",  value: completion,                                    colors: "from-blue-400 to-blue-600"    },
@@ -637,10 +651,10 @@ export default function Profile() {
             ].map((p, i) => (
               <div key={i} className="mb-3 last:mb-0">
                 <div className="flex justify-between mb-1.5">
-                  <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{p.label}</span>
-                  <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{p.value}%</span>
+                  <span className="text-xs font-medium text-[var(--cl-text-muted)]">{p.label}</span>
+                  <span className="text-xs font-bold text-[var(--cl-text)]">{p.value}%</span>
                 </div>
-                <div className="h-1.5 bg-neutral-100 dark:bg-white/10 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-[var(--cl-surface-soft)] rounded-full overflow-hidden">
                   <motion.div className={`h-full rounded-full bg-linear-to-r ${p.colors}`}
                     initial={{ width: 0 }} animate={{ width: `${p.value}%` }}
                     transition={{ duration: 1.1, ease: "easeOut", delay: 0.3 + i * 0.1 }} />
@@ -651,14 +665,14 @@ export default function Profile() {
 
           {/* Account Info */}
           <Card className="p-4 sm:p-5">
-            <h3 className="text-sm font-bold text-neutral-800 dark:text-white mb-3">Account Info</h3>
-            <div className="space-y-2.5 text-sm text-neutral-600 dark:text-neutral-400">
+            <h3 className="text-sm font-bold text-[var(--cl-text)] mb-3">Account Info</h3>
+            <div className="space-y-2.5 text-sm text-[var(--cl-text-muted)]">
               <div className="flex items-center gap-2 min-w-0">
                 <FaEnvelope className="text-blue-400 text-xs shrink-0" />
                 <span className="truncate">{user?.email || "—"}</span>
               </div>
               <div className="flex items-center gap-2">
-                <FaUser className="text-violet-400 text-xs shrink-0" />
+                <FaUser className="text-[var(--cl-primary)] text-xs shrink-0" />
                 <span className="capitalize">{user?.role || "student"}</span>
               </div>
               {user?.createdAt && (
@@ -667,9 +681,9 @@ export default function Profile() {
                   <span className="text-xs">Joined {new Date(user.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
                 </div>
               )}
-              {form.github    && <a href={form.github}    target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-blue-500 transition-colors min-w-0"><FaGithub   className="text-xs shrink-0" /><span className="truncate">GitHub</span></a>}
-              {form.linkedin  && <a href={form.linkedin}  target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-blue-500 transition-colors min-w-0"><FaLinkedin className="text-xs shrink-0" /><span className="truncate">LinkedIn</span></a>}
-              {form.portfolio && <a href={form.portfolio} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-blue-500 transition-colors min-w-0"><FaGlobe    className="text-xs shrink-0" /><span className="truncate">Portfolio</span></a>}
+              {form.github    && <a href={form.github}    target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-[var(--cl-primary)] transition-colors min-w-0"><FaGithub   className="text-xs shrink-0" /><span className="truncate">GitHub</span></a>}
+              {form.linkedin  && <a href={form.linkedin}  target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-[var(--cl-primary)] transition-colors min-w-0"><FaLinkedin className="text-xs shrink-0" /><span className="truncate">LinkedIn</span></a>}
+              {form.portfolio && <a href={form.portfolio} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-[var(--cl-primary)] transition-colors min-w-0"><FaGlobe    className="text-xs shrink-0" /><span className="truncate">Portfolio</span></a>}
             </div>
           </Card>
 
@@ -680,23 +694,23 @@ export default function Profile() {
                 bg-linear-to-br from-blue-500 to-violet-500">
                 <FaLightbulb className="text-white text-[10px]" />
               </div>
-              <h3 className="text-sm font-bold text-neutral-800 dark:text-white">AI Career Tips</h3>
+              <h3 className="text-sm font-bold text-[var(--cl-text)]">AI Career Tips</h3>
             </div>
             <div className="space-y-2">
               {[
                 { icon: FaBolt,      text: "Add a portfolio URL to boost profile visibility by 40%.",   color: "text-yellow-500 bg-yellow-50 dark:bg-yellow-500/10" },
                 { icon: FaFire,      text: !form.github ? "Connect your GitHub to showcase projects." : "GitHub connected — great for recruiters!", color: "text-orange-500 bg-orange-50 dark:bg-orange-500/10" },
-                { icon: FaLightbulb, text: skillsList.length < 5 ? "Add more skills to match more job requirements." : `${skillsList.length} skills added — keep it up!`, color: "text-purple-500 bg-purple-50 dark:bg-purple-500/10" },
+                { icon: FaLightbulb, text: skillsList.length < 5 ? "Add more skills to match more job requirements." : `${skillsList.length} skills added — keep it up!`, color: "text-violet-600 bg-violet-100 dark:bg-violet-500/10" },
               ].map((t, i) => {
                 const Icon = t.icon;
                 return (
                   <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl
-                    bg-neutral-50 dark:bg-white/4
-                    border border-neutral-100 dark:border-white/6">
+                    bg-[var(--cl-surface-soft)]
+                    border border-[var(--cl-border)]">
                     <div className={`w-6 h-6 rounded-lg shrink-0 flex items-center justify-center ${t.color}`}>
                       <Icon className="text-[10px]" />
                     </div>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">{t.text}</p>
+                    <p className="text-xs text-[var(--cl-text-muted)] leading-relaxed">{t.text}</p>
                   </div>
                 );
               })}

@@ -25,7 +25,7 @@ const grad = (s = "") => GRADS[(s.charCodeAt(0) || 0) % GRADS.length];
 /* ── Stars ────────────────────────────────────────────────────────── */
 function Stars({ rating, count }) {
   if (!rating) return (
-    <span className="text-xs text-gray-400 dark:text-gray-600">No rating</span>
+    <span className="text-xs text-[var(--cl-text-soft)]">No rating</span>
   );
   const full  = Math.floor(rating);
   const half  = rating - full >= 0.5;
@@ -33,15 +33,15 @@ function Stars({ rating, count }) {
   return (
     <span className="flex items-center gap-0.5 flex-wrap">
       {Array.from({ length: full  }).map((_, i) => (
-        <FaStar key={`f${i}`} className="text-amber-400 text-xs shrink-0" />
+        <FaStar key={`f${i}`} className="text-[var(--cl-warning)] text-xs shrink-0" />
       ))}
-      {half  && <FaStar className="text-amber-300/70 text-xs shrink-0" />}
+      {half  && <FaStar className="text-[var(--cl-warning)]/70 text-xs shrink-0" />}
       {Array.from({ length: empty }).map((_, i) => (
-        <FaStar key={`e${i}`} className="text-gray-200 dark:text-white/10 text-xs shrink-0" />
+        <FaStar key={`e${i}`} className="text-[var(--cl-track)] text-xs shrink-0" />
       ))}
-      <span className="ml-1 text-xs font-bold text-gray-700 dark:text-gray-200">{rating.toFixed(1)}</span>
+      <span className="ml-1 text-xs font-bold text-[var(--cl-text)]">{rating.toFixed(1)}</span>
       {count && (
-        <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+        <span className="text-xs text-[var(--cl-text-soft)] whitespace-nowrap">
           ({count.toLocaleString()})
         </span>
       )}
@@ -77,10 +77,9 @@ function CompanyCard({ company, isSaved = false, onSave }) {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -3, transition: { duration: 0.18 } }}
       transition={{ duration: 0.22 }}
-      className="flex flex-col h-full bg-white dark:bg-[#0f1123]
-        border border-gray-200 dark:border-white/8 rounded-2xl
-        shadow-sm hover:shadow-xl hover:shadow-black/8 dark:hover:shadow-black/40
-        overflow-hidden transition-shadow duration-300"
+      className="flex flex-col h-full bg-[var(--cl-surface)]
+        border border-[var(--cl-border)] rounded-2xl
+        shadow-sm hover:shadow-[var(--cl-shadow)] overflow-hidden transition-shadow duration-300"
     >
       {/* Colour accent bar */}
       <div className="h-1.5 w-full shrink-0"
@@ -100,7 +99,7 @@ function CompanyCard({ company, isSaved = false, onSave }) {
 
           {/* Name + rating + status */}
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-[15px]
+            <h3 className="font-bold text-[var(--cl-text)] text-sm sm:text-[15px]
               leading-tight truncate" title={companyName}>
               {companyName}
             </h3>
@@ -109,15 +108,15 @@ function CompanyCard({ company, isSaved = false, onSave }) {
               {isOpen && !isClosed ? (
                 <span className="inline-flex items-center gap-1 text-[10px] font-semibold
                   px-2 py-0.5 rounded-full shrink-0
-                  bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                  bg-[var(--cl-success-soft)] text-[var(--cl-success)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--cl-success)] animate-pulse inline-block" />
                   Open
                 </span>
               ) : isClosed ? (
                 <span className="inline-flex items-center gap-1 text-[10px] font-semibold
                   px-2 py-0.5 rounded-full shrink-0
-                  bg-gray-100 text-gray-500 dark:bg-white/8 dark:text-gray-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" />
+                  bg-[var(--cl-surface-soft)] text-[var(--cl-text-soft)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--cl-text-soft)] inline-block" />
                   Closed
                 </span>
               ) : null}
@@ -130,10 +129,10 @@ function CompanyCard({ company, isSaved = false, onSave }) {
             disabled={saving}
             onClick={handleSave}
             title={isSaved ? "Remove from saved" : "Save company"}
-            className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all
+            className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all border
               ${isSaved
-                ? "bg-blue-600 text-white shadow-md shadow-blue-500/30"
-                : "bg-gray-100 dark:bg-white/8 text-gray-400 dark:text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400"}
+                ? "bg-[var(--cl-primary)] text-[var(--cl-button-text)] border-[var(--cl-primary)] shadow-md"
+                : "bg-[var(--cl-surface-soft)] text-[var(--cl-text-soft)] border-[var(--cl-border)] hover:bg-[var(--cl-primary-soft)] hover:text-[var(--cl-primary)] hover:border-[var(--cl-primary)]"}
               ${saving ? "opacity-50 cursor-wait" : ""}`}
           >
             <FaBookmark className="text-sm" />
@@ -147,24 +146,24 @@ function CompanyCard({ company, isSaved = false, onSave }) {
           {distanceText && (
             <span className="self-start inline-flex items-center gap-1.5 text-xs font-semibold
               px-2.5 py-1 rounded-full
-              bg-blue-50 text-blue-700 dark:bg-blue-900/25 dark:text-blue-400
-              border border-blue-200 dark:border-blue-500/30 whitespace-nowrap">
+              bg-[var(--cl-primary-soft)] text-[var(--cl-primary)]
+              border border-[var(--cl-primary)]/25 whitespace-nowrap">
               <FaMapMarkerAlt className="text-[9px] shrink-0" />{distanceText}
             </span>
           )}
 
           {/* Industry */}
           {industry && (
-            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 min-w-0">
-              <FaBriefcase className="shrink-0 text-indigo-400 text-[10px]" />
+            <div className="flex items-center gap-2 text-xs text-[var(--cl-text-muted)] min-w-0">
+              <FaBriefcase className="shrink-0 text-[var(--cl-primary)] text-[10px]" />
               <span className="capitalize truncate">{industry}</span>
             </div>
           )}
 
           {/* Address */}
           {address && (
-            <div className="flex items-start gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300 min-w-0">
-              <FaMapMarkerAlt className="mt-0.5 shrink-0 text-blue-500 text-xs" />
+            <div className="flex items-start gap-2 text-xs sm:text-sm text-[var(--cl-text-muted)] min-w-0">
+              <FaMapMarkerAlt className="mt-0.5 shrink-0 text-[var(--cl-primary)] text-xs" />
               <span className="line-clamp-2 leading-snug wrap-break-word">{address}</span>
             </div>
           )}
@@ -172,10 +171,10 @@ function CompanyCard({ company, isSaved = false, onSave }) {
           {/* Website */}
           {website && (
             <div className="flex items-center gap-2 min-w-0">
-              <FaGlobe className="shrink-0 text-violet-500 text-xs" />
+              <FaGlobe className="shrink-0 text-[var(--cl-primary)] text-xs" />
               <a href={website} target="_blank" rel="noopener noreferrer"
                 onClick={e => e.stopPropagation()}
-                className="truncate text-xs text-violet-600 dark:text-violet-400
+                className="truncate text-xs text-[var(--cl-primary)]
                   hover:underline font-medium min-w-0">
                 {website.replace(/^https?:\/\/(www\.)?/, "")}
               </a>
@@ -184,10 +183,10 @@ function CompanyCard({ company, isSaved = false, onSave }) {
 
           {/* Phone */}
           {phone && (
-            <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 min-w-0">
-              <FaPhone className="shrink-0 text-emerald-500 text-[10px]" />
+            <div className="flex items-center gap-2 text-xs text-[var(--cl-text-muted)] min-w-0">
+              <FaPhone className="shrink-0 text-[var(--cl-success)] text-[10px]" />
               <a href={`tel:${phone}`} onClick={e => e.stopPropagation()}
-                className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors truncate">
+                className="hover:text-[var(--cl-success)] transition-colors truncate">
                 {phone}
               </a>
             </div>
@@ -195,7 +194,7 @@ function CompanyCard({ company, isSaved = false, onSave }) {
 
           {/* Opening hours */}
           {company.openingHours?.length > 0 && (
-            <div className="flex items-start gap-2 text-xs text-gray-400 dark:text-gray-500 min-w-0">
+            <div className="flex items-start gap-2 text-xs text-[var(--cl-text-soft)] min-w-0">
               <FaRegClock className="shrink-0 mt-0.5 text-[10px]" />
               <span className="line-clamp-1 wrap-break-word">{company.openingHours[0]}</span>
             </div>
@@ -203,15 +202,15 @@ function CompanyCard({ company, isSaved = false, onSave }) {
         </div>
 
         {/* ── Action buttons ─────────────────────────────────── */}
-        <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100 dark:border-white/6 mt-auto">
+        <div className="flex flex-wrap gap-2 pt-3 border-t border-[var(--cl-border)] mt-auto">
 
           {/* View Details — always stretches to fill */}
           <Link
             to={`/student/companies/${encodeURIComponent(placeId)}`}
             className="flex-1 min-w-0 flex items-center justify-center gap-1.5
-              bg-blue-600 hover:bg-blue-700 active:bg-blue-800
-              text-white text-xs font-semibold px-3 py-2.5 rounded-xl
-              transition-colors shadow-sm shadow-blue-500/20 whitespace-nowrap">
+              bg-[var(--cl-primary)] hover:bg-[var(--cl-primary-strong)] active:bg-[var(--cl-primary-strong)]
+              text-[var(--cl-button-text)] text-xs font-semibold px-3 py-2.5 rounded-xl
+              transition-colors shadow-sm whitespace-nowrap">
             View Details <FaChevronRight className="text-[9px] shrink-0" />
           </Link>
 
@@ -221,9 +220,9 @@ function CompanyCard({ company, isSaved = false, onSave }) {
               onClick={e => e.stopPropagation()}
               title="Open in Google Maps"
               className="flex items-center justify-center gap-1.5 shrink-0
-                bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/15
-                text-gray-700 dark:text-gray-300 text-xs font-semibold
-                px-3 py-2.5 rounded-xl transition-colors border border-gray-200 dark:border-white/10
+                bg-[var(--cl-surface-soft)] hover:bg-[var(--cl-border)]
+                text-[var(--cl-text)] text-xs font-semibold
+                px-3 py-2.5 rounded-xl transition-colors border border-[var(--cl-border)]
                 whitespace-nowrap">
               <FaMapMarkedAlt className="text-xs shrink-0" /> Maps
             </a>
@@ -234,9 +233,9 @@ function CompanyCard({ company, isSaved = false, onSave }) {
             <a href={careerPage} target="_blank" rel="noopener noreferrer"
               onClick={e => e.stopPropagation()}
               className="w-full flex items-center justify-center gap-1.5
-                bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800
-                text-white text-xs font-semibold px-3 py-2.5 rounded-xl
-                transition-colors shadow-sm shadow-emerald-500/20 whitespace-nowrap">
+                bg-[var(--cl-success)] hover:opacity-90 active:opacity-90
+                text-[var(--cl-button-text)] text-xs font-semibold px-3 py-2.5 rounded-xl
+                transition-colors shadow-sm whitespace-nowrap">
               <FaBriefcase className="text-[9px] shrink-0" /> Careers
             </a>
           )}
