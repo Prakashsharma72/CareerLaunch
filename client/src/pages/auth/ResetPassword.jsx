@@ -44,54 +44,54 @@ function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white px-4 py-10">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md bg-slate-900/95 border border-white/10 rounded-3xl p-8 shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--cl-page)] px-4 py-10 text-[var(--cl-text)]">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md rounded-3xl border border-[var(--cl-border)] bg-[var(--cl-surface)] p-8 shadow-[var(--cl-shadow)]">
         <div className="mb-6 text-center">
-          <h1 className="text-3xl font-bold">Reset password</h1>
-          <p className="text-sm text-slate-400 mt-2">Choose a new password for your account.</p>
+          <h1 className="text-3xl font-bold text-[var(--cl-text)]">Reset password</h1>
+          <p className="mt-2 text-sm text-[var(--cl-text-muted)]">Choose a new password for your account.</p>
         </div>
 
-        {error && <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-200">{error}</div>}
-        {success && <div className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 text-sm text-emerald-200">{success}</div>}
+        {error && <div className="mb-4 rounded-xl border border-[var(--cl-danger)]/30 bg-[var(--cl-danger-soft)] px-4 py-3 text-sm text-[var(--cl-danger)]">{error}</div>}
+        {success && <div className="mb-4 rounded-xl border border-[var(--cl-success)]/30 bg-[var(--cl-success-soft)] px-4 py-3 text-sm text-[var(--cl-success)]">{success}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3">
-            <label className="block text-sm text-slate-400 mb-2">New password</label>
+          <div className="rounded-2xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] px-4 py-3">
+            <label className="mb-2 block text-sm text-[var(--cl-text-muted)]">New password</label>
             <div className="flex items-center gap-3">
-              <FaLock className="text-slate-400" />
+              <FaLock className="text-[var(--cl-text-soft)]" />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="New password"
-                className="w-full bg-transparent outline-none text-white placeholder:text-slate-500"
+                className="w-full bg-transparent outline-none text-[var(--cl-text)] placeholder:text-[var(--cl-text-soft)]"
                 autoComplete="new-password"
               />
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3">
-            <label className="block text-sm text-slate-400 mb-2">Confirm password</label>
+          <div className="rounded-2xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] px-4 py-3">
+            <label className="mb-2 block text-sm text-[var(--cl-text-muted)]">Confirm password</label>
             <div className="flex items-center gap-3">
-              <FaLock className="text-slate-400" />
+              <FaLock className="text-[var(--cl-text-soft)]" />
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm password"
-                className="w-full bg-transparent outline-none text-white placeholder:text-slate-500"
+                className="w-full bg-transparent outline-none text-[var(--cl-text)] placeholder:text-[var(--cl-text-soft)]"
                 autoComplete="new-password"
               />
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full rounded-2xl bg-blue-600 py-3 text-sm font-semibold text-white transition hover:bg-indigo-600 disabled:opacity-60">
+          <button type="submit" disabled={loading} className="w-full rounded-2xl bg-[var(--cl-primary)] py-3 text-sm font-semibold text-white transition hover:bg-[var(--cl-primary-strong)] disabled:opacity-60">
             {loading ? "Resetting…" : "Reset password"}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-400">
-          <Link to="/login" className="text-blue-400 hover:text-blue-200">Back to sign in</Link>
+        <p className="mt-6 text-center text-sm text-[var(--cl-text-muted)]">
+          <Link to="/login" className="text-[var(--cl-primary)] hover:text-[var(--cl-primary-strong)]">Back to sign in</Link>
         </p>
       </motion.div>
     </div>

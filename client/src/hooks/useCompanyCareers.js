@@ -4,7 +4,7 @@
  * Fetches companies with verified career pages via GET /api/company-careers.
  * Reuses placesSlice for location + filter state only.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   setLocationStatus,
@@ -41,28 +41,34 @@ export default function useCompanyCareers() {
   const [error, setError]         = useState(null);
   const [source, setSource]       = useState(null);
   const [nextPageToken, setNextPageToken] = useState(null);
+  const [activeLocation, setActiveLocation] = useState(null);
+  const [dataLocation, setDataLocation] = useState(null);
+  const [providerSource, setProviderSource] = useState(null);
+  const requestVersion = useRef(0);
 
   const doFetch = useCallback(async ({ lat, lon, city, keyword, radius, pageToken = null, append = false }) => {
+    const version = ++requestVersion.current;
+    const resolvedCity = city?.trim() || null;
     setLoading(true);
     setError(null);
     try {
       let res;
-      if (lat != null && lon != null) {
+      if (resolvedCity) {
+        res = await getCompanyCareers({
+          lat: null,
+          lon: null,
+          radius: radius ?? 15,
+          keyword: keyword ?? "software company",
+          city: resolvedCity,
+          pageToken,
+        });
+      } else if (lat != null && lon != null) {
         res = await getCompanyCareers({
           lat,
           lon,
           radius:  radius ?? 15,
           keyword: keyword ?? "software company",
           city:    city?.trim() || undefined,
-          pageToken,
-        });
-      } else if (city?.trim()) {
-        res = await getCompanyCareers({
-          lat,
-          lon,
-          city:    city.trim(),
-          keyword: keyword ?? "software company",
-          radius:  radius ?? 15,
           pageToken,
         });
       } else {
@@ -74,6 +80,7 @@ export default function useCompanyCareers() {
 
       const payload = Array.isArray(res.data) ? { companies: res.data } : res.data;
       const list = payload?.companies || [];
+      if (version !== requestVersion.current) return;
       setCompanies(current => {
         if (!append) {
           return [...list].sort((first, second) => (first.distanceKm ?? Infinity) - (second.distanceKm ?? Infinity));
@@ -83,15 +90,19 @@ export default function useCompanyCareers() {
           .sort((first, second) => (first.distanceKm ?? Infinity) - (second.distanceKm ?? Infinity));
       });
       setNextPageToken(payload?.nextPageToken || null);
-      setSource("company_careers");
+      setSource(payload?.source || "company_careers");
+      setProviderSource(payload?.providerSource || null);
+      setActiveLocation(payload?.location || resolvedCity || null);
+      setDataLocation(payload?.location || resolvedCity || null);
     } catch (e) {
+      if (version !== requestVersion.current) return;
       const payload = e?.response?.data || { reason: e.message || "Failed to load career pages" };
       setError(typeof payload === "string" ? payload : payload.reason || payload.message || "Failed to load");
       if (!append) setCompanies([]);
       setNextPageToken(null);
       setSource(null);
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   }, []);
 
@@ -100,12 +111,15 @@ export default function useCompanyCareers() {
       dispatch(setLocationError("Geolocation is not supported by your browser."));
       return;
     }
+    const locationRequestVersion = ++requestVersion.current;
     dispatch(setLocationStatus("requesting"));
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        if (filters.city?.trim() || locationRequestVersion !== requestVersion.current) return;
         const { latitude: lat, longitude: lon } = pos.coords;
         const { city, fullCity } = await reverseGeocode(lat, lon);
         dispatch(setLocationGranted({ lat, lon, city, fullCity }));
+        setActiveLocation(city || null);
         doFetch({
           lat,
           lon,
@@ -123,8 +137,8 @@ export default function useCompanyCareers() {
 
   const fetchByCity = useCallback((city, keyword) => {
     doFetch({
-      lat:     location.lat,
-      lon:     location.lon,
+      lat:     null,
+      lon:     null,
       city,
       keyword: keyword ?? filters.keyword ?? "software company",
       radius:  filters.maxRadius ?? 15,
@@ -132,10 +146,10 @@ export default function useCompanyCareers() {
   }, [doFetch, location.lat, location.lon, filters.keyword, filters.maxRadius]);
 
   const refetch = useCallback(() => {
-    const effectiveCity = location.city || filters.city;
+    const effectiveCity = filters.city?.trim() || null;
     doFetch({
-      lat:     location.lat,
-      lon:     location.lon,
+      lat:     effectiveCity ? null : location.lat,
+      lon:     effectiveCity ? null : location.lon,
       city:    effectiveCity,
       keyword: filters.keyword ?? "software company",
       radius:  filters.maxRadius ?? 15,
@@ -144,10 +158,10 @@ export default function useCompanyCareers() {
 
   const loadMore = useCallback(() => {
     if (!nextPageToken || loading) return;
-    const effectiveCity = location.city || filters.city;
+    const effectiveCity = filters.city?.trim() || null;
     doFetch({
-      lat: location.lat,
-      lon: location.lon,
+      lat: effectiveCity ? null : location.lat,
+      lon: effectiveCity ? null : location.lon,
       city: effectiveCity,
       keyword: filters.keyword ?? "software company",
       radius: filters.maxRadius ?? 15,
@@ -161,6 +175,9 @@ export default function useCompanyCareers() {
     loading,
     error,
     source,
+    activeLocation,
+    dataLocation,
+    providerSource,
     nextPageToken,
     loadMore,
     requestLocation,

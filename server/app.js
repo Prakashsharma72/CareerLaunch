@@ -20,6 +20,7 @@ import uploadRoutes       from "./routes/upload.routes.js";
 import roadmapRoutes      from "./routes/roadmap.routes.js";
 import adminRoutes        from "./routes/admin.routes.js";
 import healthRoutes       from "./routes/health.routes.js";
+import publicRoutes       from "./routes/public.routes.js";
 
 import { errorHandler } from "./middleware/error.middleware.js";
 import sequelize         from "./config/db.js";  // eslint-disable-line no-unused-vars
@@ -36,6 +37,7 @@ import "./models/interviewSession.model.js";
 import "./models/interviewQuestion.model.js";
 import "./models/roadmap.model.js";
 import "./models/savedJob.model.js";
+import "./models/publicSnapshot.model.js";
 
 // Import associations after all models are loaded
 import "./models/associations.js";
@@ -49,8 +51,13 @@ const app = express();
 const ALLOWED_ORIGINS = [
   // Local development
   "http://localhost:5173",
+  
   "http://localhost:4173",
+
   "http://127.0.0.1:5173",
+  
+  "http://127.0.0.1:4173",
+
   // Production frontend — all Vercel domains for this project
   // Custom domain
   "https://careerlaunchai.in",
@@ -105,6 +112,7 @@ app.use("/api/upload",          uploadRoutes);
 app.use("/api/roadmaps",        roadmapRoutes);
 app.use("/api/admin",           adminRoutes);
 app.use("/api/health",          healthRoutes);
+app.use("/api/public",          publicRoutes);
 
 
 

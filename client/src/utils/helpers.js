@@ -69,7 +69,10 @@ export const getThemePreference = () => {
 
 export const applyTheme = (darkMode) => {
   if (typeof document === "undefined") return;
+
   document.documentElement.classList.toggle("dark", darkMode);
+  document.documentElement.style.colorScheme = darkMode ? "dark" : "light";
+
   if (typeof window !== "undefined") {
     window.localStorage.setItem("theme", darkMode ? "dark" : "light");
   }

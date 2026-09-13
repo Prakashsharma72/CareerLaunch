@@ -183,7 +183,7 @@ export default function SavedJobs() {
   };
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-[#080810] p-6 md:p-8 space-y-7">
+    <div className="cl-page min-h-full p-6 md:p-8 space-y-7">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">

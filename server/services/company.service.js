@@ -15,6 +15,7 @@
  */
 import axios from "axios";
 import Company from "../models/company.model.js";
+import { invalidatePublicSnapshot } from "./publicSnapshot.service.js";
 
 /* ─────────────────────────────────────────────────────────────────────────
    LOGGING
@@ -113,8 +114,14 @@ async function upsertCompany(details, careerPage, city, keyword) {
       careerPage: careerPage || null, city: city.trim(), keyword: keyword.trim(),
       logo: details.logo || null, industry: details.industry || null,
     };
-    if (existing) { await existing.update(payload); return existing; }
-    return await Company.create({ placeId: details.placeId, ...payload });
+    if (existing) {
+      await existing.update(payload);
+      await invalidatePublicSnapshot("companies");
+      return existing;
+    }
+    const created = await Company.create({ placeId: details.placeId, ...payload });
+    await invalidatePublicSnapshot("companies");
+    return created;
   } catch (err) {
     log("error", `DB upsert failed for "${details.companyName}"`, { error: err.message });
     return null;

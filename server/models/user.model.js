@@ -38,6 +38,13 @@ const User = db.define(
       allowNull: false,
     },
 
+    googleSub: {
+      type:      DataTypes.STRING(255),
+      allowNull: true,
+      unique:    true,
+      field:     "google_sub",
+    },
+
     role: {
       type:         DataTypes.STRING(50),
       allowNull:    false,

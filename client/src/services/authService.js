@@ -23,6 +23,12 @@ export const resendOtpApi = (data) => api.post("/auth/resend-otp", data);
  */
 export const loginUser = (data) => api.post("/auth/login", data);
 
+/** POST /api/auth/google */
+export const googleLoginApi = (credential) => api.post("/auth/google", { credential });
+
+/** POST /api/auth/google/link (requires the existing password session) */
+export const linkGoogleAccountApi = (credential) => api.post("/auth/google/link", { credential });
+
 /**
  * POST /api/auth/forgot-password
  */

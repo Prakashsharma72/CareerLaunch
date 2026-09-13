@@ -226,7 +226,7 @@ export default function CompanyDetails() {
   const isClosed = isOpenNow === false;
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-[#080810]">
+    <div className="cl-page min-h-full">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
         {/* Back */}

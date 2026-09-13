@@ -46,140 +46,162 @@ function ManageJobs() {
   const totalPages = Math.ceil(total / LIMIT);
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-
+    <div className="cl-page p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--cl-text)] sm:text-3xl">
             Companies Index
           </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 mt-1 text-sm">
+          <p className="mt-1 text-sm text-[var(--cl-text-muted)]">
             Companies cached from Google Places API · {total} total
           </p>
         </div>
-        <button onClick={() => fetchCompanies(page, searchTerm)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700
-            text-white font-semibold text-sm rounded-xl transition-colors self-start md:self-auto">
-          <FaSyncAlt className={loading ? "animate-spin" : ""} /> Refresh
+        <button
+          type="button"
+          onClick={() => fetchCompanies(page, searchTerm)}
+          className="cl-primary-btn flex items-center justify-center gap-2 self-start px-4 py-2.5 text-sm md:self-auto"
+        >
+          <FaSyncAlt className={loading ? "animate-spin" : ""} />
+          Refresh
         </button>
       </div>
 
       {/* Search */}
-      <div className="bg-white dark:bg-[#0f1123] rounded-2xl border border-neutral-200 dark:border-white/8 shadow-sm p-4">
+      <div className="cl-card p-4 sm:p-5">
         <div className="relative">
-          <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" />
+          <FaSearch className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[var(--cl-text-soft)]" />
           <input
             type="text"
             placeholder="Search companies by name…"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl
-              bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10
-              text-gray-800 dark:text-white placeholder-gray-400
-              focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition"
+            className="cl-control w-full pl-10 pr-4 py-2.5 text-sm"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-[#0f1123] rounded-2xl border border-neutral-200 dark:border-white/8 shadow-sm overflow-hidden">
+      <div className="cl-card overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <FaSyncAlt className="animate-spin text-2xl text-blue-500" />
+            <FaSyncAlt className="animate-spin text-2xl text-[var(--cl-primary)]" />
           </div>
         ) : companies.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-white/8 flex items-center justify-center">
-              <FaBuilding className="text-2xl text-gray-400" />
+          <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--cl-surface-soft)]">
+              <FaBuilding className="text-2xl text-[var(--cl-text-soft)]" />
             </div>
-            <h3 className="font-bold text-gray-700 dark:text-white">No companies yet</h3>
-            <p className="text-sm text-gray-400 max-w-xs">
+            <h3 className="text-lg font-bold text-[var(--cl-text)]">No companies yet</h3>
+            <p className="max-w-xs text-sm text-[var(--cl-text-muted)]">
               Companies appear here after users search on the Jobs or Companies page.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[760px] text-sm">
               <thead>
-                <tr className="bg-gray-50 dark:bg-white/4 border-b border-gray-100 dark:border-white/8 text-left">
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Company</th>
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Rating</th>
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">City</th>
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Industry</th>
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Status</th>
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Links</th>
+                <tr className="border-b border-[var(--cl-border)] bg-[var(--cl-surface-soft)] text-left">
+                  <th className="px-5 py-3.5 text-left text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Company
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Rating
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    City
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Industry
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Status
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Links
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-white/6">
+              <tbody>
                 {companies.map(c => (
-                  <tr key={c.id || c.placeId}
-                    className="hover:bg-gray-50 dark:hover:bg-white/4 transition-colors">
-                    <td className="px-5 py-4">
-                      <div className="font-semibold text-gray-900 dark:text-white truncate max-w-50">
+                  <tr
+                    key={c.id || c.placeId}
+                    className="border-b border-[var(--cl-border)] transition-colors last:border-b-0 hover:bg-[var(--cl-surface-soft)]"
+                  >
+                    <td className="px-5 py-4 align-top">
+                      <div className="max-w-[18rem] truncate font-semibold text-[var(--cl-text)]">
                         {c.companyName}
                       </div>
                       {c.address && (
-                        <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-400 dark:text-gray-500 truncate max-w-50">
+                        <div className="mt-1 flex max-w-[18rem] items-center gap-1 truncate text-xs text-[var(--cl-text-muted)]">
                           <FaMapMarkerAlt className="shrink-0 text-[9px]" />
                           {c.address}
                         </div>
                       )}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 align-top">
                       {c.rating ? (
-                        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold">
-                          <FaStar className="text-xs" />{Number(c.rating).toFixed(1)}
-                          {c.reviewCount && <span className="text-gray-400 font-normal text-xs">({c.reviewCount})</span>}
+                        <span className="flex items-center gap-1 font-semibold text-[var(--cl-warning)]">
+                          <FaStar className="text-xs" />
+                          {Number(c.rating).toFixed(1)}
+                          {c.reviewCount && (
+                            <span className="text-xs font-normal text-[var(--cl-text-soft)]">
+                              ({c.reviewCount})
+                            </span>
+                          )}
                         </span>
                       ) : (
-                        <span className="text-gray-400 text-xs">—</span>
+                        <span className="text-xs text-[var(--cl-text-soft)]">—</span>
                       )}
                     </td>
-                    <td className="px-5 py-4 text-gray-600 dark:text-gray-300 capitalize">
+                    <td className="px-5 py-4 align-top capitalize text-[var(--cl-text)]">
                       {c.city || "—"}
                     </td>
-                    <td className="px-5 py-4 text-gray-600 dark:text-gray-300 capitalize text-xs">
+                    <td className="px-5 py-4 align-top text-xs capitalize text-[var(--cl-text-muted)]">
                       {c.industry || "—"}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 align-top">
                       {c.businessStatus === "OPERATIONAL" ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full
-                          bg-emerald-100 text-emerald-700 dark:bg-emerald-900/25 dark:text-emerald-400">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />Open
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--cl-success-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--cl-success)]">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--cl-success)]" />
+                          Open
                         </span>
                       ) : (
-                        <span className="text-gray-400 text-xs capitalize">
+                        <span className="text-xs capitalize text-[var(--cl-text-soft)]">
                           {c.businessStatus?.replace(/_/g, " ").toLowerCase() || "—"}
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 align-top">
                       <div className="flex items-center gap-2">
                         {c.website && (
-                          <a href={c.website} target="_blank" rel="noopener noreferrer"
+                          <a
+                            href={c.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             title="Website"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center
-                              bg-gray-100 dark:bg-white/8 text-gray-500 hover:text-blue-600
-                              hover:bg-blue-50 dark:hover:bg-blue-900/25 transition-colors">
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--cl-surface-soft)] text-[var(--cl-text-muted)] transition-colors hover:bg-[var(--cl-primary-soft)] hover:text-[var(--cl-primary-strong)]"
+                          >
                             <FaGlobe className="text-xs" />
                           </a>
                         )}
                         {c.mapsUrl && (
-                          <a href={c.mapsUrl} target="_blank" rel="noopener noreferrer"
+                          <a
+                            href={c.mapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             title="Google Maps"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center
-                              bg-gray-100 dark:bg-white/8 text-gray-500 hover:text-red-500
-                              hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--cl-surface-soft)] text-[var(--cl-text-muted)] transition-colors hover:bg-[var(--cl-danger-soft)] hover:text-[var(--cl-danger)]"
+                          >
                             <FaMapMarkerAlt className="text-xs" />
                           </a>
                         )}
                         {c.phone && (
-                          <a href={`tel:${c.phone}`}
+                          <a
+                            href={`tel:${c.phone}`}
                             title={c.phone}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center
-                              bg-gray-100 dark:bg-white/8 text-gray-500 hover:text-emerald-600
-                              hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--cl-surface-soft)] text-[var(--cl-text-muted)] transition-colors hover:bg-[var(--cl-success-soft)] hover:text-[var(--cl-success)]"
+                          >
                             <FaPhone className="text-xs" />
                           </a>
                         )}
@@ -194,19 +216,25 @@ function ManageJobs() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3.5 border-t border-gray-100 dark:border-white/8">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex flex-col gap-3 border-t border-[var(--cl-border)] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-[var(--cl-text-muted)]">
               Page {page} of {totalPages} · {total} companies
             </p>
             <div className="flex gap-2">
-              <button onClick={() => fetchCompanies(page - 1, searchTerm)} disabled={page === 1}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-white/10
-                  text-gray-600 dark:text-gray-300 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/8 transition-colors">
+              <button
+                type="button"
+                onClick={() => fetchCompanies(page - 1, searchTerm)}
+                disabled={page === 1}
+                className="rounded-lg border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] px-3 py-1.5 text-xs font-medium text-[var(--cl-text)] transition-colors hover:bg-[var(--cl-surface-elevated)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 ← Prev
               </button>
-              <button onClick={() => fetchCompanies(page + 1, searchTerm)} disabled={page === totalPages}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-white/10
-                  text-gray-600 dark:text-gray-300 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/8 transition-colors">
+              <button
+                type="button"
+                onClick={() => fetchCompanies(page + 1, searchTerm)}
+                disabled={page === totalPages}
+                className="rounded-lg border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] px-3 py-1.5 text-xs font-medium text-[var(--cl-text)] transition-colors hover:bg-[var(--cl-surface-elevated)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 Next →
               </button>
             </div>

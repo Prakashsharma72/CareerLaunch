@@ -27,6 +27,7 @@ ensureJwtSecret();
 import app from "./app.js";
 import sequelize from "./config/db.js";
 import { verifySmtpConnection } from "./services/email.service.js";
+import { refreshPublicSnapshot, publicSnapshotConfig } from "./services/publicSnapshot.service.js";
 
 const LOG = "[server]";
 const log = (msg) => console.log(`${new Date().toISOString()} ${LOG} ${msg}`);
@@ -40,7 +41,8 @@ async function addColumnIfMissing(table, column, definition) {
   if (dialect === "sqlite") {
     const [cols] = await sequelize.query(`PRAGMA table_info(${table})`);
     if (!cols.some(c => c.name === column)) {
-      await sequelize.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
+      const sqliteDefinition = definition.replace(/\s+UNIQUE\b/gi, "");
+      await sequelize.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${sqliteDefinition}`);
       log(`  ✔ [sqlite] Added ${table}.${column}`);
     }
   } else {
@@ -101,6 +103,7 @@ async function runMigrations() {
       name          VARCHAR(255)  NOT NULL,
       email         VARCHAR(255)  NOT NULL UNIQUE,
       password      VARCHAR(255)  NOT NULL,
+      google_sub    VARCHAR(255) UNIQUE,
       role          VARCHAR(50)   NOT NULL DEFAULT 'student',
       phone         VARCHAR(20),
       location      VARCHAR(255),
@@ -154,10 +157,16 @@ async function runMigrations() {
 
   await createTableIfMissing("resources", `
     CREATE TABLE resources (
-      id         ${AI},
-      title      VARCHAR(255) NOT NULL,
-      category   VARCHAR(255),
-      link       TEXT         NOT NULL,
+      id            ${AI},
+      title         VARCHAR(255) NOT NULL,
+      description   TEXT,
+      category      VARCHAR(64),
+      resource_type VARCHAR(32) NOT NULL DEFAULT 'Article',
+      link          TEXT,
+      file_url      TEXT,
+      file_name     VARCHAR(255),
+      file_mime_type VARCHAR(100),
+      status        VARCHAR(20) NOT NULL DEFAULT 'published',
       created_at DATETIME DEFAULT ${NOW},
       updated_at DATETIME DEFAULT ${NOW}
     )
@@ -222,6 +231,27 @@ async function runMigrations() {
       target_role     VARCHAR(100),
       roadmap_content TEXT,
       created_at      DATETIME DEFAULT ${NOW}
+    )
+  `);
+
+  await createTableIfMissing("roadmap_steps", `
+    CREATE TABLE roadmap_steps (
+      id ${AI}, roadmap_id INT NOT NULL, title VARCHAR(255) NOT NULL, description TEXT NOT NULL,
+      topics TEXT, estimated_time VARCHAR(100), practice_task TEXT, step_order INT NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT ${NOW}, updated_at DATETIME DEFAULT ${NOW}
+    )
+  `);
+  await createTableIfMissing("roadmap_resources", `
+    CREATE TABLE roadmap_resources (
+      id ${AI}, step_id INT NOT NULL, label VARCHAR(255) NOT NULL, type VARCHAR(32) NOT NULL DEFAULT 'Article',
+      url TEXT NOT NULL, resource_order INT NOT NULL DEFAULT 0
+    )
+  `);
+  await createTableIfMissing("roadmap_progress", `
+    CREATE TABLE roadmap_progress (
+      id ${AI}, user_id INT NOT NULL, roadmap_id INT NOT NULL, step_id INT NOT NULL,
+      completed_at DATETIME, created_at DATETIME DEFAULT ${NOW}, updated_at DATETIME DEFAULT ${NOW},
+      ${dialect === "mysql" ? "UNIQUE KEY uq_roadmap_progress (user_id, roadmap_id, step_id)" : "UNIQUE(user_id, roadmap_id, step_id)"}
     )
   `);
 
@@ -290,6 +320,14 @@ async function runMigrations() {
     )
   `);
 
+  await createTableIfMissing("public_snapshots", `
+    CREATE TABLE public_snapshots (
+      scope        VARCHAR(64) PRIMARY KEY,
+      payload      TEXT NOT NULL,
+      generated_at DATETIME NOT NULL
+    )
+  `);
+
   await createTableIfMissing("interview_questions", `
     CREATE TABLE interview_questions (
       id               ${AI},
@@ -319,6 +357,24 @@ async function runMigrations() {
 
   // ── 2. Add missing columns to existing tables ───────────────────────────
   const columns = [
+    // roadmap resources
+    ["roadmap_resources", "source_type", "VARCHAR(16) DEFAULT 'link'"],
+    ["roadmap_resources", "storage_public_id", "VARCHAR(500)"],
+    ["roadmap_resources", "original_name", "VARCHAR(255)"],
+    ["roadmap_resources", "mime_type", "VARCHAR(150)"],
+    ["roadmap_resources", "file_size", "BIGINT"],
+    ["roadmap_resources", "resource_type", "VARCHAR(16)"],
+    // roadmaps
+    ["roadmaps", "short_description", "VARCHAR(500)"],
+    ["roadmaps", "category", "VARCHAR(100)"],
+    ["roadmaps", "difficulty", "VARCHAR(32) DEFAULT 'Beginner'"],
+    ["roadmaps", "duration_weeks", "INT"],
+    ["roadmaps", "cover_url", "TEXT"],
+    ["roadmaps", "pdf_url", "TEXT"],
+    ["roadmaps", "pdf_name", "VARCHAR(255)"],
+    ["roadmaps", "status", "VARCHAR(20) DEFAULT 'draft'"],
+    ["roadmaps", "published_at", "DATETIME"],
+    ["roadmaps", "updated_at", "DATETIME"],
     // interview_sessions
     ["interview_sessions", "user_id", "INT"],
     ["interview_sessions", "role", "VARCHAR(255)"],
@@ -341,8 +397,13 @@ async function runMigrations() {
     ["companies", "photo_refs", "TEXT"],
     ["companies", "career_valid", "TINYINT(1)"],
     ["companies", "career_checked_at", "DATETIME"],
+    ["companies", "source", "VARCHAR(64) NOT NULL DEFAULT 'google_places'"],
+    ["companies", "fetched_at", "DATETIME"],
+    ["companies", "expires_at", "DATETIME"],
+    ["companies", "admin_managed", "TINYINT(1) NOT NULL DEFAULT 0"],
 
     // users — OTP verification
+    ["users", "google_sub", "VARCHAR(255) UNIQUE"],
     ["users", "otp", "VARCHAR(6)"],
     ["users", "otp_expires_at", "DATETIME"],
     ["users", "is_verified", "TINYINT(1) DEFAULT 0"],
@@ -400,6 +461,14 @@ async function runMigrations() {
     ["jobs", "expires_at", "DATE"],
     ["jobs", "status", "VARCHAR(20) DEFAULT 'active'"],
     ["jobs", "applicants", "TEXT"],
+
+    // resources
+    ["resources", "description", "TEXT"],
+    ["resources", "resource_type", "VARCHAR(32) DEFAULT 'Article'"],
+    ["resources", "file_url", "TEXT"],
+    ["resources", "file_name", "VARCHAR(255)"],
+    ["resources", "file_mime_type", "VARCHAR(100)"],
+    ["resources", "status", "VARCHAR(20) DEFAULT 'published'"],
   ];
 
   for (const [table, column, definition] of columns) {
@@ -464,6 +533,16 @@ async function startServer() {
   const server = app.listen(PORT, () => {
     log(`🚀 HTTP server running on port ${PORT}`);
   });
+
+  refreshPublicSnapshot("companies").catch(error =>
+    log(`Public snapshot startup refresh failed: ${error.message}`)
+  );
+  const refreshTimer = setInterval(() => {
+    refreshPublicSnapshot("companies").catch(error =>
+      log(`Public snapshot scheduled refresh failed: ${error.message}`)
+    );
+  }, publicSnapshotConfig.FRESH_MS);
+  refreshTimer.unref?.();
 
   server.on("error", (err) => {
     if (err.code === "EADDRINUSE") {

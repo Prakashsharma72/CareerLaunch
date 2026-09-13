@@ -10,16 +10,17 @@ function NotFound() {
       flex-col
       justify-center
       items-center
-      bg-gray-100
+      bg-[var(--cl-page)]
       px-6
       text-center
+      text-[var(--cl-text)]
     "
     >
       <h1
         className="
         text-8xl
         font-bold
-        text-blue-600
+        text-[var(--cl-primary)]
       "
       >
         404
@@ -37,7 +38,7 @@ function NotFound() {
 
       <p
         className="
-        text-gray-600
+        text-[var(--cl-text-muted)]
         mt-4
         max-w-md
       "
@@ -53,12 +54,12 @@ function NotFound() {
         inline-flex
         items-center
         gap-2
-        bg-blue-600
+        bg-[var(--cl-primary)]
         text-white
         px-6
         py-3
         rounded-lg
-        hover:bg-blue-700
+        hover:bg-[var(--cl-primary-strong)]
       "
       >
         <FaHome />

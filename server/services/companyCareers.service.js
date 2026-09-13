@@ -7,6 +7,7 @@
 import axios from "axios";
 import { Op } from "sequelize";
 import Company from "../models/company.model.js";
+import { getStoredJobsFallback } from "./job.service.js";
 import {
   getNearbyCompanies,
   searchCompaniesByCity,
@@ -270,26 +271,64 @@ export async function getCompaniesWithCareers({
   keyword = "software company",
   city,
   pageToken = null,
+  page = 1,
+  limit = 12,
 }) {
   let payload;
 
-  if (lat != null && lon != null) {
-    payload = await getNearbyCompanies({
-      lat, lon, radius, keyword,
-      pageToken,
-      skipCareerProbe: true,
-    });
-  } else if (city?.trim()) {
-    payload = await searchCompaniesByCity({
-      keyword, city: city.trim(), userLat: lat, userLon: lon,
-      pageToken,
-      skipCareerProbe: true,
-    });
-  } else {
-    throw new Error("lat/lon or city is required");
+  // An explicit city is authoritative. GPS is only a fallback when no city exists.
+  try {
+    if (city?.trim()) {
+      payload = await searchCompaniesByCity({
+        keyword, city: city.trim(), userLat: null, userLon: null,
+        radius, pageToken, skipCareerProbe: true,
+      });
+    } else if (lat != null && lon != null) {
+      payload = await getNearbyCompanies({
+        lat, lon, radius, keyword,
+        pageToken,
+        skipCareerProbe: true,
+      });
+    } else {
+      throw new Error("lat/lon or city is required");
+    }
+  } catch (providerError) {
+    try {
+      return {
+        ...(await getStoredJobsFallback({ city: city?.trim() || null, keyword, lat: city?.trim() ? null : lat, lon: city?.trim() ? null : lon, radius })),
+        providerSource: "provider_error",
+        page: Number(page) || 1,
+        limit: Number(limit) || 12,
+      };
+    } catch {
+      throw providerError;
+    }
   }
 
   const companies = payload.companies || [];
+
+  // The live path remains Method 1. Only its unusable/failed result hands off
+  // to actual published job rows; company records are never presented as jobs.
+  if (!companies.length || payload.source === "database_fallback") {
+    try {
+      const fallback = await getStoredJobsFallback({
+        city: city?.trim() || null,
+        keyword,
+        lat: city?.trim() ? null : lat,
+        lon: city?.trim() ? null : lon,
+        radius,
+      });
+      return {
+        ...fallback,
+        providerSource: payload.source === "database_fallback" ? "provider_error" : "provider_empty",
+        page: Number(page) || 1,
+        limit: Number(limit) || 12,
+      };
+    } catch (fallbackError) {
+      log("Stored jobs fallback failed", fallbackError.message);
+      // Preserve the existing live/company response if the fallback database is unavailable.
+    }
+  }
   const withWebsites = companies.filter(c => c.website);
   const cacheMap  = await preloadCareerCache(withWebsites.map(c => c.placeId));
   const cacheHits = withWebsites.filter(c => readCachedRow(cacheMap.get(c.placeId)) !== undefined).length;
@@ -310,5 +349,8 @@ export async function getCompaniesWithCareers({
     verifiedCareerCount: verifiedCount,
     nextPageToken: payload.nextPageToken || null,
     source:    "company_careers",
+    recordType: "company",
+    location: city?.trim() || null,
+    freshness: new Date().toISOString(),
   };
 }
