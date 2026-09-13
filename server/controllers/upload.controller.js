@@ -21,6 +21,9 @@ export const uploadResume = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
+    if (req.file.mimetype !== "application/pdf" || !req.file.originalname?.toLowerCase().endsWith(".pdf")) {
+      return res.status(400).json({ message: "Only PDF resume files are supported" });
+    }
 
     const resumeUrl = req.file.path; // set by our custom storage engine
 

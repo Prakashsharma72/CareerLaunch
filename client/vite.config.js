@@ -6,6 +6,12 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
 
+  server: {
+  port: 5173,
+  strictPort: true,
+},
+
+
   build: {
     // Warn only when a chunk exceeds 600 KB after all splitting
     chunkSizeWarningLimit: 600,

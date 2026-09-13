@@ -97,12 +97,12 @@ function AdminDashboard() {
   // Show error message if data fetch failed
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
-          <p className="text-red-600 dark:text-red-400 font-medium">{error}</p>
+      <div className="mx-auto max-w-7xl">
+        <div className="rounded-xl border border-[var(--cl-danger)]/20 bg-[var(--cl-danger-soft)] p-6 text-center">
+          <p className="font-medium text-[var(--cl-danger)]">{error}</p>
           <button
             onClick={fetchDashboardData}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="mt-4 rounded-lg bg-[var(--cl-danger)] px-4 py-2 text-[var(--cl-button-text)] transition-colors hover:bg-[var(--cl-danger)]/90"
           >
             Retry
           </button>
@@ -115,16 +115,16 @@ function AdminDashboard() {
     <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
 
       {/* ── Page header ── */}
-      <motion.div {...fadeUp(0)} className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+      <motion.div {...fadeUp(0)} className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--cl-text)] sm:text-3xl">
             Admin Dashboard
           </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 mt-1 text-sm">
+          <p className="mt-1 text-sm text-[var(--cl-text-muted)]">
             Manage jobs, resources, users, and monitor platform activity.
           </p>
         </div>
-        <span className="text-xs text-neutral-400 dark:text-neutral-500 shrink-0">
+        <span className="shrink-0 text-xs text-[var(--cl-text-soft)]">
           {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
         </span>
       </motion.div>
@@ -150,54 +150,55 @@ function AdminDashboard() {
       </motion.div>
 
       {/* ── Quick actions ── */}
-      <motion.div {...fadeUp(0.16)}
-        className="bg-white dark:bg-white/3 rounded-2xl
-          border border-neutral-200 dark:border-white/8
-          shadow-sm p-5 sm:p-6 lg:p-8">
-
-        <div className="flex items-center gap-3 mb-5">
-          <div className="p-2 bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-lg">
+      <motion.div
+        {...fadeUp(0.16)}
+        className="rounded-2xl border border-[var(--cl-border)] bg-[var(--cl-surface)] p-5 shadow-[var(--cl-shadow)] sm:p-6 lg:p-8"
+      >
+        <div className="mb-5 flex items-center gap-3">
+          <div className="rounded-lg bg-[var(--cl-primary-soft)] p-2 text-[var(--cl-primary)]">
             <FaPlusCircle className="text-lg" />
           </div>
-          <h2 className="text-lg font-bold text-neutral-800 dark:text-white">Quick Actions</h2>
+          <h2 className="text-lg font-bold text-[var(--cl-text)]">Quick Actions</h2>
         </div>
 
         {/* 1 col → 2 col → 4 col */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             {
               label: "Manage Jobs",
               icon: FaBriefcase,
               onClick: () => navigate("/admin/jobs"),
-              base: "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300",
-              hover: "hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600",
+              base: "border border-[var(--cl-primary)]/25 bg-[var(--cl-primary-soft)] text-[var(--cl-primary-strong)]",
+              hover: "hover:bg-[var(--cl-primary)] hover:text-[var(--cl-button-text)]",
             },
             {
               label: "Manage Resources",
               icon: FaBook,
               onClick: () => navigate("/admin/resources"),
-              base: "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-              hover: "hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600",
+              base: "border border-[var(--cl-success)]/25 bg-[var(--cl-success-soft)] text-[var(--cl-success)]",
+              hover: "hover:bg-[var(--cl-success)] hover:text-[var(--cl-button-text)]",
             },
             {
               label: "Manage Users",
               icon: FaUsersCog,
               onClick: () => navigate("/admin/users"),
-              base: "bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300",
-              hover: "hover:bg-violet-600 hover:text-white dark:hover:bg-violet-600",
+              base: "border border-[var(--cl-primary)]/25 bg-[var(--cl-primary-soft)] text-[var(--cl-primary-strong)]",
+              hover: "hover:bg-[var(--cl-primary)] hover:text-[var(--cl-button-text)]",
             },
             {
               label: "View Platform",
               icon: FaExternalLinkAlt,
               onClick: () => navigate("/student/jobs"),
-              base: "bg-neutral-50 dark:bg-white/5 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/10",
-              hover: "hover:bg-neutral-800 hover:text-white hover:border-transparent dark:hover:bg-white/15",
+              base: "border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] text-[var(--cl-text)]",
+              hover: "hover:bg-[var(--cl-surface-elevated)] hover:text-[var(--cl-text)]",
             },
           ].map(({ label, icon: Icon, onClick, base, hover }) => (
-            <button key={label} onClick={onClick}
-              className={`flex items-center justify-center gap-2.5 p-4 rounded-xl font-semibold text-sm
-                transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 group ${base} ${hover}`}>
-              <Icon className="text-sm shrink-0 group-hover:scale-110 transition-transform" />
+            <button
+              key={label}
+              onClick={onClick}
+              className={`group flex items-center justify-center gap-2.5 rounded-xl p-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${base} ${hover}`}
+            >
+              <Icon className="shrink-0 text-sm transition-transform group-hover:scale-110" />
               {label}
             </button>
           ))}
@@ -209,35 +210,32 @@ function AdminDashboard() {
         className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
 
         {/* Recent activities — spans 2 of 3 cols on desktop */}
-        <div className="lg:col-span-2 bg-white dark:bg-white/3 rounded-2xl
-          border border-neutral-200 dark:border-white/8 shadow-sm p-5 sm:p-6 lg:p-8">
-
-          <div className="flex items-center justify-between mb-5">
+        <div className="lg:col-span-2 rounded-2xl border border-[var(--cl-border)] bg-[var(--cl-surface)] p-5 shadow-[var(--cl-shadow)] sm:p-6 lg:p-8">
+          <div className="mb-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-violet-50 dark:bg-violet-500/15 text-violet-600 dark:text-violet-400 rounded-lg">
+              <div className="rounded-lg bg-[var(--cl-primary-soft)] p-2 text-[var(--cl-primary)]">
                 <FaHistory className="text-lg" />
               </div>
-              <h2 className="text-lg font-bold text-neutral-800 dark:text-white">Recent Activities</h2>
+              <h2 className="text-lg font-bold text-[var(--cl-text)]">Recent Activities</h2>
             </div>
-            <button className="text-sm text-blue-600 dark:text-blue-400 font-medium
-              hover:text-blue-800 dark:hover:text-blue-300 transition-colors">
+            <button className="text-sm font-medium text-[var(--cl-primary)] transition-colors hover:text-[var(--cl-primary-strong)]">
               View All
             </button>
           </div>
 
           <div className="space-y-1">
             {recentActivities.map(item => (
-              <div key={item.id}
-                className="flex items-start gap-4 p-3.5 rounded-xl
-                  hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors group">
-                <div className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${TYPE_DOT[item.type] ?? "bg-neutral-400"}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-neutral-800 dark:text-white
-                    group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors truncate">
+              <div
+                key={item.id}
+                className="group flex items-start gap-4 rounded-xl p-3.5 transition-colors hover:bg-[var(--cl-surface-soft)]"
+              >
+                <div className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${TYPE_DOT[item.type] ?? "bg-neutral-400"}`} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-[var(--cl-text)] transition-colors group-hover:text-[var(--cl-primary)]">
                     {item.activity}
                   </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1 mt-0.5">
-                    <FaRegClock className="text-[10px] shrink-0" /> {item.time}
+                  <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--cl-text-muted)]">
+                    <FaRegClock className="shrink-0 text-[10px]" /> {item.time}
                   </p>
                 </div>
               </div>
@@ -246,17 +244,15 @@ function AdminDashboard() {
         </div>
 
         {/* Growth stats */}
-        <div className="bg-white dark:bg-white/3 rounded-2xl
-          border border-neutral-200 dark:border-white/8 shadow-sm p-5 sm:p-6 lg:p-8 flex flex-col">
-
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded-lg">
+        <div className="flex flex-col rounded-2xl border border-[var(--cl-border)] bg-[var(--cl-surface)] p-5 shadow-[var(--cl-shadow)] sm:p-6 lg:p-8">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="rounded-lg bg-[var(--cl-success-soft)] p-2 text-[var(--cl-success)]">
               <FaChartLine className="text-lg" />
             </div>
-            <h2 className="text-lg font-bold text-neutral-800 dark:text-white">Growth Stats</h2>
+            <h2 className="text-lg font-bold text-[var(--cl-text)]">Growth Stats</h2>
           </div>
 
-          <div className="space-y-6 flex-1 flex flex-col justify-center">
+          <div className="flex flex-1 flex-col justify-center space-y-6">
             {[
               {
                 label: "Users Growth",
@@ -274,17 +270,18 @@ function AdminDashboard() {
               },
             ].map(({ label, pct, badge, color, isPositive }) => (
               <div key={label}>
-                <div className="flex justify-between mb-2 items-center">
-                  <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</span>
-                  <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${isPositive
-                      ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15'
-                      : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/15'
-                    }`}>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm font-medium text-[var(--cl-text)]">{label}</span>
+                  <span
+                    className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold ${isPositive
+                      ? "bg-[var(--cl-success-soft)] text-[var(--cl-success)]"
+                      : "bg-[var(--cl-danger-soft)] text-[var(--cl-danger)]"}`}
+                  >
                     {isPositive ? <FaArrowUp className="text-[9px]" /> : <FaArrowDown className="text-[9px]" />}
                     {badge}
                   </span>
                 </div>
-                <div className="bg-neutral-100 dark:bg-white/10 rounded-full h-2.5 overflow-hidden">
+                <div className="h-2.5 overflow-hidden rounded-full bg-[var(--cl-surface-soft)]">
                   <motion.div
                     className={`${color} h-2.5 rounded-full`}
                     initial={{ width: 0 }}
@@ -299,17 +296,18 @@ function AdminDashboard() {
       </motion.div>
 
       {/* ── Platform summary ── */}
-      <motion.div {...fadeUp(0.32)}
-        className="rounded-2xl border border-blue-100 dark:border-blue-500/20 shadow-sm p-5 sm:p-6 md:p-8
-          bg-linear-to-r from-blue-50 to-violet-50 dark:from-blue-900/15 dark:to-violet-900/15">
-        <h2 className="text-base sm:text-lg font-bold text-neutral-800 dark:text-white mb-3">
+      <motion.div
+        {...fadeUp(0.32)}
+        className="rounded-2xl border border-[var(--cl-border)] bg-linear-to-r from-[var(--cl-primary-soft)] to-[var(--cl-surface-soft)] p-5 shadow-[var(--cl-shadow)] sm:p-6 md:p-8"
+      >
+        <h2 className="mb-3 text-base font-bold text-[var(--cl-text)] sm:text-lg">
           Platform Summary
         </h2>
-        <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed text-sm sm:text-base">
+        <p className="text-sm leading-relaxed text-[var(--cl-text-muted)] sm:text-base">
           CareerLaunch AI is currently serving{" "}
-          <strong className="text-blue-700 dark:text-blue-400">{stats.totalUsers}</strong> registered users,
-          with <strong className="text-emerald-700 dark:text-emerald-400">{stats.totalJobs}</strong> active job
-          postings and <strong className="text-violet-700 dark:text-violet-400">{stats.totalResources}</strong> learning
+          <strong className="text-[var(--cl-primary)]">{stats.totalUsers}</strong> registered users,
+          with <strong className="text-[var(--cl-success)]">{stats.totalJobs}</strong> active job
+          postings and <strong className="text-[var(--cl-primary)]">{stats.totalResources}</strong> learning
           resources available, reflecting steady platform growth and engagement.
         </p>
       </motion.div>

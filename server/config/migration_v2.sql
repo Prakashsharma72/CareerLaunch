@@ -45,6 +45,15 @@ ALTER TABLE jobs ADD COLUMN IF NOT EXISTS expires_at       DATE          DEFAULT
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS status           VARCHAR(20)   DEFAULT 'active';
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS experience_level VARCHAR(50)   DEFAULT 'Fresher';
 
+-- ── RESOURCES ───────────────────────────────────────────────
+ALTER TABLE resources ADD COLUMN IF NOT EXISTS description   TEXT         DEFAULT NULL;
+ALTER TABLE resources ADD COLUMN IF NOT EXISTS resource_type VARCHAR(32)  DEFAULT 'Article';
+ALTER TABLE resources ADD COLUMN IF NOT EXISTS file_url      TEXT         DEFAULT NULL;
+ALTER TABLE resources ADD COLUMN IF NOT EXISTS file_name     VARCHAR(255) DEFAULT NULL;
+ALTER TABLE resources ADD COLUMN IF NOT EXISTS file_mime_type VARCHAR(100) DEFAULT NULL;
+ALTER TABLE resources ADD COLUMN IF NOT EXISTS status        VARCHAR(20)  NOT NULL DEFAULT 'published';
+ALTER TABLE resources MODIFY COLUMN link TEXT NULL;
+
 -- ── COMPANIES (create if not exists) ─────────────────────────
 CREATE TABLE IF NOT EXISTS companies (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,6 +79,11 @@ CREATE TABLE IF NOT EXISTS companies (
     created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS source        VARCHAR(64) NOT NULL DEFAULT 'google_places';
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS fetched_at    DATETIME DEFAULT NULL;
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS expires_at    DATETIME DEFAULT NULL;
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS admin_managed TINYINT(1) NOT NULL DEFAULT 0;
 
 -- ── SAVED COMPANIES (create if not exists) ────────────────────
 CREATE TABLE IF NOT EXISTS saved_companies (

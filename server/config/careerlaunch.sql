@@ -38,6 +38,7 @@ CREATE TABLE `users` (
   `name`          VARCHAR(255)   NOT NULL,
   `email`         VARCHAR(255)   NOT NULL,
   `password`      VARCHAR(255)   NOT NULL,
+  `google_sub`    VARCHAR(255)   DEFAULT NULL,
   `role`          VARCHAR(50)    NOT NULL DEFAULT 'student',
   `phone`         VARCHAR(20)    DEFAULT NULL,
   `education`     TEXT           DEFAULT NULL,
@@ -46,7 +47,8 @@ CREATE TABLE `users` (
   `profile_image` TEXT           DEFAULT NULL,
   `created_at`    DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_users_email` (`email`)
+  UNIQUE KEY `idx_users_email` (`email`),
+  UNIQUE KEY `idx_users_google_sub` (`google_sub`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -56,8 +58,14 @@ CREATE TABLE `users` (
 CREATE TABLE `resources` (
   `id`          INT            NOT NULL AUTO_INCREMENT,
   `title`       VARCHAR(255)   NOT NULL,
+  `description` TEXT           NOT NULL,
   `category`    VARCHAR(255)   DEFAULT NULL,
-  `link`        TEXT           NOT NULL,
+  `resource_type` VARCHAR(32)  NOT NULL,
+  `link`        TEXT           DEFAULT NULL,
+  `file_url`    TEXT           DEFAULT NULL,
+  `file_name`   VARCHAR(255)   DEFAULT NULL,
+  `file_mime_type` VARCHAR(100) DEFAULT NULL,
+  `status`      VARCHAR(20)    NOT NULL DEFAULT 'published',
   `created_at`  DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`  DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -134,6 +142,10 @@ CREATE TABLE `companies` (
   `keyword`           VARCHAR(255)   DEFAULT NULL,
   `editorial_summary` TEXT           DEFAULT NULL,
   `photo_refs`        JSON           DEFAULT NULL,
+  `source`            VARCHAR(64)    NOT NULL DEFAULT 'google_places',
+  `fetched_at`        DATETIME       DEFAULT NULL,
+  `expires_at`        DATETIME       DEFAULT NULL,
+  `admin_managed`     TINYINT(1)     NOT NULL DEFAULT 0,
   `createdAt`         DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updatedAt`         DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

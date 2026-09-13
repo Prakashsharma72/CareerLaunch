@@ -10,7 +10,7 @@ import {
 } from "react-icons/fa";
 import { useSelector } from "react-redux";
 
-const SIDEBAR_W   = 240;
+const SIDEBAR_W   = 232;
 const SIDEBAR_COL = 72;
 
 const menuItems = [
@@ -37,27 +37,27 @@ function SidebarContent({
   const showLabels = isMobileDrawer || !collapsed;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className={`flex items-center border-b border-white/10 dark:border-white/5 ${showLabels ? "justify-between px-4 py-4" : "justify-center px-0 py-5"}`}>
+    <div className="flex h-full flex-col bg-[var(--cl-sidebar)]">
+      <div className={`flex items-center border-b border-[var(--cl-border)] ${showLabels ? "justify-between px-4 py-4" : "justify-center px-0 py-5"}`}>
         {showLabels ? (
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center" style={{ background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" }}>
-              <FaRocket className="text-white text-xs" />
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" }}>
+              <FaRocket className="text-xs text-white" />
             </div>
-            <span className="font-bold text-white text-sm truncate">CareerLaunch AI</span>
+            <span className="truncate text-sm font-bold text-[var(--cl-text)]">CareerLaunch AI</span>
           </div>
         ) : (
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto" style={{ background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" }}>
-            <FaRocket className="text-white text-xs" />
+          <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "linear-gradient(135deg,#0ba5ff,#8b5cf6)" }}>
+            <FaRocket className="text-xs text-white" />
           </div>
         )}
 
         {isMobileDrawer ? (
-          <button onClick={onClose} aria-label="Close sidebar" className="text-white/60 hover:text-white transition-colors p-1 ml-2 shrink-0">
+          <button onClick={onClose} aria-label="Close sidebar" className="ml-2 shrink-0 p-1 text-[var(--cl-text-muted)] transition-colors hover:text-[var(--cl-text)]">
             <FaTimes className="text-sm" />
           </button>
         ) : (
-          <button onClick={() => setCollapsed(!collapsed)} aria-label="Toggle sidebar" className="hidden lg:flex text-white/40 hover:text-white/80 transition-colors p-1 shrink-0">
+          <button onClick={() => setCollapsed(!collapsed)} aria-label="Toggle sidebar" className="hidden shrink-0 p-1 text-[var(--cl-text-muted)] transition-colors hover:text-[var(--cl-text)] lg:flex">
             <motion.span animate={{ rotate: collapsed ? 180 : 0 }} transition={{ duration: 0.25 }}>
               <FaChevronLeft className="text-xs" />
             </motion.span>
@@ -65,22 +65,21 @@ function SidebarContent({
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto space-y-1 px-2 py-4">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const active = location.pathname.startsWith(item.path);
+          const active = item.name === "Roadmap"
+            ? location.pathname.startsWith("/student/roadmap")
+            : location.pathname.startsWith(item.path);
           return (
-            <NavLink key={item.path} to={item.path} className={() => `relative flex items-center gap-3 rounded-xl transition-all duration-200 group ${!showLabels ? "justify-center px-0 py-3" : "px-3 py-2.5"} ${active ? "bg-white/15 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]" : "text-white/55 hover:bg-white/8 hover:text-white/90"}`}>
-              {active && (
-                <motion.div layoutId="sidebar-pill" className="absolute inset-0 rounded-xl bg-white/10" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />
-              )}
+            <NavLink key={item.path} to={item.path} className={() => `group relative flex items-center gap-3 rounded-lg transition-all duration-200 ${!showLabels ? "justify-center px-0 py-3" : "px-3 py-2.5"} ${active ? "border border-[var(--cl-primary)]/20 bg-[var(--cl-primary-soft)] text-[var(--cl-primary)] shadow-sm" : "text-[var(--cl-text-muted)] hover:bg-[var(--cl-surface-soft)] hover:text-[var(--cl-text)]"}`}>
               {active && showLabels && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-blue-400" />
+                <div className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[var(--cl-primary)]" />
               )}
-              <Icon className={`relative z-10 shrink-0 text-sm ${active ? "text-blue-300" : ""}`} />
-              {showLabels && <span className="relative z-10 text-sm font-medium truncate">{item.name}</span>}
+              <Icon className={`relative z-10 shrink-0 text-sm ${active ? "text-[var(--cl-primary)]" : "text-current"}`} />
+              {showLabels && <span className="relative z-10 truncate text-sm font-medium">{item.name}</span>}
               {!showLabels && (
-                <div className="absolute left-14 bg-neutral-900 text-white text-xs font-medium px-2 py-1 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
+                <div className="pointer-events-none absolute left-14 z-50 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                   {item.name}
                 </div>
               )}
@@ -89,18 +88,18 @@ function SidebarContent({
         })}
       </nav>
 
-      <div className="p-2 border-t border-white/10 dark:border-white/5 space-y-1">
+      <div className="space-y-1 border-t border-[var(--cl-border)] p-2">
         {showLabels && (
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/8">
-            <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">{userInitial}</div>
+          <div className="flex items-center gap-3 rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] px-3 py-2.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--cl-primary)] text-xs font-bold text-[var(--cl-button-text)]">{userInitial}</div>
             <div className="min-w-0">
-              <p className="text-white text-sm font-semibold truncate">{user?.name || "Student"}</p>
-              <p className="text-white/40 text-xs truncate">{user?.email || "student@app.com"}</p>
+              <p className="truncate text-sm font-semibold text-[var(--cl-text)]">{user?.name || "Student"}</p>
+              <p className="truncate text-xs text-[var(--cl-text-muted)]">{user?.email || "student@app.com"}</p>
             </div>
           </div>
         )}
-        <button onClick={handleLogout} className={`w-full flex items-center gap-2.5 rounded-xl py-2.5 text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-colors duration-200 ${!showLabels ? "justify-center px-0" : "px-3"}`}>
-          <FaSignOutAlt className="text-sm shrink-0" />
+        <button onClick={handleLogout} className={`flex w-full items-center gap-2.5 rounded-xl py-2.5 text-[var(--cl-danger)] transition-colors duration-200 hover:bg-[var(--cl-danger-soft)] hover:text-[var(--cl-danger)] ${!showLabels ? "justify-center px-0" : "px-3"}`}>
+          <FaSignOutAlt className="shrink-0 text-sm" />
           {showLabels && <span className="text-sm font-medium">Logout</span>}
         </button>
       </div>
@@ -154,10 +153,12 @@ function DashboardLayout() {
 
   const sidebarW    = collapsed ? SIDEBAR_COL : SIDEBAR_W;
   const userInitial = (user?.name || "S")[0].toUpperCase();
-  const pageName    = menuItems.find((m) => location.pathname.startsWith(m.path))?.name ?? "Dashboard";
+  const pageName    = location.pathname.startsWith("/student/roadmap")
+    ? "Roadmap"
+    : menuItems.find((m) => location.pathname.startsWith(m.path))?.name ?? "Dashboard";
 
   return (
-    <div className="min-h-screen flex bg-slate-50 dark:bg-[#080810] transition-colors duration-300">
+    <div className="cl-page flex min-h-screen transition-colors duration-300">
 
       {/* ── Mobile overlay ── */}
       <AnimatePresence>
@@ -175,8 +176,7 @@ function DashboardLayout() {
           <motion.aside key="mobile-sidebar"
             initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }}
             transition={{ type: "spring", damping: 28, stiffness: 280 }}
-            className="fixed top-0 left-0 h-full w-64 z-50 lg:hidden"
-            style={{ background: "linear-gradient(180deg,#0c1033 0%,#0d0f1e 100%)" }}
+            className="fixed top-0 left-0 z-50 h-full w-64 bg-[var(--cl-sidebar)] lg:hidden"
           >
             <SidebarContent onClose={() => setMobileOpen(false)} collapsed={collapsed} setCollapsed={setCollapsed} location={location} user={user} userInitial={userInitial} handleLogout={handleLogout} />
           </motion.aside>
@@ -187,8 +187,7 @@ function DashboardLayout() {
       <motion.aside
         animate={{ width: sidebarW }}
         transition={{ type: "spring", damping: 28, stiffness: 280 }}
-        className="hidden md:flex flex-col fixed top-0 left-0 h-full z-30 overflow-hidden shrink-0"
-        style={{ background: "linear-gradient(180deg,#0c1033 0%,#0d0f1e 100%)" }}
+        className="fixed left-0 top-0 z-30 hidden h-full shrink-0 flex-col overflow-hidden bg-[var(--cl-sidebar)] md:flex"
       >
         <SidebarContent collapsed={collapsed} setCollapsed={setCollapsed} location={location} user={user} userInitial={userInitial} handleLogout={handleLogout} />
       </motion.aside>
@@ -199,30 +198,24 @@ function DashboardLayout() {
       <motion.div
         animate={{ marginLeft: isDesktop ? sidebarW : 0 }}
         transition={{ type: "spring", damping: 28, stiffness: 280 }}
-        className="flex-1 flex flex-col min-w-0"
+        className="flex min-w-0 flex-1 flex-col bg-[var(--cl-page)]"
         style={{ marginLeft: 0 }}
       >
         {/* ── Sticky top header ── */}
-        <header className="sticky top-0 z-20 flex items-center justify-between
-          px-4 sm:px-6 md:px-6 lg:px-8 py-3
-          bg-white/80 dark:bg-[#0d0f1e]/80 backdrop-blur-xl
-          border-b border-neutral-200/60 dark:border-white/8
-          shadow-[0_1px_0_rgba(0,0,0,0.05)] dark:shadow-[0_1px_0_rgba(255,255,255,0.04)]"
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[var(--cl-border)] bg-[var(--cl-surface)] px-4 sm:px-6 lg:px-7"
         >
           {/* Left: hamburger + page title */}
           <div className="flex items-center gap-2 min-w-0">
             {/* Hamburger — mobile only (hidden md+, sidebar takes over) */}
             <button onClick={() => setMobileOpen(true)} aria-label="Open menu"
-              className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl
-                bg-neutral-100 dark:bg-white/8 text-neutral-600 dark:text-neutral-300
-                hover:bg-neutral-200 dark:hover:bg-white/15 transition-colors shrink-0">
+              className="md:hidden flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--cl-surface-muted)] text-[var(--cl-text-muted)] transition-colors shrink-0">
               <FaBars className="text-sm" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-base font-semibold text-neutral-800 dark:text-white truncate">
+              <h1 className="truncate text-sm font-bold text-[var(--cl-text)] sm:text-base">
                 {pageName}
               </h1>
-              <p className="text-xs text-neutral-400 dark:text-neutral-500 hidden sm:block">
+              <p className="hidden text-xs text-[var(--cl-text-muted)] sm:block">
                 {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
               </p>
             </div>
@@ -234,9 +227,7 @@ function DashboardLayout() {
             {/* Dark mode toggle */}
             <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
               onClick={() => setDarkMode(!darkMode)} aria-label="Toggle dark mode"
-              className="w-9 h-9 flex items-center justify-center rounded-xl
-                bg-neutral-100 dark:bg-white/8 text-neutral-500 dark:text-neutral-300
-                hover:bg-neutral-200 dark:hover:bg-white/15 transition-colors">
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--cl-surface-muted)] text-[var(--cl-text-muted)] transition-colors">
               <AnimatePresence mode="wait">
                 {darkMode ? (
                   <motion.svg key="sun"
@@ -260,9 +251,7 @@ function DashboardLayout() {
 
             {/* Notification bell */}
             <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
-              className="relative w-9 h-9 flex items-center justify-center rounded-xl
-                bg-neutral-100 dark:bg-white/8 text-neutral-500 dark:text-neutral-300
-                hover:bg-neutral-200 dark:hover:bg-white/15 transition-colors">
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--cl-surface-muted)] text-[var(--cl-text-muted)] transition-colors">
               <span className="text-sm">🔔</span>
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full
                 border-2 border-white dark:border-[#0d0f1e]" />
@@ -275,10 +264,10 @@ function DashboardLayout() {
                 {userInitial}
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-semibold text-neutral-800 dark:text-white leading-tight">
+                <p className="text-sm font-semibold leading-tight text-[var(--cl-text)]">
                   {user?.name || "Student"}
                 </p>
-                <p className="text-xs text-neutral-400 dark:text-neutral-500">Welcome back</p>
+                <p className="text-xs text-[var(--cl-text-muted)]">Welcome back</p>
               </div>
             </div>
           </div>

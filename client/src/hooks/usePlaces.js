@@ -85,7 +85,6 @@ export default function usePlaces() {
       return;
     }
     const version = ++requestVersion.current;
-    dispatch(setFilter({ city: "", batchIndex: 0 }));
     dispatch(setLocationStatus("requesting"));
     navigator.geolocation.getCurrentPosition(
       async (pos) => {

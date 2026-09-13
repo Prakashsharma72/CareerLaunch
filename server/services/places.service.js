@@ -14,7 +14,9 @@
  *   searchCompaniesByCity({ keyword, city })
  */
 import axios   from "axios";
+import { Op } from "sequelize";
 import Company from "../models/company.model.js";
+import { invalidatePublicSnapshot } from "./publicSnapshot.service.js";
 
 /* ─── Logging ─────────────────────────────────────────────────────────── */
 const TAG = "[places.service]";
@@ -26,6 +28,10 @@ const MEM_CACHE     = new Map();
 const CACHE_TTL_MS  = 24 * 60 * 60 * 1000;  // 24 hours (conserve daily quota)
 const MAX_RESULTS    = 60;
 const GOOGLE_PAGE_SIZE = 20;
+const PROVIDER_TIMEOUT_MS = Number(process.env.GOOGLE_PLACES_TIMEOUT_MS || 7000);
+const PROVIDER_RETRIES = 1;
+const PROVIDER_COOLDOWN_MS = Number(process.env.GOOGLE_PLACES_COOLDOWN_MS || 5 * 60 * 1000);
+let providerBlockedUntil = 0;
 
 function memGet(key) {
   const e = MEM_CACHE.get(key);
@@ -36,6 +42,20 @@ function memGet(key) {
 }
 function memSet(key, data) {
   MEM_CACHE.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
+function providerAvailable() {
+  if (Date.now() < providerBlockedUntil) {
+    throw Object.assign(new Error("Google Places is temporarily unavailable"), { code: "PROVIDER_COOLDOWN" });
+  }
+}
+
+function noteProviderFailure() {
+  providerBlockedUntil = Date.now() + PROVIDER_COOLDOWN_MS;
+}
+
+function noteProviderSuccess() {
+  providerBlockedUntil = 0;
 }
 
 /* ─── Haversine ───────────────────────────────────────────────────────── */
@@ -158,6 +178,7 @@ export function buildPhotoUrl(photoRef, maxWidth = 400) {
  */
 async function googleTextSearch({ textQuery, lat, lon, radiusMeters = 15000, pageToken = null }) {
   const apiKey = getApiKey();
+  providerAvailable();
 
   const baseBody = {
     textQuery,
@@ -184,18 +205,25 @@ async function googleTextSearch({ textQuery, lat, lon, radiusMeters = 15000, pag
     const body = nextToken ? { ...baseBody, pageToken: nextToken } : baseBody;
     let data;
     try {
-      ({ data } = await axios.post(
-        "https://places.googleapis.com/v1/places:searchText",
-        body,
-        {
-          headers: {
-            "Content-Type":   "application/json",
-            "X-Goog-Api-Key": apiKey,
-            "X-Goog-FieldMask": SEARCH_FIELDS,
-          },
-          timeout: 15000,
+      for (let attempt = 0; attempt <= PROVIDER_RETRIES; attempt++) {
+        try {
+          ({ data } = await axios.post(
+            "https://places.googleapis.com/v1/places:searchText",
+            body,
+            {
+              headers: {
+                "Content-Type":   "application/json",
+                "X-Goog-Api-Key": apiKey,
+                "X-Goog-FieldMask": SEARCH_FIELDS,
+              },
+              timeout: PROVIDER_TIMEOUT_MS,
+            }
+          ));
+          break;
+        } catch (requestError) {
+          if (attempt === PROVIDER_RETRIES) throw requestError;
         }
-      ));
+      }
     } catch (error) {
       if (allPlaces.length > 0) {
         log(`Google Text Search stopped after ${allPlaces.length} results`, error.message);
@@ -271,6 +299,8 @@ function normaliseReviews(raw = []) {
 /* ─── DB upsert  ──────────────────────────────────────────────────────── */
 async function upsertToDb(place, careerPage, extras = {}) {
   try {
+    const existing = await Company.findOne({ where: { placeId: place.placeId } });
+    const now = new Date();
     const payload = {
       companyName:      place.companyName,
       website:          place.website          || null,
@@ -290,6 +320,9 @@ async function upsertToDb(place, careerPage, extras = {}) {
       logo:             place.logo             || null,
       editorialSummary: place.editorialSummary || null,
       photoRefs:        place.photoRefs        || null,
+      source:           "google_places",
+      fetchedAt:        now,
+      expiresAt:        new Date(now.getTime() + CACHE_TTL_MS),
       ...extras,
     };
 
@@ -297,11 +330,95 @@ async function upsertToDb(place, careerPage, extras = {}) {
       payload.careerPage = careerPage || null;
     }
 
+    if (existing?.adminManaged) {
+      await existing.update({ source: "google_places", fetchedAt: now, expiresAt: payload.expiresAt });
+      return { row: existing, created: false };
+    }
     const [row, created] = await Company.upsert({ placeId: place.placeId, ...payload });
+    await invalidatePublicSnapshot("companies");
     return { row, created };
   } catch (e) {
     err(`DB upsert "${place.companyName}"`, e);
     return { row: null, created: false };
+  }
+}
+
+function normalized(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function validCoordinate(value, min, max) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= min && number <= max;
+}
+
+function matchesKeyword(row, keyword) {
+  const terms = normalized(keyword).split(" ").filter(term => term.length > 2);
+  if (!terms.length) return true;
+  const haystack = normalized([row.companyName, row.industry, row.keyword, row.address, row.types].join(" "));
+  return terms.every(term => haystack.includes(term));
+}
+
+function storedCompanyResponse(row, { userLat, userLon, city, keyword }) {
+  const json = row.toJSON ? row.toJSON() : row;
+  let distanceKm = null;
+  if (validCoordinate(userLat, -90, 90) && validCoordinate(userLon, -180, 180)
+    && validCoordinate(json.latitude, -90, 90) && validCoordinate(json.longitude, -180, 180)) {
+    distanceKm = haversineKm(Number(userLat), Number(userLon), Number(json.latitude), Number(json.longitude));
+  }
+  return {
+    ...json,
+    placeId: json.placeId,
+    source: "database_fallback",
+    recordSource: json.source || "unknown",
+    attribution: "Stored company record",
+    freshness: json.fetchedAt ? (Date.now() - new Date(json.fetchedAt).getTime() < CACHE_TTL_MS ? "stored" : "stale") : "unknown",
+    fetchedAt: json.fetchedAt || null,
+    expiresAt: json.expiresAt || null,
+    distanceKm,
+    distanceText: fmtDistance(distanceKm),
+    // Stored hours are not a live opening-status signal.
+    isOpenNow: null,
+    city: json.city || city || null,
+    keyword: json.keyword || keyword || null,
+  };
+}
+
+async function findStoredCompanies({ city, keyword, userLat, userLon, radius }) {
+  const rows = await Company.findAll({
+    where: city?.trim() ? { city: { [Op.like]: `%${city.trim()}%` } } : {},
+    order: [["updatedAt", "DESC"]],
+    limit: 500,
+  });
+  const cityKey = normalized(city);
+  return rows
+    .filter(row => matchesKeyword(row, keyword))
+    .map(row => storedCompanyResponse(row, { userLat, userLon, city, keyword }))
+    .filter(company => {
+      if (cityKey && normalized(company.city) !== cityKey) return false;
+      if (userLat == null || userLon == null) return true;
+      return company.distanceKm != null && company.distanceKm <= radius;
+    })
+    .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
+    .slice(0, MAX_RESULTS);
+}
+
+async function fallbackPayload(options, error) {
+  try {
+    const companies = await findStoredCompanies(options);
+    return {
+      companies,
+      total: companies.length,
+      nextPageToken: null,
+      batchIndex: options.batchIndex || 0,
+      hasMoreBatches: false,
+      source: "database_fallback",
+      freshness: companies.length ? "stored" : "none",
+      providerError: error?.code || error?.response?.data?.error?.status || "PROVIDER_ERROR",
+    };
+  } catch (dbError) {
+    err("Database fallback failed", dbError);
+    throw error;
   }
 }
 
@@ -432,18 +549,20 @@ export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "sof
     }))
   );
 
+  if (allFetches.every(result => result.status === "rejected")) {
+    noteProviderFailure();
+    return fallbackPayload({ userLat: lat, userLon: lon, radius, keyword, batchIndex }, allFetches[0].reason);
+  }
+  noteProviderSuccess();
+
   const merged = filterByRadius(mergeAndDedup(allFetches), lat, lon, radius).slice(0, MAX_RESULTS);
   log(`getNearbyCompanies: ${merged.length} unique companies after dedup`);
 
   // If all fetches failed, surface the first error so the controller can return a proper error response
-  if (merged.length === 0 && allFetches.every(r => r.status === "rejected")) {
-    throw allFetches[0].reason;
-  }
-
   const result = await enrichPlaces(merged, { userLat: lat, userLon: lon, keyword, skipCareerProbe });
 
   const nextPageToken = allFetches.find(r => r.status === "fulfilled")?.value?.nextPageToken || null;
-  const payload = { companies: result, total: result.length, nextPageToken, batchIndex, hasMoreBatches: batchIndex < queryVariants.length - 1, source: "google_places" };
+  const payload = { companies: result, total: result.length, nextPageToken, batchIndex, hasMoreBatches: batchIndex < queryVariants.length - 1, source: "google_places", freshness: "live", attribution: "Google Maps" };
   memSet(cacheKey, payload);
   return payload;
 }
@@ -490,18 +609,20 @@ export async function searchCompaniesByCity({ keyword = "software company", city
     }))
   );
 
+  if (allFetches.every(result => result.status === "rejected")) {
+    noteProviderFailure();
+    return fallbackPayload({ city, userLat: lat, userLon: lon, radius, keyword, batchIndex }, allFetches[0].reason);
+  }
+  noteProviderSuccess();
+
   const merged = filterByRadius(mergeAndDedup(allFetches), lat, lon, radius).slice(0, MAX_RESULTS);
   log(`searchCompaniesByCity: ${merged.length} unique companies for "${city}"`);
 
   // If all fetches failed, surface the first error
-  if (merged.length === 0 && allFetches.every(r => r.status === "rejected")) {
-    throw allFetches[0].reason;
-  }
-
   const result = await enrichPlaces(merged, { userLat: lat, userLon: lon, city, keyword, skipCareerProbe });
 
   const nextPageToken = allFetches.find(r => r.status === "fulfilled")?.value?.nextPageToken || null;
-  const payload = { companies: result, total: result.length, nextPageToken, batchIndex, hasMoreBatches: batchIndex < queryVariants.length - 1, source: "google_places" };
+  const payload = { companies: result, total: result.length, nextPageToken, batchIndex, hasMoreBatches: batchIndex < queryVariants.length - 1, source: "google_places", freshness: "live", attribution: "Google Maps" };
   memSet(cacheKey, payload);
   return payload;
 }
@@ -518,7 +639,12 @@ export async function getCompanyDetails(placeId) {
   if (cached) return cached;
 
   // Check DB first
-  const existing = await Company.findOne({ where: { placeId } });
+  let existing = null;
+  try {
+    existing = await Company.findOne({ where: { placeId } });
+  } catch (dbError) {
+    err(`DB lookup failed for ${placeId}`, dbError);
+  }
 
   let details;
   try {
@@ -550,6 +676,9 @@ export async function getCompanyDetails(placeId) {
 
     details = {
       ...raw,
+      source: "google_places",
+      freshness: "live",
+      attribution: "Google Maps",
       photos,
       reviews,
       careerPage,
@@ -573,6 +702,10 @@ export async function getCompanyDetails(placeId) {
         industry:       existing.industry,
         logo:           existing.logo,
         careerPage:     existing.careerPage,
+        source:         "database_fallback",
+        freshness:      existing.fetchedAt ? "stored" : "unknown",
+        fetchedAt:      existing.fetchedAt || null,
+        expiresAt:      existing.expiresAt || null,
         photos:         [],
         reviews:        [],
         latitude:       existing.latitude,

@@ -51,23 +51,23 @@ function Pagination({ page, totalPages, onChange, canLoadMore = false }) {
         onClick={() => onChange(page - 1)}
         disabled={page === 1}
         className="w-9 h-9 rounded-xl flex items-center justify-center
-          bg-white dark:bg-white/8 border border-gray-200 dark:border-white/10
-          text-gray-600 dark:text-gray-300 disabled:opacity-30
-          hover:bg-gray-50 dark:hover:bg-white/15 transition-colors">
+          bg-[var(--cl-surface)] border border-[var(--cl-border)]
+          text-[var(--cl-text-muted)] disabled:opacity-30
+          hover:bg-[var(--cl-surface-soft)] transition-colors">
         <FaChevronLeft className="text-xs" />
       </button>
 
       {pages.map((p, i) => (
         <span key={p} className="flex items-center gap-1.5 sm:gap-2">
           {pages[i - 1] && p - pages[i - 1] > 1 && (
-            <span className="text-gray-400 text-sm">…</span>
+            <span className="text-[var(--cl-text-soft)] text-sm">…</span>
           )}
           <button
             onClick={() => onChange(p)}
             className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all ${
               p === page
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/25 scale-105"
-                : "bg-white dark:bg-white/8 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/15"
+                ? "bg-[var(--cl-primary)] text-[var(--cl-button-text)] shadow-lg scale-105"
+                : "bg-[var(--cl-surface)] border border-[var(--cl-border)] text-[var(--cl-text-muted)] hover:bg-[var(--cl-surface-soft)]"
             }`}>
             {p}
           </button>
@@ -78,9 +78,9 @@ function Pagination({ page, totalPages, onChange, canLoadMore = false }) {
         onClick={() => onChange(page + 1)}
         disabled={page === totalPages && !canLoadMore}
         className="w-9 h-9 rounded-xl flex items-center justify-center
-          bg-white dark:bg-white/8 border border-gray-200 dark:border-white/10
-          text-gray-600 dark:text-gray-300 disabled:opacity-30
-          hover:bg-gray-50 dark:hover:bg-white/15 transition-colors">
+          bg-[var(--cl-surface)] border border-[var(--cl-border)]
+          text-[var(--cl-text-muted)] disabled:opacity-30
+          hover:bg-[var(--cl-surface-soft)] transition-colors">
         <FaChevronRight className="text-xs" />
       </button>
     </div>
@@ -94,18 +94,18 @@ function LocationPrompt({ onRequestGPS, onCitySubmit }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="col-span-full bg-white dark:bg-[#0f1123]
-        border border-gray-100 dark:border-white/8 rounded-2xl
+      className="col-span-full bg-[var(--cl-surface)]
+        border border-[var(--cl-border)] rounded-2xl
         p-8 sm:p-12 md:p-16 flex flex-col items-center text-center gap-5">
-      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/25
+      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[var(--cl-primary-soft)]
         flex items-center justify-center shrink-0">
-        <FaMapMarkerAlt className="text-2xl sm:text-3xl text-blue-500" />
+        <FaMapMarkerAlt className="text-2xl sm:text-3xl text-[var(--cl-primary)]" />
       </div>
       <div className="max-w-sm">
-        <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-lg sm:text-xl font-bold text-[var(--cl-text)] mb-2">
           Allow location or enter a city
         </h3>
-        <p className="text-gray-400 dark:text-gray-500 text-sm">
+        <p className="text-[var(--cl-text-muted)] text-sm">
           We need your location to find nearby software companies using Google Maps.
         </p>
       </div>
@@ -113,11 +113,11 @@ function LocationPrompt({ onRequestGPS, onCitySubmit }) {
         <button
           onClick={onRequestGPS}
           className="flex-1 flex items-center justify-center gap-2
-            bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm
-            px-5 py-3 rounded-xl transition-colors shadow-md shadow-blue-500/20">
+            bg-[var(--cl-primary)] hover:bg-[var(--cl-primary-strong)] text-[var(--cl-button-text)] font-semibold text-sm
+            px-5 py-3 rounded-xl transition-colors shadow-md">
           <FaLocationArrow className="text-xs shrink-0" /> Use My Location
         </button>
-        <span className="self-center text-gray-400 text-sm hidden sm:block">or</span>
+        <span className="self-center text-[var(--cl-text-soft)] text-sm hidden sm:block">or</span>
         <form
           className="flex-1 flex gap-2"
           onSubmit={e => { e.preventDefault(); city.trim() && onCitySubmit(city.trim()); }}>
@@ -127,14 +127,13 @@ function LocationPrompt({ onRequestGPS, onCitySubmit }) {
             value={city}
             onChange={e => setCity(e.target.value)}
             className="flex-1 min-w-0 px-4 py-3 text-sm rounded-xl
-              border border-gray-200 dark:border-white/10
-              bg-gray-50 dark:bg-white/5 text-gray-800 dark:text-white
-              placeholder-gray-400 focus:outline-none focus:ring-2
-              focus:ring-blue-500/40 focus:border-blue-400 transition" />
+              border border-[var(--cl-border)]
+              bg-[var(--cl-surface-soft)] text-[var(--cl-text)] placeholder:text-[var(--cl-text-soft)]
+              focus:outline-none focus:ring-2 focus:ring-[var(--cl-ring)] focus:border-[var(--cl-primary)] transition" />
           <button
             type="submit"
             disabled={!city.trim()}
-            className="shrink-0 px-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900
+            className="shrink-0 px-4 py-3 bg-[var(--cl-text)] text-[var(--cl-button-text)]
               font-semibold text-sm rounded-xl disabled:opacity-40 transition-colors">
             <FaSearch />
           </button>
@@ -186,24 +185,24 @@ function ErrorCard({ error, onRetry }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-      className="col-span-full flex flex-col items-center bg-red-50 dark:bg-red-900/10
-        border border-red-200 dark:border-red-500/20 rounded-2xl
+      className="col-span-full flex flex-col items-center bg-[var(--cl-danger-soft)]
+        border border-[var(--cl-danger)]/25 rounded-2xl
         p-8 sm:p-12 text-center gap-4">
-      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-red-100 dark:bg-red-900/30
+      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[var(--cl-danger-soft)]
         flex items-center justify-center shrink-0">
-        <FaExclamationTriangle className="text-xl sm:text-2xl text-red-500" />
+        <FaExclamationTriangle className="text-xl sm:text-2xl text-[var(--cl-danger)]" />
       </div>
       <div className="space-y-1.5 max-w-md">
-        <h3 className="text-base sm:text-lg font-bold text-red-700 dark:text-red-400">
+        <h3 className="text-base sm:text-lg font-bold text-[var(--cl-danger)]">
           We couldn’t find companies near you
         </h3>
-        <p className="text-sm text-red-600 dark:text-red-400">{reason}</p>
-        {hint && <p className="text-xs text-red-500 italic">{hint}</p>}
+        <p className="text-sm text-[var(--cl-danger)]">{reason}</p>
+        {hint && <p className="text-xs text-[var(--cl-danger)] italic opacity-80">{hint}</p>}
       </div>
       <button
         onClick={onRetry}
-        className="flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700
-          text-white text-sm font-semibold rounded-xl transition-colors">
+        className="flex items-center gap-2 px-6 py-2.5 bg-[var(--cl-danger)] hover:opacity-90
+          text-[var(--cl-button-text)] text-sm font-semibold rounded-xl transition-colors">
         <FaSyncAlt className="text-xs" /> Try Again
       </button>
     </motion.div>
@@ -242,8 +241,14 @@ export default function CompanySearch() {
   useEffect(() => {
     if (didInit.current) return;
     didInit.current = true;
+
+    if (filters.city?.trim()) {
+      fetchByCity(filters.city, filters.keyword);
+      return;
+    }
+
     requestLocation();
-  }, []); // eslint-disable-line
+  }, [fetchByCity, filters.city, filters.keyword, requestLocation]);
 
   /* ── Load saved map ── */
   useEffect(() => {
@@ -315,22 +320,27 @@ export default function CompanySearch() {
      RENDER
   ══════════════════════════════════════════════════════════════ */
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-[#080810] p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-5">
+    <div className="cl-page min-h-full p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-5">
 
       {/* ── Page header ──────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--cl-text)] tracking-tight">
             Find Companies
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm flex items-center gap-2 flex-wrap">
+          <p className="text-[var(--cl-text-muted)] mt-1 text-sm flex items-center gap-2 flex-wrap">
             {locationLine}
             {source === "google_places" && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold
                 px-2 py-0.5 rounded-full
-                bg-blue-100 text-blue-700 dark:bg-blue-900/25 dark:text-blue-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block" />
+                bg-[var(--cl-primary-soft)] text-[var(--cl-primary)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--cl-primary)] animate-pulse inline-block" />
                 Google Places
+              </span>
+            )}
+            {source === "database_fallback" && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--cl-warning-soft)] text-[var(--cl-warning)]">
+                Stored companies • Last updated data
               </span>
             )}
           </p>
@@ -339,16 +349,16 @@ export default function CompanySearch() {
         {!loading && total > 0 && (
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold
-              bg-blue-50 dark:bg-blue-900/25 text-blue-600 dark:text-blue-400
-              px-3 py-1.5 rounded-full border border-blue-200 dark:border-blue-500/30">
+              bg-[var(--cl-primary-soft)] text-[var(--cl-primary)]
+              px-3 py-1.5 rounded-full border border-[var(--cl-primary)]/25">
               {total} {total === 1 ? "company" : "companies"}
             </span>
             <button
               onClick={refetch}
               title="Refresh"
               className="w-8 h-8 rounded-xl flex items-center justify-center
-                bg-white dark:bg-white/8 border border-gray-200 dark:border-white/10
-                text-gray-500 hover:bg-gray-50 dark:hover:bg-white/15 transition-colors">
+                bg-[var(--cl-surface)] border border-[var(--cl-border)]
+                text-[var(--cl-text-muted)] hover:bg-[var(--cl-surface-soft)] transition-colors">
               <FaSyncAlt className={`text-xs ${loading ? "animate-spin" : ""}`} />
             </button>
           </div>
@@ -361,10 +371,10 @@ export default function CompanySearch() {
           <motion.div
             key="req"
             initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/15
-              border border-blue-200 dark:border-blue-500/30 rounded-xl px-4 py-3 text-sm">
-            <FaLocationArrow className="text-blue-500 animate-pulse shrink-0" />
-            <span className="text-blue-700 dark:text-blue-300 font-medium">
+            className="flex items-center gap-3 bg-[var(--cl-primary-soft)]
+              border border-[var(--cl-primary)]/30 rounded-xl px-4 py-3 text-sm">
+            <FaLocationArrow className="text-[var(--cl-primary)] animate-pulse shrink-0" />
+            <span className="text-[var(--cl-primary-strong)] font-medium">
               Requesting your location…
             </span>
           </motion.div>
@@ -382,17 +392,17 @@ export default function CompanySearch() {
 
       {/* ── Status line ───────────────────────────────────────── */}
       {!loading && !error && total > 0 && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-[var(--cl-text-muted)]">
           Showing{" "}
-          <strong className="text-gray-800 dark:text-white">
+          <strong className="text-[var(--cl-text)]">
             {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)}
           </strong>{" "}
           of{" "}
-          <strong className="text-gray-800 dark:text-white">{total}</strong>{" "}
+          <strong className="text-[var(--cl-text)]">{total}</strong>{" "}
           companies
           {location.city && (
             <> near{" "}
-              <strong className="text-blue-600 dark:text-blue-400">{location.city}</strong>
+              <strong className="text-[var(--cl-primary)]">{location.city}</strong>
             </>
           )}
         </p>
@@ -425,26 +435,25 @@ export default function CompanySearch() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="col-span-full flex flex-col items-center justify-center
-              bg-white dark:bg-[#0f1123] border border-gray-100 dark:border-white/8
+              bg-[var(--cl-surface)] border border-[var(--cl-border)]
               rounded-2xl p-10 sm:p-16 text-center gap-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gray-100 dark:bg-white/8
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[var(--cl-surface-soft)]
               flex items-center justify-center shrink-0">
-              <FaBuilding className="text-xl sm:text-2xl text-gray-400" />
+              <FaBuilding className="text-xl sm:text-2xl text-[var(--cl-text-soft)]" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white">
-                No companies found
+              <h3 className="text-base sm:text-lg font-bold text-[var(--cl-text)]">
+                {source === "database_fallback" ? "No stored companies matched" : "No companies found"}
               </h3>
-              <p className="text-gray-400 text-sm mt-1">
-                Try adjusting your filters or expanding the radius.
+              <p className="text-[var(--cl-text-muted)] text-sm mt-1">
+                {source === "database_fallback" ? "The live provider is unavailable. Retry to check for live results." : "Try adjusting your filters or expanding the radius."}
               </p>
             </div>
-            <button
-              onClick={() => dispatch(setFilter({ minRating: 0, openNow: false, maxRadius: 50, search: "" }))}
-              className="px-5 py-2.5 text-sm font-semibold bg-blue-600 hover:bg-blue-700
-                text-white rounded-xl transition-colors">
-              Clear Filters
-            </button>
+            {source === "database_fallback" ? (
+              <button onClick={refetch} className="px-5 py-2.5 text-sm font-semibold bg-[var(--cl-primary)] hover:bg-[var(--cl-primary-strong)] text-[var(--cl-button-text)] rounded-xl transition-colors">Retry</button>
+            ) : (
+              <button onClick={() => dispatch(setFilter({ minRating: 0, openNow: false, maxRadius: 50, search: "" }))} className="px-5 py-2.5 text-sm font-semibold bg-[var(--cl-primary)] hover:bg-[var(--cl-primary-strong)] text-[var(--cl-button-text)] rounded-xl transition-colors">Clear Filters</button>
+            )}
           </motion.div>
         )}
 

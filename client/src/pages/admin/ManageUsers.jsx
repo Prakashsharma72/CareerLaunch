@@ -52,122 +52,125 @@ function ManageUsers() {
   if (loading) return <Loader />;
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-
-      {/* ── Header ── */}
+    <div className="cl-page p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-neutral-900 dark:text-white tracking-tight">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--cl-text)] sm:text-3xl">
           Manage Users
         </h1>
-        <p className="text-neutral-500 dark:text-neutral-400 mt-1 text-sm">
+        <p className="mt-1 text-sm text-[var(--cl-text-muted)]">
           View users, manage roles, and control platform access.
         </p>
       </div>
 
-      {/* ── Search + Filter ── */}
-      <div className="bg-white dark:bg-[#0f1123] rounded-2xl border border-neutral-200 dark:border-white/8 shadow-sm p-4">
-        <div className="grid md:grid-cols-2 gap-4">
+      <div className="cl-card p-4 sm:p-5">
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="relative">
-            <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" />
+            <FaSearch className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[var(--cl-text-soft)]" />
             <input
               type="text"
               placeholder="Search users…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl
-                bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10
-                text-gray-800 dark:text-white placeholder-gray-400
-                focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition"
+              className="cl-control w-full pl-10 pr-4 py-2.5 text-sm"
             />
           </div>
+
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="py-2.5 px-3 text-sm rounded-xl
-              bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10
-              text-gray-800 dark:text-white
-              focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition"
+            className="cl-control px-3 py-2.5 text-sm"
           >
-            <option value="All"     className="bg-white dark:bg-[#0f1123]">All Roles</option>
-            <option value="student" className="bg-white dark:bg-[#0f1123]">Student</option>
-            <option value="admin"   className="bg-white dark:bg-[#0f1123]">Admin</option>
+            <option value="All">All Roles</option>
+            <option value="student">Student</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
       </div>
 
-      {/* ── Table ── */}
-      <div className="bg-white dark:bg-[#0f1123] rounded-2xl border border-neutral-200 dark:border-white/8 shadow-sm overflow-hidden">
+      <div className="cl-card overflow-hidden">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-white/8 flex items-center justify-center">
-              <FaUsers className="text-2xl text-gray-400" />
+          <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--cl-surface-soft)]">
+              <FaUsers className="text-2xl text-[var(--cl-text-soft)]" />
             </div>
-            <h3 className="font-bold text-gray-700 dark:text-white">No users found</h3>
-            <p className="text-sm text-gray-400 max-w-xs">Try adjusting your search or role filter.</p>
+            <h3 className="text-lg font-bold text-[var(--cl-text)]">No users found</h3>
+            <p className="max-w-xs text-sm text-[var(--cl-text-muted)]">
+              Try adjusting your search or role filter.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[760px] text-sm">
               <thead>
-                <tr className="bg-gray-50 dark:bg-white/4 border-b border-gray-100 dark:border-white/8 text-left">
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Name</th>
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Email</th>
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Role</th>
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Joined</th>
-                  <th className="px-5 py-3.5 font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Actions</th>
+                <tr className="border-b border-[var(--cl-border)] bg-[var(--cl-surface-soft)] text-left">
+                  <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Name
+                  </th>
+                  <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Email
+                  </th>
+                  <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Role
+                  </th>
+                  <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Joined
+                  </th>
+                  <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-muted)]">
+                    Actions
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-white/6">
+
+              <tbody>
                 {filtered.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-white/4 transition-colors">
-
-                    {/* Name */}
-                    <td className="px-5 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                      {user.name}
+                  <tr
+                    key={user.id}
+                    className="border-b border-[var(--cl-border)] transition-colors last:border-b-0 hover:bg-[var(--cl-surface-soft)]"
+                  >
+                    <td className="px-5 py-4 align-top">
+                      <div className="max-w-[16rem] truncate font-medium text-[var(--cl-text)]">
+                        {user.name}
+                      </div>
                     </td>
 
-                    {/* Email */}
-                    <td className="px-5 py-4 text-gray-600 dark:text-gray-300">
-                      {user.email}
+                    <td className="px-5 py-4 align-top">
+                      <div className="max-w-[22rem] truncate text-[var(--cl-text-muted)]">
+                        {user.email}
+                      </div>
                     </td>
 
-                    {/* Role select */}
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 align-top">
                       <select
                         value={user.role}
                         onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                        className="py-1.5 px-2.5 text-xs font-semibold rounded-lg
-                          bg-gray-100 dark:bg-white/8 border border-gray-200 dark:border-white/10
-                          text-gray-700 dark:text-gray-200
-                          focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                        className="rounded-lg border border-[var(--cl-border)] bg-[var(--cl-surface-soft)] px-2.5 py-1.5 text-xs font-semibold text-[var(--cl-text)] transition-colors focus:border-[var(--cl-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--cl-ring)]"
                       >
-                        <option value="student" className="bg-white dark:bg-[#0f1123]">Student</option>
-                        <option value="admin"   className="bg-white dark:bg-[#0f1123]">Admin</option>
+                        <option value="student">Student</option>
+                        <option value="admin">Admin</option>
                       </select>
                     </td>
 
-                    {/* Joined */}
-                    <td className="px-5 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
+                    <td className="px-5 py-4 align-top text-xs whitespace-nowrap text-[var(--cl-text-soft)]">
                       {user.joinedAt}
                     </td>
 
-                    {/* Actions */}
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 align-top">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => { setSelectedUser(user); setShowModal(true); }}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center
-                            bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400
-                            hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 transition-colors"
+                          type="button"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowModal(true);
+                          }}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--cl-primary-soft)] text-[var(--cl-primary-strong)] transition-colors hover:bg-[var(--cl-primary)] hover:text-[var(--cl-button-text)]"
                           title="View details"
                         >
                           <FaEye className="text-xs" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDeleteUser(user.id)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center
-                            bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400
-                            hover:bg-red-600 hover:text-white dark:hover:bg-red-600 transition-colors"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--cl-danger-soft)] text-[var(--cl-danger)] transition-colors hover:bg-[var(--cl-danger)] hover:text-[var(--cl-button-text)]"
                           title="Delete user"
                         >
                           <FaTrash className="text-xs" />
@@ -182,68 +185,61 @@ function ManageUsers() {
         )}
       </div>
 
-      {/* ── User Details Modal ── */}
       {showModal && selectedUser && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-white dark:bg-[#0f1123] border border-neutral-200 dark:border-white/10
-            rounded-2xl shadow-2xl w-full max-w-md">
-
-            {/* Modal header */}
-            <div className="flex justify-between items-center px-6 py-4 border-b border-neutral-100 dark:border-white/8">
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-white">User Details</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cl-overlay)] p-4 backdrop-blur-sm">
+          <div className="cl-card w-full max-w-md">
+            <div className="flex items-center justify-between border-b border-[var(--cl-border)] px-6 py-4">
+              <h2 className="text-lg font-bold text-[var(--cl-text)]">User Details</h2>
               <button
+                type="button"
                 onClick={() => setShowModal(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center
-                  bg-gray-100 dark:bg-white/8 text-gray-500 dark:text-gray-400
-                  hover:bg-gray-200 dark:hover:bg-white/15 transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--cl-surface-soft)] text-[var(--cl-text-muted)] transition-colors hover:bg-[var(--cl-surface-elevated)]"
               >
                 <FaTimes className="text-xs" />
               </button>
             </div>
 
-            {/* Modal body */}
-            <div className="p-6 space-y-4">
+            <div className="space-y-4 p-6">
               {[
-                { label: "Name",   value: selectedUser.name     },
-                { label: "Email",  value: selectedUser.email    },
-                { label: "Role",   value: selectedUser.role     },
+                { label: "Name", value: selectedUser.name },
+                { label: "Email", value: selectedUser.email },
+                { label: "Role", value: selectedUser.role },
                 { label: "Joined", value: selectedUser.joinedAt },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-start gap-3">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 w-14 pt-0.5 shrink-0">
+                  <span className="w-14 shrink-0 pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-soft)]">
                     {label}
                   </span>
-                  <span className="text-sm font-medium text-gray-800 dark:text-white capitalize">
+                  <span className="text-sm font-medium capitalize text-[var(--cl-text)]">
                     {value}
                   </span>
                 </div>
               ))}
 
-              {/* Skills */}
               <div className="flex items-start gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 w-14 pt-0.5 shrink-0">
+                <span className="w-14 shrink-0 pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--cl-text-soft)]">
                   Skills
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {selectedUser.skills?.length > 0 ? (
                     selectedUser.skills.map((skill, i) => (
-                      <span key={i}
-                        className="px-2.5 py-0.5 rounded-full text-xs font-semibold
-                          bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
+                      <span
+                        key={i}
+                        className="rounded-full bg-[var(--cl-primary-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--cl-primary-strong)]"
+                      >
                         {skill}
                       </span>
                     ))
                   ) : (
-                    <span className="text-sm text-gray-400 dark:text-gray-500">No skills added</span>
+                    <span className="text-sm text-[var(--cl-text-muted)]">No skills added</span>
                   )}
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={() => setShowModal(false)}
-                className="w-full mt-2 py-2.5 text-sm font-semibold rounded-xl
-                  bg-gray-100 dark:bg-white/8 text-gray-700 dark:text-gray-300
-                  hover:bg-gray-200 dark:hover:bg-white/15 transition-colors"
+                className="cl-secondary-btn mt-2 w-full"
               >
                 Close
               </button>

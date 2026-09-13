@@ -13,6 +13,9 @@
  *   savedMap         — { [placeId]: savedId } for bookmark state
  */
 import { createSlice, createSelector } from "@reduxjs/toolkit";
+import { persistFilters, readPersistedFilters } from "../utils/cache";
+
+const persistedFilters = readPersistedFilters()?.data || {};
 
 const initialState = {
   /* ── Location ───────────────────────────────────────────────── */
@@ -32,13 +35,13 @@ const initialState = {
 
   /* ── Filters ────────────────────────────────────────────────── */
   filters: {
-    search:    "",         // free text — client-side name filter
-    city:      "",         // manual city override
-    minRating: 0,
-    maxRadius: 50,         // km — used for GPS radius chip
-    openNow:   false,
-    keyword:   "software company",  // sent to Google Places API
-    batchIndex: 0,                   // related provider-query batch already loaded
+    search:    persistedFilters.search || "",         // free text — client-side name filter
+    city:      persistedFilters.city || "",         // manual city override
+    minRating: persistedFilters.minRating ?? 0,
+    maxRadius: persistedFilters.maxRadius ?? 50,         // km — used for GPS radius chip
+    openNow:   persistedFilters.openNow ?? false,
+    keyword:   persistedFilters.keyword || "software company",  // sent to Google Places API
+    batchIndex: persistedFilters.batchIndex ?? 0,                   // related provider-query batch already loaded
   },
 
   /* ── UI state ───────────────────────────────────────────────── */
@@ -87,9 +90,6 @@ const placesSlice = createSlice({
     fetchStart(state) {
       state.loading   = true;
       state.error     = null;
-      state.companies = [];
-      state.total     = 0;
-      state.source    = null;
       state.page      = 1;
     },
     appendFetchStart(state) {
@@ -117,14 +117,13 @@ const placesSlice = createSlice({
     fetchFailure(state, action) {
       state.loading   = false;
       state.error     = action.payload;
-      state.companies = [];
-      state.total     = 0;
     },
 
     /* ── Filters ───────────────────────────────────────────────── */
     setFilter(state, action) {
       state.filters = { ...state.filters, ...action.payload };
       state.page    = 1;
+      persistFilters(state.filters);
     },
     resetFilters(state) {
       state.filters = { ...initialState.filters };

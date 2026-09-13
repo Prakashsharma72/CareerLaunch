@@ -8,7 +8,7 @@ import {
   logout,
 } from "../redux/authSlice";
 
-import { loginUser, registerUser, verifyOtpApi, resendOtpApi } from "../services/authService";
+import { loginUser, googleLoginApi, linkGoogleAccountApi, registerUser, verifyOtpApi, resendOtpApi } from "../services/authService";
 
 /**
  * Custom Auth Hook
@@ -44,6 +44,27 @@ const useAuth = () => {
     } finally {
       setLocalLoading(false);
     }
+  };
+
+  const googleLogin = async (credential) => {
+    dispatch(loginStart());
+    setLocalLoading(true);
+    try {
+      const { data } = await googleLoginApi(credential);
+      dispatch(loginSuccess({ user: data.user, token: data.token }));
+      return data;
+    } catch (err) {
+      dispatch(loginFailure(err?.response?.data?.message || "Google sign-in failed"));
+      throw err;
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  const linkGoogleAccount = async (credential) => {
+    const { data } = await linkGoogleAccountApi(credential);
+    dispatch(loginSuccess({ user: data.user, token: data.token }));
+    return data;
   };
 
   /* ── REGISTER (step 1 — sends OTP) ────────────────────────────────────── */
@@ -103,6 +124,8 @@ const useAuth = () => {
     localLoading,
 
     login,
+    googleLogin,
+    linkGoogleAccount,
     register,
     verifyOtp,
     resendOtp,

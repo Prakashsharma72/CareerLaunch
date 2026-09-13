@@ -17,6 +17,7 @@ import PendingRegistration     from "../models/pendingRegistration.model.js";
 import PasswordReset          from "../models/passwordReset.model.js";
 import bcrypt                 from "bcryptjs";
 import jwt                    from "jsonwebtoken";
+import { OAuth2Client }       from "google-auth-library";
 import {
   sendOtpEmail,
   sendPasswordResetEmail,
@@ -29,7 +30,9 @@ const errLog = (msg, e) =>
   console.error(`${new Date().toISOString()} ${TAG} ❌ ${msg}`, e?.message ?? e);
 
 /* Safe projection — password hash / OTP never returned to the client */
-const SAFE_ATTRS = { exclude: ["password", "otp", "otpExpiresAt"] };
+const SAFE_ATTRS = { exclude: ["password", "otp", "otpExpiresAt", "googleSub"] };
+
+const googleClient = new OAuth2Client();
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 function signToken(user) {
@@ -48,6 +51,47 @@ function generateOtp() {
 
 function generateResetToken() {
   return crypto.randomBytes(32).toString("hex");
+}
+
+async function verifyGoogleIdToken(idToken) {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    const error = new Error("Google sign-in is not configured on this server.");
+    error.code = "GOOGLE_CONFIG_MISSING";
+    throw error;
+  }
+  if (!idToken || typeof idToken !== "string") {
+    const error = new Error("A Google ID token is required.");
+    error.code = "GOOGLE_TOKEN_MISSING";
+    throw error;
+  }
+
+  const ticket = await googleClient.verifyIdToken({ idToken, audience: clientId });
+  const payload = ticket.getPayload();
+  const validIssuers = ["accounts.google.com", "https://accounts.google.com"];
+
+  if (!payload?.sub || !payload.email || !payload.email_verified || !validIssuers.includes(payload.iss)) {
+    const error = new Error("Google returned an invalid or unverified identity.");
+    error.code = "GOOGLE_TOKEN_INVALID";
+    throw error;
+  }
+  if (!payload.exp || payload.exp * 1000 <= Date.now()) {
+    const error = new Error("The Google sign-in token has expired. Please try again.");
+    error.code = "GOOGLE_TOKEN_EXPIRED";
+    throw error;
+  }
+
+  return payload;
+}
+
+function googleErrorResponse(res, error) {
+  if (error.code === "GOOGLE_CONFIG_MISSING") {
+    return res.status(503).json({ code: error.code, message: error.message });
+  }
+  if (["GOOGLE_TOKEN_MISSING", "GOOGLE_TOKEN_INVALID", "GOOGLE_TOKEN_EXPIRED"].includes(error.code)) {
+    return res.status(401).json({ code: error.code, message: error.message });
+  }
+  return res.status(401).json({ code: "GOOGLE_TOKEN_INVALID", message: "Google sign-in could not be verified. Please try again." });
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -422,5 +466,65 @@ export const login = async (req, res) => {
   } catch (e) {
     errLog("login() unhandled error", e);
     return res.status(500).json({ code: "SERVER_ERROR", message: e.message || "Login failed." });
+  }
+};
+
+/* POST /api/auth/google — verify the GIS ID token and create/login a student. */
+export const googleLogin = async (req, res) => {
+  try {
+    const payload = await verifyGoogleIdToken(req.body?.credential);
+    const normalEmail = payload.email.toLowerCase().trim();
+    let user = await User.findOne({ where: { googleSub: payload.sub } });
+
+    if (!user) {
+      const emailUser = await User.findOne({ where: { email: normalEmail } });
+      if (emailUser) {
+        return res.status(409).json({
+          code: "ACCOUNT_LINK_REQUIRED",
+          message: "This email already has a password account. Sign in with your password first to link Google securely.",
+        });
+      }
+
+      const password = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12);
+      user = await User.create({
+        name: payload.name?.trim() || normalEmail.split("@")[0],
+        email: normalEmail,
+        password,
+        googleSub: payload.sub,
+        role: "student",
+        profileImage: payload.picture || null,
+        isVerified: true,
+      });
+    }
+
+    const safeUser = await User.findByPk(user.id, { attributes: SAFE_ATTRS });
+    return res.status(200).json({ message: "Google login successful", user: safeUser, token: signToken(safeUser) });
+  } catch (error) {
+    errLog("googleLogin() failed", error);
+    return googleErrorResponse(res, error);
+  }
+};
+
+/* POST /api/auth/google/link — requires the existing account session. */
+export const linkGoogleAccount = async (req, res) => {
+  try {
+    const payload = await verifyGoogleIdToken(req.body?.credential);
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ code: "NOT_FOUND", message: "Account not found." });
+    if (user.email.toLowerCase() !== payload.email.toLowerCase()) {
+      return res.status(403).json({ code: "EMAIL_MISMATCH", message: "The Google email must match your signed-in account." });
+    }
+
+    const linkedUser = await User.findOne({ where: { googleSub: payload.sub } });
+    if (linkedUser && linkedUser.id !== user.id) {
+      return res.status(409).json({ code: "GOOGLE_ACCOUNT_LINKED", message: "That Google account is already linked to another account." });
+    }
+
+    await user.update({ googleSub: payload.sub, isVerified: true });
+    const safeUser = await User.findByPk(user.id, { attributes: SAFE_ATTRS });
+    return res.status(200).json({ message: "Google account linked successfully", user: safeUser, token: signToken(safeUser) });
+  } catch (error) {
+    errLog("linkGoogleAccount() failed", error);
+    return googleErrorResponse(res, error);
   }
 };

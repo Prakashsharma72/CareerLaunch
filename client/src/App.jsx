@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 
 // ── Layouts (eager – shared shells, always needed) ──────────────────────────
 import MainLayout      from "./layouts/MainLayout";
-import DashboardLayout from "./layouts/DashboardLayout";
+import StudentLayout    from "./layouts/StudentLayout";
 import AdminLayout     from "./layouts/AdminLayout";
 
 // ── Auth pages (eager – entry points, minimal weight) ───────────────────────
@@ -17,6 +17,7 @@ import ResetPassword  from "./pages/auth/ResetPassword";
 // Home is the landing page and loads on every first visit → keep eager
 import Home     from "./pages/Home";
 const  NotFound = lazy(() => import("./pages/NotFound"));
+const LegalPage = lazy(() => import("./pages/LegalPage"));
 
 // ── Student pages (lazy – only loaded when user navigates there) ──────────────
 const Dashboard        = lazy(() => import("./pages/student/Dashboard"));
@@ -26,6 +27,7 @@ const JobDetails       = lazy(() => import("./pages/student/JobDetails"));
 const Resources        = lazy(() => import("./pages/student/Resources"));
 const SavedJobs        = lazy(() => import("./pages/student/SavedJobs"));
 const RoadmapGenerator = lazy(() => import("./pages/student/RoadmapGenerator"));
+const RoadmapDetails = lazy(() => import("./pages/student/RoadmapDetails"));
 const MockInterview    = lazy(() => import("./pages/student/MockInterview"));
 const CompanySearch    = lazy(() => import("./pages/student/CompanySearch"));
 const CompanyDetails   = lazy(() => import("./pages/student/CompanyDetails"));
@@ -37,6 +39,7 @@ const ManageJobs      = lazy(() => import("./pages/admin/ManageJobs"));
 const ManageResources = lazy(() => import("./pages/admin/ManageResources"));
 const ManageUsers     = lazy(() => import("./pages/admin/ManageUsers"));
 const ManageRoadmaps  = lazy(() => import("./pages/admin/ManageRoadmaps"));
+const ManageCompanies = lazy(() => import("./pages/admin/ManageCompanies"));
 const AdminSettings   = lazy(() => import("./pages/admin/AdminSettings"));
 
 // ── Route-level loading fallback ─────────────────────────────────────────────
@@ -101,6 +104,8 @@ const App = () => (
       <Route path="/register"        element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password"  element={<ResetPassword />} />
+      <Route path="/privacy-policy"  element={<LegalPage />} />
+      <Route path="/terms-of-use"    element={<LegalPage />} />
 
       {/* ── Public main ── */}
       <Route path="/" element={<MainLayout />}>
@@ -110,7 +115,7 @@ const App = () => (
       {/* ── Student dashboard (protected) ── */}
       <Route
         path="/student"
-        element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}
+        element={<ProtectedRoute><StudentLayout /></ProtectedRoute>}
       >
         <Route path="dashboard"          element={<Dashboard />} />
         <Route path="profile"            element={<Profile />} />
@@ -119,6 +124,7 @@ const App = () => (
         <Route path="resources"          element={<Resources />} />
         <Route path="saved-jobs"         element={<SavedJobs />} />
         <Route path="roadmap-generator"  element={<RoadmapGenerator />} />
+        <Route path="roadmaps/:id"       element={<RoadmapDetails />} />
         <Route path="mock-interview"     element={<MockInterview />} />
         <Route path="companies"          element={<CompanySearch />} />
         <Route path="companies/:placeId" element={<CompanyDetails />} />
@@ -135,6 +141,7 @@ const App = () => (
         <Route path="resources" element={<ManageResources />} />
         <Route path="users"     element={<ManageUsers />} />
         <Route path="roadmaps"  element={<ManageRoadmaps />} />
+        <Route path="companies" element={<ManageCompanies />} />
         <Route path="settings"  element={<AdminSettings />} />
       </Route>
 

@@ -2,9 +2,9 @@
 
 ## Overview
 
-CareerLaunch is a React and Node.js career platform for students and freshers. It combines email-verified accounts, profiles, nearby company discovery, verified company career pages, saved opportunities, roadmaps, and AI-powered mock interviews.
+CareerLaunch is a React and Node.js career platform for students and freshers. It combines email-verified accounts, profiles, nearby company discovery, verified company career pages, saved opportunities, learning resources, roadmaps, and AI-powered mock interviews.
 
-The current implementation is primarily a company-discovery platform. The legacy `jobs` naming remains in several routes and screens, but Google Places-backed company data is the active search source.
+The current implementation is primarily a company-discovery and career-preparation platform. The legacy `jobs` naming remains in several routes and screens, but Google Places-backed company data is the active search source. Resources are stored in the database and are shared between the admin and student pages.
 
 ## Problem Statement
 
@@ -20,10 +20,13 @@ Students need one place to discover relevant companies, find career pages, save 
 - Verified company career-page discovery
 - Saved company and saved job/company snapshot lists
 - Roadmap library for authenticated users
+- Published learning resources organized into eight canonical categories
+- Admin resource management with URL resources or Cloudinary-backed file uploads
+- Resource editing, deletion, publication status, and cache-safe refresh behavior
 - Gemini-powered mock interview sessions, feedback, scoring, reports, and history
-- Admin dashboard statistics, activity feed, roadmap creation, and API-key settings
+- Admin dashboard statistics, activity feed, resource and roadmap management, and API-key settings
 
-The current code does not prove persistent AI chat history, AI roadmap generation, resume analysis, or real job application submission. Several resource and user admin screens still use local/demo state.
+The current code does not prove persistent AI chat history, AI roadmap generation, resume analysis, or real job application submission. Some legacy job and user administration flows remain transitional.
 
 ## Tech Stack
 
@@ -81,6 +84,7 @@ client/
   src/pages/               Auth, student, admin, and public screens
   src/hooks/               useAuth, usePlaces, useCompanyCareers
   src/redux/               Store and auth, places, jobs, resources, AI, company slices
+  src/constants/           Shared resource category identifiers and display metadata
   src/services/            Axios service modules for API calls
   src/utils/               JWT and theme helpers
 server/
@@ -119,7 +123,7 @@ Current pages often combine Redux for shared auth/location data with local compo
 
 `server/server.js` loads environment variables, ensures a JWT secret, authenticates the database, creates missing tables and columns, runs `sequelize.sync({ force: false })`, checks SMTP, and starts the server on port 5000 by default.
 
-`server/app.js` configures an explicit CORS allowlist, JSON and URL-encoded parsing, mounts `/api` routers, exposes a health check at `/`, and installs the global error handler last.
+`server/app.js` configures an explicit CORS allowlist, JSON and URL-encoded parsing, mounts `/api` routers, exposes a health check at `/`, and installs the global error handler last. Resource mutations use JWT verification plus the admin role middleware; resource uploads use the Cloudinary-backed Multer storage engine.
 
 Controllers validate request data and delegate to Sequelize models or services. Services contain external API integration, company career verification, AI logic, email delivery, uploads, and other business logic. Middleware verifies JWTs, checks roles, handles uploads, and formats errors.
 
@@ -148,13 +152,17 @@ All endpoints are prefixed with `/api`.
 | POST/GET | `/interview/start`, `/interview/history` | JWT | Start or list interviews |
 | POST/GET | `/interview/:sessionId/*`, `/interview/:sessionId` | JWT | Answer, skip, end, or inspect a session |
 | GET/POST | `/roadmaps` | JWT; POST also admin | List or create roadmaps |
-| GET/POST/DELETE | `/resources`, `/resources/:id` | Public GET; JWT mutations | Resource operations |
+| GET | `/resources` | Public | List published resources with fresh, no-store responses |
+| GET | `/resources/admin` | JWT + admin | List all resources, including drafts |
+| POST | `/resources` | JWT + admin | Create a resource using a URL or multipart file upload |
+| PUT | `/resources/:id` | JWT + admin | Update resource metadata, publication status, URL, or uploaded file |
+| DELETE | `/resources/:id` | JWT + admin | Delete a resource |
 | GET | `/admin/stats`, `/admin/users`, `/admin/activities` | JWT + admin | Admin data |
 | GET/PUT | `/settings/keys` | JWT + admin | Read masked or update integration keys |
 | POST | `/upload/avatar` | JWT | Upload JPEG, PNG, or WEBP, max 2 MB |
 | POST | `/upload/resume` | JWT | Upload PDF, max 5 MB |
 
-Legacy job mutation, apply, import, and seed handlers exist but currently return `501 Not Implemented` in the controller. Frontend AI history/clear methods exist, but matching backend routes are not mounted.
+Resource categories use shared slugs: `web-development`, `react`, `nodejs`, `database`, `interview-preparation`, `dsa`, `ai-tools`, and `career-guides`. The admin form requires a title, description, category, resource type, publication status, and either a URL or file. Uploaded files are stored in Cloudinary under `careerlaunch/resources`, and public users see only `published` resources. Legacy job mutation, apply, import, and seed handlers exist but currently return `501 Not Implemented` in the controller. Frontend AI history/clear methods exist, but matching backend routes are not mounted.
 
 ## Authentication
 
@@ -173,7 +181,7 @@ Logout removes the local token and user. Password-reset tokens are generated wit
 
 The main Sequelize tables are `users`, `pending_registrations`, `password_resets`, `jobs`, `resources`, `companies`, `saved_jobs`, `saved_companies`, `roadmaps`, `interview_sessions`, `interview_questions`, and `chats`.
 
-Users have a primary key and unique email. Saved records belong to users and store inline snapshots of external job/company data. Companies are cached by `place_id`. Interview sessions belong to users and contain interview questions with answers, feedback, scores, and skipped state. Roadmaps store title, target role, and content. Startup DDL creates missing tables and adds missing columns for both SQLite and MySQL.
+Users have a primary key and unique email. Saved records belong to users and store inline snapshots of external job/company data. Companies are cached by `place_id`. Interview sessions belong to users and contain interview questions with answers, feedback, scores, and skipped state. Roadmaps store title, target role, and content. Resources store title, description, canonical category slug, resource type, URL/file URL, and publication status. Startup DDL creates missing tables and adds missing columns for both SQLite and MySQL.
 
 The model association file currently defines no Sequelize associations, so most relationships are represented by ID columns and explicit queries. The `chats` model/table exists, but the active AI controller does not use it.
 
@@ -241,7 +249,7 @@ The user selects a role and difficulty. The interview API creates a session, Gem
 
 ### Roadmaps and resources
 
-Roadmaps are fetched for authenticated users and can be created by admins. The current student roadmap screen is a searchable roadmap library. Student resources and some admin resource/user management screens contain local hard-coded/demo data even though related backend routes/models exist.
+Roadmaps are fetched for authenticated users and can be created by admins. The current student roadmap screen is a searchable roadmap library. The student Resources page reads published records from `/api/resources`, calculates totals and category counts from the complete response, and supports filtering by category, resource type, difficulty, search text, and opening URL or Cloudinary file links. The admin Manage Resources page uses `/api/resources/admin` and protected create/update/delete endpoints. Resource changes trigger refetches on navigation, window focus, storage events, and the resource-change event.
 
 ## Third-Party APIs
 
@@ -249,15 +257,15 @@ Roadmaps are fetched for authenticated users and can be created by admins. The c
 - Google Generative AI Gemini 2.0 Flash: chat and mock-interview generation/evaluation using `GEMINI_API_KEY`.
 - OpenStreetMap Nominatim: browser-triggered reverse geocoding in `usePlaces` and `useCompanyCareers`.
 - OpenStreetMap Overpass: legacy company-search fallback.
-- Cloudinary: server-side in-memory avatar and resume uploads.
+- Cloudinary: server-side in-memory avatar, resume, and admin resource uploads.
 - SMTP/Nodemailer with Brevo HTTP fallback: OTP and password-reset email delivery.
 - OpenAI client code exists, but the active AI controller uses Gemini; active production use of OpenAI is not identifiable from the code.
 
 ## Security
 
-Implemented protections include bcrypt password hashing, JWT signature verification, safe user projections that exclude password/OTP, protected routes, admin role middleware, CORS origin filtering, upload size/type limits, masked key reads, and non-revealing forgot-password responses.
+Implemented protections include bcrypt password hashing, JWT signature verification, safe user projections that exclude password/OTP, protected routes, admin role middleware on resource mutations, CORS origin filtering, upload size/type limits, masked key reads, and non-revealing forgot-password responses.
 
-Risks visible in the current code include JWTs in `localStorage` (XSS impact), public registration accepting `role: "admin"`, resource mutation routes requiring authentication but not admin role, development error responses exposing stack traces, runtime admin settings writing server `.env`, MIME-only file validation, no identifiable rate limiting/security-header middleware, and outbound career-page probing that needs SSRF hardening. Secrets are expected from environment variables and are not documented with values.
+Risks visible in the current code include JWTs in `localStorage` (XSS impact), development error responses exposing stack traces, runtime admin settings writing server `.env`, MIME-only file validation, no identifiable rate limiting/security-header middleware, and outbound career-page probing that needs SSRF hardening. Secrets are expected from environment variables and are not documented with values.
 
 ## Installation
 
@@ -272,12 +280,27 @@ npm install
 
 Do not commit secret values. The code reads variables including:
 
-- Frontend: `VITE_API_URL`
+- Frontend: `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`
 - Server: `JWT_SECRET`, `PORT`, `FRONTEND_URL`
+- Google authentication: `GOOGLE_CLIENT_ID` (the same OAuth 2.0 Web client ID as the frontend)
 - Database: `DB_DIALECT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_STORAGE`
 - Integrations: `GEMINI_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_MAPS_API_KEY`, Cloudinary variables, SMTP variables, and `BREVO_API_KEY`
 
 The backend defaults to SQLite storage `careerlaunch.sqlite` and port `5000`. Configure MySQL values and `DB_DIALECT=mysql` when using MySQL.
+
+### Google sign-in setup
+
+1. In Google Cloud Console, create or select a project, configure the OAuth consent screen, and create an OAuth 2.0 **Web application** client ID under **APIs & Services > Credentials**.
+2. Add these exact authorized JavaScript origins to that client:
+  - `http://localhost:5174` (Vite development origin)
+  - `https://careerlaunchai.in` (production origin)
+  - Add `https://www.careerlaunchai.in` only if that hostname serves the frontend.
+  No redirect URI is needed for the GIS button flow.
+3. Copy the client ID into `client/.env.development` and `server/.env` as `VITE_GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_ID`. Use the same values in production; the frontend ID is public, but never expose server secrets or `JWT_SECRET`.
+4. In Vercel, add `VITE_API_URL=https://careerlaunch-api.onrender.com/api` and `VITE_GOOGLE_CLIENT_ID` to the project Environment Variables for Preview/Production, then redeploy.
+5. In Render, add `GOOGLE_CLIENT_ID`, `FRONTEND_URL=https://careerlaunchai.in`, `JWT_SECRET`, and the existing database variables to the backend service Environment settings, then redeploy. The server startup migration adds `users.google_sub` automatically.
+
+Google login creates a verified student account keyed by Google's stable `sub`. If the Google email already belongs to a password account, the login page asks the user to sign in with that password first and then links the Google identity through the authenticated `/api/auth/google/link` endpoint. Cancellation, invalid/expired tokens, missing configuration, and request failures are shown in the login error banner.
 
 ## Running the Project
 
@@ -305,7 +328,7 @@ The frontend has Vercel configuration with an SPA rewrite to `index.html`. Produ
 
 ### One-minute answer
 
-“CareerLaunch is a full-stack career platform for students and freshers. I built a React frontend with Vite, React Router, Redux Toolkit, Axios, and Framer Motion, backed by a Node.js and Express API. Users can register with email OTP verification, manage their profile, upload a resume and avatar, discover nearby companies through Google Places, save companies, browse career pages, and practise with AI mock interviews. The backend uses Sequelize with SQLite by default and supports MySQL, JWT authentication, bcrypt password hashing, Cloudinary uploads, email delivery, and Gemini for interview features. One important challenge was keeping location-based company discovery reliable, so the frontend custom hook handles geolocation and city fallback while the backend caches, deduplicates, sorts, and enriches results.”
+“CareerLaunch is a full-stack career platform for students and freshers. I built a React frontend with Vite, React Router, Redux Toolkit, Axios, and Framer Motion, backed by a Node.js and Express API. Users can register with email OTP verification, manage their profile, upload a resume and avatar, discover nearby companies through Google Places, save companies, browse career pages and published learning resources, and practise with AI mock interviews. The backend uses Sequelize with SQLite by default and supports MySQL, JWT authentication, bcrypt password hashing, Cloudinary uploads, email delivery, and Gemini for interview features. One important challenge was keeping location-based company discovery reliable, so the frontend custom hook handles geolocation and city fallback while the backend caches, deduplicates, sorts, and enriches results.”
 
 ### Two-minute answer
 
@@ -313,7 +336,7 @@ The frontend has Vercel configuration with an SPA rewrite to `index.html`. Produ
 
 The Express backend separates routes, middleware, controllers, services, and Sequelize models. It supports SQLite by default and can use MySQL. The authentication flow stores a pending registration, sends a six-digit OTP, hashes passwords with bcryptjs, creates the verified user, and signs a seven-day JWT. Protected middleware verifies that token, and admin middleware checks the role.
 
-The main product flow is company discovery. A user grants location permission or searches by city. The frontend calls the API, the backend queries Google Places, caches and deduplicates results, and can verify career pages. The user can inspect details and save company snapshots. Another substantial feature is the mock interview workflow, where sessions, questions, answers, feedback, scores, and reports are persisted and Gemini supports the AI behavior. The repository also contains a roadmap library, profile uploads through Cloudinary, and admin statistics. The main technical caveat is that some older job, resource, and admin screens are transitional, so I would describe those as partially implemented rather than claim functionality that the code does not currently provide.”
+The main product flow is company discovery. A user grants location permission or searches by city. The frontend calls the API, the backend queries Google Places, caches and deduplicates results, and can verify career pages. The user can inspect details and save company snapshots. Another substantial feature is the mock interview workflow, where sessions, questions, answers, feedback, scores, and reports are persisted and Gemini supports the AI behavior. The repository also contains a database-backed resource library, admin resource CRUD with URL or Cloudinary file uploads, a roadmap library, profile uploads through Cloudinary, and admin statistics. The main technical caveat is that some older job and user administration flows are transitional, so I would describe those as partially implemented rather than claim functionality that the code does not currently provide.”
 
 ## My Contribution
 
@@ -356,7 +379,7 @@ The 30 project-specific questions and short speaking answers are included in the
 15. **How does company search work?** Geolocation or city input becomes a Places request; results are stored in Redux and filtered/paginated for display.
 16. **Why use `useCallback` in search hooks?** Stable callbacks prevent effects from refiring because a function identity changed on every render.
 17. **Why use `useMemo`?** Jobs and roadmaps derive filtered lists without repeating that calculation on unrelated renders.
-18. **How do uploads work?** Multer validates size/type, the server streams the file to Cloudinary, then stores the returned URL.
+18. **How do uploads work?** Multer validates size/type, the server streams avatar, resume, or admin resource files to Cloudinary, then stores the returned URL. Resource admins can provide either a URL or a file.
 19. **How does the interview feature persist data?** Sessions and question rows record answers, feedback, skipped state, scores, and reports.
 20. **How does the backend start safely?** It loads env values, ensures JWT configuration, authenticates the DB, runs dialect-aware DDL, syncs models, then listens.
 
@@ -371,4 +394,4 @@ The 30 project-specific questions and short speaking answers are included in the
 27. **What is unusual about the database setup?** Runtime Sequelize, MySQL SQL documentation, SQLite defaults, and an empty Prisma scaffold coexist, so deployment configuration must be made explicit.
 28. **What is a current API limitation?** Several legacy job mutations, apply/import actions, and seed handlers intentionally return 501.
 29. **How would you scale the cache?** Replace the process-local cache with a shared cache such as Redis and control external-request concurrency centrally.
-30. **What would you test?** Auth/OTP expiry, JWT guards, role checks, profile/upload validation, company search fallbacks, saved-record ownership, and interview state transitions.
+30. **What would you test?** Auth/OTP expiry, JWT guards, admin resource authorization, resource URL/file uploads, publication filtering, category mapping, profile/upload validation, company search fallbacks, saved-record ownership, and interview state transitions.

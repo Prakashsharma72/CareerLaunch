@@ -41,7 +41,7 @@ function errorResponse(res, e) {
  * GET /api/company-careers?lat=&lon=&radius=&keyword=&city=
  */
 export async function listCompanyCareers(req, res) {
-  const { lat, lon, radius, keyword, city, pageToken } = req.query;
+  const { lat, lon, radius, keyword, city, pageToken, page, limit } = req.query;
 
   const userLat = lat ? parseFloat(lat) : null;
   const userLon = lon ? parseFloat(lon) : null;
@@ -62,6 +62,8 @@ export async function listCompanyCareers(req, res) {
       keyword: searchKw,
       city:    city?.trim() || null,
       pageToken: pageToken?.trim() || null,
+      page: Number(page) || 1,
+      limit: Number(limit) || 12,
     });
 
     return res.status(200).json(result);

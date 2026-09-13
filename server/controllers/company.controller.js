@@ -153,6 +153,90 @@ export const triggerSeed = async (req, res) => {
   }
 };
 
+const ADMIN_COMPANY_FIELDS = [
+  "companyName", "website", "careerPage", "address", "shortAddress", "phone",
+  "rating", "reviewCount", "latitude", "longitude", "mapsUrl", "businessStatus",
+  "openingHours", "types", "city", "state", "country", "logo", "industry", "keyword",
+];
+
+function companyPayload(body = {}) {
+  return Object.fromEntries(ADMIN_COMPANY_FIELDS
+    .filter(field => body[field] !== undefined)
+    .map(field => [field, body[field] === "" ? null : body[field]]));
+}
+
+export const getAdminCompanies = async (req, res) => {
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const where = {};
+    const search = req.query.search?.trim();
+    const city = req.query.city?.trim();
+    const source = req.query.source?.trim();
+    const status = req.query.status?.trim();
+    const searchConditions = search ? [
+      { companyName: { [Op.like]: `%${search}%` } },
+      { address: { [Op.like]: `%${search}%` } },
+      { placeId: { [Op.like]: `%${search}%` } },
+    ] : [];
+    if (city) where.city = { [Op.like]: `%${city}%` };
+    if (source && source !== "all") where.source = source;
+    if (status === "admin") where.adminManaged = true;
+    if (status === "expired") where.expiresAt = { [Op.lt]: new Date() };
+    const andConditions = [];
+    if (status === "active") andConditions.push({ [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gte]: new Date() } }] });
+    if (searchConditions.length) andConditions.push({ [Op.or]: searchConditions });
+    if (andConditions.length) where[Op.and] = andConditions;
+    const { count, rows } = await Company.findAndCountAll({
+      where, order: [["updatedAt", "DESC"]], limit, offset: (page - 1) * limit,
+    });
+    return res.json({ success: true, companies: rows, total: count, page, limit, totalPages: Math.ceil(count / limit) });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: "DB_ERROR", message: error.message });
+  }
+};
+
+export const getAdminCompany = async (req, res) => {
+  try {
+    const company = await Company.findByPk(req.params.id);
+    if (!company) return res.status(404).json({ success: false, message: "Company not found" });
+    return res.json({ success: true, company });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: "DB_ERROR", message: error.message });
+  }
+};
+
+export const createAdminCompany = async (req, res) => {
+  try {
+    const payload = companyPayload(req.body);
+    if (!payload.companyName?.trim() || !payload.city?.trim()) {
+      return res.status(400).json({ success: false, message: "companyName and city are required" });
+    }
+    const company = await Company.create({
+      ...payload,
+      placeId: req.body.placeId?.trim() || null,
+      source: "admin",
+      adminManaged: true,
+      fetchedAt: new Date(),
+      expiresAt: null,
+    });
+    return res.status(201).json({ success: true, company });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const updateAdminCompany = async (req, res) => {
+  try {
+    const company = await Company.findByPk(req.params.id);
+    if (!company) return res.status(404).json({ success: false, message: "Company not found" });
+    await company.update({ ...companyPayload(req.body), adminManaged: true, source: company.source || "admin" });
+    return res.json({ success: true, company });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 /* ── helpers ─────────────────────────────────────────────────────────────── */
 
 function pickHttpStatus(errorCode) {
