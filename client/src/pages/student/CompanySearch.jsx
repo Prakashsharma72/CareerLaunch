@@ -223,12 +223,24 @@ export default function CompanySearch() {
   const filters     = useSelector(s => s.places.filters);
   const page        = useSelector(s => s.places.page);
   const source      = useSelector(s => s.places.source);
+  const resultMode  = useSelector(s => s.places.resultMode);
   const savedMap    = useSelector(s => s.places.savedMap);
   const allFiltered = useSelector(selectFilteredCompanies);
   const paged       = useSelector(selectPagedCompanies);
   const totalPages  = useSelector(selectTotalPages);
   const total       = allFiltered.length;
   const hasMoreBatches = (filters.batchIndex ?? 0) < 3;
+
+  // A fresh search can replace a larger result set while pagination still points
+  // at the old page. Clamp it before rendering so the grid cannot be empty.
+  const visiblePage = Math.min(page, totalPages);
+  const visiblePaged = page > totalPages
+    ? allFiltered.slice((visiblePage - 1) * PAGE_SIZE, visiblePage * PAGE_SIZE)
+    : paged;
+
+  useEffect(() => {
+    if (page > totalPages) dispatch(setPage(totalPages));
+  }, [dispatch, page, totalPages]);
 
   const hasGPS     = location.status === "granted";
   const hasDenied  = location.status === "denied" || location.status === "manual";
@@ -330,12 +342,12 @@ export default function CompanySearch() {
           </h1>
           <p className="text-[var(--cl-text-muted)] mt-1 text-sm flex items-center gap-2 flex-wrap">
             {locationLine}
-            {source === "google_places" && (
+            {(resultMode === "live" || resultMode === "cached" || (source === "google_places" && !resultMode)) && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold
                 px-2 py-0.5 rounded-full
                 bg-[var(--cl-primary-soft)] text-[var(--cl-primary)]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--cl-primary)] animate-pulse inline-block" />
-                Google Places
+                {resultMode === "cached" ? "Cached live results" : "Google Places"}
               </span>
             )}
             {source === "database_fallback" && (
@@ -395,7 +407,7 @@ export default function CompanySearch() {
         <p className="text-sm text-[var(--cl-text-muted)]">
           Showing{" "}
           <strong className="text-[var(--cl-text)]">
-            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)}
+            {(visiblePage - 1) * PAGE_SIZE + 1}–{Math.min(visiblePage * PAGE_SIZE, total)}
           </strong>{" "}
           of{" "}
           <strong className="text-[var(--cl-text)]">{total}</strong>{" "}
@@ -458,7 +470,7 @@ export default function CompanySearch() {
         )}
 
         {/* Company cards */}
-        {!loading && !error && paged.map(company => (
+        {!loading && !error && visiblePaged.map(company => (
           <CompanyCard
             key={company.placeId}
             company={company}

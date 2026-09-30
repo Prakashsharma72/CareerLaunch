@@ -28,6 +28,13 @@ import app from "./app.js";
 import sequelize from "./config/db.js";
 import { verifySmtpConnection } from "./services/email.service.js";
 import { refreshPublicSnapshot, publicSnapshotConfig } from "./services/publicSnapshot.service.js";
+import "./models/providerIncident.model.js";
+import "./models/providerIncidentState.model.js";
+import "./models/adminNotification.model.js";
+import "./models/adminNotificationRead.model.js";
+import "./models/notificationOutbox.model.js";
+import { backfillHistoricalActivityNotifications, startNotificationOutboxWorker } from "./services/notification.service.js";
+import { startUserNotificationScheduler } from "./services/userNotification.service.js";
 
 const LOG = "[server]";
 const log = (msg) => console.log(`${new Date().toISOString()} ${LOG} ${msg}`);
@@ -86,6 +93,21 @@ async function createTableIfMissing(table, ddl) {
     await sequelize.query(ddl);
     log(`  ✔ Created table: ${table}`);
   }
+}
+
+async function createIndexIfMissing(table, index, columns) {
+  const dialect = sequelize.getDialect();
+  if (dialect === "sqlite") {
+    const [indexes] = await sequelize.query(`PRAGMA index_list(${table})`);
+    if (indexes.some(item => item.name === index)) return;
+  } else {
+    const [indexes] = await sequelize.query(
+      `SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table AND INDEX_NAME = :index`,
+      { replacements: { table, index } },
+    );
+    if (indexes.length) return;
+  }
+  await sequelize.query(`CREATE INDEX \`${index}\` ON \`${table}\` (${columns.map(column => `\`${column}\``).join(", ")})`);
 }
 
 async function runMigrations() {
@@ -328,6 +350,70 @@ async function runMigrations() {
     )
   `);
 
+  await createTableIfMissing("provider_incidents", `
+    CREATE TABLE provider_incidents (
+      id ${AI}, group_key VARCHAR(191) NOT NULL, environment VARCHAR(32) NOT NULL,
+      provider VARCHAR(64) NOT NULL, integration VARCHAR(64) NOT NULL,
+      status VARCHAR(16) NOT NULL DEFAULT 'open', severity VARCHAR(16) NOT NULL DEFAULT 'high',
+      first_seen_at DATETIME NOT NULL, last_seen_at DATETIME NOT NULL, resolved_at DATETIME,
+      failure_count INT NOT NULL DEFAULT 1, recovery_successes INT NOT NULL DEFAULT 0,
+      error_code VARCHAR(64), reason VARCHAR(255) NOT NULL, fallback_available TINYINT(1) NOT NULL DEFAULT 0,
+      metadata TEXT, created_at DATETIME DEFAULT ${NOW}, updated_at DATETIME DEFAULT ${NOW}
+    )
+  `);
+  await createTableIfMissing("provider_incident_states", `
+    CREATE TABLE provider_incident_states (
+      id ${AI}, group_key VARCHAR(191) NOT NULL UNIQUE, environment VARCHAR(32) NOT NULL,
+      provider VARCHAR(64) NOT NULL, integration VARCHAR(64) NOT NULL, current_incident_id INT,
+      consecutive_successes INT NOT NULL DEFAULT 0, last_success_at DATETIME,
+      created_at DATETIME DEFAULT ${NOW}, updated_at DATETIME DEFAULT ${NOW}
+    )
+  `);
+  await createTableIfMissing("admin_notifications", `
+    CREATE TABLE admin_notifications (
+      id ${AI}, type VARCHAR(64) NOT NULL, severity VARCHAR(16) NOT NULL DEFAULT 'info',
+      title VARCHAR(255) NOT NULL, message TEXT NOT NULL, link VARCHAR(512), user_id INT, user_name VARCHAR(255), user_email VARCHAR(255), event_key VARCHAR(191) UNIQUE, incident_id INT, resolved TINYINT(1) NOT NULL DEFAULT 0,
+      metadata TEXT, created_at DATETIME DEFAULT ${NOW}, updated_at DATETIME DEFAULT ${NOW}
+    )
+  `);
+  await createTableIfMissing("admin_notification_reads", `
+    CREATE TABLE admin_notification_reads (
+      id ${AI}, notification_id INT NOT NULL, admin_id INT NOT NULL, read_at DATETIME NOT NULL,
+      UNIQUE KEY uq_admin_notification_read (notification_id, admin_id)
+    )
+  `);
+  await createTableIfMissing("notification_outbox", `
+    CREATE TABLE notification_outbox (
+      id ${AI}, incident_id INT NOT NULL, email_type VARCHAR(64) NOT NULL, status VARCHAR(16) NOT NULL DEFAULT 'pending',
+      attempts INT NOT NULL DEFAULT 0, available_at DATETIME NOT NULL, claimed_at DATETIME, sent_at DATETIME,
+      uncertain TINYINT(1) NOT NULL DEFAULT 0, last_error VARCHAR(255), created_at DATETIME DEFAULT ${NOW}, updated_at DATETIME DEFAULT ${NOW},
+      ${dialect === "mysql" ? "UNIQUE KEY uq_notification_outbox_incident_type (incident_id, email_type)" : "UNIQUE(incident_id, email_type)"}
+    )
+  `);
+  await createTableIfMissing("user_notifications", `
+    CREATE TABLE user_notifications (
+      id ${AI}, user_id INT NOT NULL, event_key VARCHAR(191) NOT NULL, type VARCHAR(64) NOT NULL,
+      title VARCHAR(255) NOT NULL, description TEXT NOT NULL, link VARCHAR(512), metadata TEXT,
+      read_at DATETIME, dismissed_at DATETIME, created_at DATETIME DEFAULT ${NOW}, updated_at DATETIME DEFAULT ${NOW},
+      ${dialect === "mysql" ? "UNIQUE KEY uq_user_notification_event (user_id, event_key)" : "UNIQUE(user_id, event_key)"}
+    )
+  `);
+  await createTableIfMissing("user_notification_preferences", `
+    CREATE TABLE user_notification_preferences (
+      user_id INT PRIMARY KEY, job_alerts TINYINT(1) NOT NULL DEFAULT 1,
+      resource_updates TINYINT(1) NOT NULL DEFAULT 1, learning_reminders TINYINT(1) NOT NULL DEFAULT 1,
+      announcements TINYINT(1) NOT NULL DEFAULT 1, created_at DATETIME DEFAULT ${NOW}, updated_at DATETIME DEFAULT ${NOW}
+    )
+  `);
+  await createTableIfMissing("user_notification_cursors", `
+    CREATE TABLE user_notification_cursors (
+      user_id INT PRIMARY KEY, initialized_at DATETIME NOT NULL, last_scanned_at DATETIME NOT NULL,
+      created_at DATETIME DEFAULT ${NOW}, updated_at DATETIME DEFAULT ${NOW}
+    )
+  `);
+  await createIndexIfMissing("user_notifications", "idx_user_notifications_recipient_state", ["user_id", "read_at", "dismissed_at", "created_at"]);
+  await createIndexIfMissing("user_notifications", "idx_user_notifications_recipient_type", ["user_id", "type"]);
+
   await createTableIfMissing("interview_questions", `
     CREATE TABLE interview_questions (
       id               ${AI},
@@ -357,6 +443,12 @@ async function runMigrations() {
 
   // ── 2. Add missing columns to existing tables ───────────────────────────
   const columns = [
+    // admin notifications
+    ["admin_notifications", "link", "VARCHAR(512)"],
+    ["admin_notifications", "user_id", "INT"],
+    ["admin_notifications", "user_name", "VARCHAR(255)"],
+    ["admin_notifications", "user_email", "VARCHAR(255)"],
+    ["admin_notifications", "event_key", "VARCHAR(191) UNIQUE"],
     // roadmap resources
     ["roadmap_resources", "source_type", "VARCHAR(16) DEFAULT 'link'"],
     ["roadmap_resources", "storage_public_id", "VARCHAR(500)"],
@@ -475,6 +567,12 @@ async function runMigrations() {
     await addColumnIfMissing(table, column, definition);
   }
 
+  await createIndexIfMissing("admin_notifications", "idx_admin_notifications_created", ["created_at"]);
+  await createIndexIfMissing("admin_notifications", "idx_admin_notifications_type_created", ["type", "created_at"]);
+  await createIndexIfMissing("admin_notifications", "idx_admin_notifications_severity_created", ["severity", "created_at"]);
+  await createIndexIfMissing("admin_notifications", "idx_admin_notifications_user", ["user_id"]);
+  await createIndexIfMissing("admin_notification_reads", "idx_admin_notification_reads_admin", ["admin_id", "notification_id"]);
+
   log("Migrations complete.");
 }
 
@@ -519,6 +617,8 @@ async function startServer() {
 
     await sequelize.sync({ force: false });
     log("  ✔ Sequelize models synced");
+    const backfilled = await backfillHistoricalActivityNotifications();
+    log(`Historical activity backfill: ${backfilled.registrationsInserted} registrations, ${backfilled.interviewStartsInserted} interview starts`);
   } catch (error) {
     console.error(`${new Date().toISOString()} ${LOG} ❌ Database connection failed:`, error.message);
     process.exit(1);
@@ -543,6 +643,8 @@ async function startServer() {
     );
   }, publicSnapshotConfig.FRESH_MS);
   refreshTimer.unref?.();
+  startNotificationOutboxWorker();
+  startUserNotificationScheduler();
 
   server.on("error", (err) => {
     if (err.code === "EADDRINUSE") {

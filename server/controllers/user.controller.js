@@ -1,4 +1,5 @@
 import { getUserById, updateUserProfile, getUserStats } from "../services/user.service.js";
+import { recordUserActivity } from "../services/notification.service.js";
 
 /**
  * GET /api/users/profile
@@ -20,6 +21,12 @@ export const getProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const updated = await updateUserProfile(req.user.id, req.body);
+    recordUserActivity(updated, {
+      type: "profile_updated",
+      title: "Profile updated",
+      message: `${updated.name || "A user"} updated their profile.`,
+      metadata: { action: "profile_update" },
+    }).catch(error => console.error("[user] profile activity notification failed:", error.message));
     return res.status(200).json(updated);
   } catch (err) {
     return res.status(err.status || 500).json({ message: err.message });

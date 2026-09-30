@@ -22,6 +22,7 @@ import {
   sendOtpEmail,
   sendPasswordResetEmail,
 } from "../services/email.service.js";
+import { recordUserRegistration, recordUserActivity, recordSystemActivity } from "../services/notification.service.js";
 
 const TAG    = "[auth]";
 const log    = (msg, data) =>
@@ -139,6 +140,7 @@ export const register = async (req, res) => {
         await sendOtpEmail(normalEmail, otp, name.trim());
       } catch (mailErr) {
         errLog("Failed to resend OTP (pending registration)", mailErr);
+        recordSystemActivity({ type: "email_error", severity: "warning", title: "Registration email delivery failed", message: "An OTP email could not be delivered.", metadata: { action: "registration_otp" } }).catch(() => undefined);
         return res.status(500).json({ code: "EMAIL_ERROR", message: "Could not send verification email. Please try again." });
       }
 
@@ -193,6 +195,7 @@ export const register = async (req, res) => {
       // Roll back: delete the pending registration so the user can retry cleanly
       await created.destroy();
       errLog("OTP email failed — pending registration rolled back", mailErr);
+      recordSystemActivity({ type: "email_error", severity: "warning", title: "Registration email delivery failed", message: "An OTP email could not be delivered.", metadata: { action: "registration_otp" } }).catch(() => undefined);
       return res.status(500).json({
         code:    "EMAIL_ERROR",
         message: "Could not send verification email. Please try again.",
@@ -262,6 +265,7 @@ export const verifyOtp = async (req, res) => {
     };
 
     const user = await User.create(userPayload);
+    recordUserRegistration(user).catch(error => errLog("Registration notification failed", error));
     await pending.destroy();
 
     const safeUser = await User.findByPk(user.id, { attributes: SAFE_ATTRS });
@@ -312,6 +316,7 @@ export const resendOtp = async (req, res) => {
       log(`✓ OTP resent to: ${normalEmail}`);
     } catch (mailErr) {
       errLog("resendOtp() email failed", mailErr);
+      recordSystemActivity({ type: "email_error", severity: "warning", title: "OTP email delivery failed", message: "An OTP resend could not be delivered.", metadata: { action: "otp_resend" } }).catch(() => undefined);
       return res.status(500).json({ code: "EMAIL_ERROR", message: "Could not send verification email. Please try again." });
     }
 
@@ -356,6 +361,7 @@ export const forgotPassword = async (req, res) => {
       log(`✓ Password reset email sent: ${normalEmail}`);
     } catch (mailErr) {
       errLog("forgotPassword() email failed", mailErr);
+      recordSystemActivity({ type: "email_error", severity: "warning", title: "Password reset email delivery failed", message: "A password reset email could not be delivered.", metadata: { action: "password_reset" } }).catch(() => undefined);
       return res.status(500).json({ code: "EMAIL_ERROR", message: "Could not send password reset email. Please try again." });
     }
 
@@ -459,6 +465,14 @@ export const login = async (req, res) => {
     const user  = await User.findByPk(userWithPw.id, { attributes: SAFE_ATTRS });
     const token = signToken(user);
 
+    recordUserActivity(user, {
+      type: user.role === "admin" ? "admin_login" : "user_login",
+      title: user.role === "admin" ? "Admin logged in" : "User logged in",
+      message: `${user.name || "A user"} signed in to CareerLaunch AI.`,
+      link: user.role === "admin" ? "/admin/notifications" : null,
+      metadata: { role: user.role },
+    }).catch(error => errLog("Login activity notification failed", error));
+
     log(`✓ Login successful — user ${user.id} role=${user.role}`);
 
     return res.status(200).json({ message: "Login successful", user, token });
@@ -495,14 +509,32 @@ export const googleLogin = async (req, res) => {
         profileImage: payload.picture || null,
         isVerified: true,
       });
+      recordUserRegistration(user).catch(error => errLog("Google registration notification failed", error));
     }
 
     const safeUser = await User.findByPk(user.id, { attributes: SAFE_ATTRS });
+    recordUserActivity(safeUser, {
+      type: safeUser.role === "admin" ? "admin_login" : "user_login",
+      title: safeUser.role === "admin" ? "Admin logged in" : "User logged in",
+      message: `${safeUser.name || "A user"} signed in to CareerLaunch AI with Google.`,
+      link: safeUser.role === "admin" ? "/admin/notifications" : null,
+      metadata: { role: safeUser.role, provider: "google" },
+    }).catch(error => errLog("Google login activity notification failed", error));
     return res.status(200).json({ message: "Google login successful", user: safeUser, token: signToken(safeUser) });
   } catch (error) {
     errLog("googleLogin() failed", error);
     return googleErrorResponse(res, error);
   }
+};
+
+export const logout = async (req, res) => {
+  recordUserActivity(req.user, {
+    type: req.user.role === "admin" ? "admin_activity" : "user_logout",
+    title: req.user.role === "admin" ? "Admin logged out" : "User logged out",
+    message: `${req.user.name || "A user"} signed out of CareerLaunch AI.`,
+    metadata: { action: "logout", role: req.user.role },
+  }).catch(error => errLog("Logout activity notification failed", error));
+  return res.status(200).json({ success: true });
 };
 
 /* POST /api/auth/google/link — requires the existing account session. */

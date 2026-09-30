@@ -6,9 +6,11 @@ import {
   FaTachometerAlt, FaUser, FaBriefcase, FaBook,
   FaRoad, FaRobot,
   FaSignOutAlt, FaBars, FaTimes, FaRocket,
-  FaChevronLeft, FaBuilding,
+  FaChevronLeft, FaBuilding, FaBell,
 } from "react-icons/fa";
 import { useSelector } from "react-redux";
+import UserNotificationBell from "../components/notifications/UserNotificationBell";
+import { logoutApi } from "../services/authService";
 
 const SIDEBAR_W   = 232;
 const SIDEBAR_COL = 72;
@@ -22,6 +24,7 @@ const menuItems = [
   { name: "Saved Companies",  icon: FaBuilding,      path: "/student/saved-companies" },
   { name: "Roadmap",          icon: FaRoad,          path: "/student/roadmap-generator" },
   { name: "Mock Interview",   icon: FaRobot,         path: "/student/mock-interview" },
+  { name: "Notifications",    icon: FaBell,           path: "/student/notifications" },
 ];
 
 function SidebarContent({
@@ -146,6 +149,8 @@ function DashboardLayout() {
   }, []);
 
   const handleLogout = () => {
+    const token = localStorage.getItem("token");
+    if (token) logoutApi(token).catch(() => undefined);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
@@ -249,13 +254,7 @@ function DashboardLayout() {
               </AnimatePresence>
             </motion.button>
 
-            {/* Notification bell */}
-            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--cl-surface-muted)] text-[var(--cl-text-muted)] transition-colors">
-              <span className="text-sm">🔔</span>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full
-                border-2 border-white dark:border-[#0d0f1e]" />
-            </motion.button>
+            <UserNotificationBell />
 
             {/* Avatar + name */}
             <div className="flex items-center gap-2 pl-1">

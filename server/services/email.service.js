@@ -326,3 +326,55 @@ async function sendViaBrevoApi({ sender, to, subject, htmlContent, textContent }
     timeout: 15_000,
   });
 }
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/** Send one durable provider-incident alert from the notification outbox. */
+export async function sendAdminProviderFailureEmail(incident) {
+  const recipient = process.env.ADMIN_ALERT_EMAIL?.trim();
+  if (!recipient) throw new Error("ADMIN_ALERT_EMAIL is not configured");
+  if (!incident) throw new Error("Provider incident was not found");
+
+  const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+  const notificationUrl = `${frontendUrl}/admin/notifications?incident=${encodeURIComponent(incident.id)}`;
+  const reason = escapeHtml(incident.reason);
+  const firstSeen = escapeHtml(new Date(incident.firstSeenAt).toISOString());
+  const fallback = incident.fallbackAvailable ? "Available for the triggering request" : "No matching stored companies were available";
+  const isGemini = incident.integration === "gemini_interview";
+  const subject = isGemini
+    ? "[CareerLaunch AI] Gemini interview AI failed"
+    : "[CareerLaunch AI] Google Places company fetching failed";
+  const text = [
+    `${isGemini ? "Gemini interview AI" : "Google Places company fetching"} failed.`,
+    `Incident ID: ${incident.id}`,
+    `First failure: ${new Date(incident.firstSeenAt).toISOString()}`,
+    `Provider: ${incident.provider} / ${incident.integration}`,
+    `Reason: ${incident.reason}`,
+    `Stored-company fallback: ${fallback}`,
+    `Admin link: ${notificationUrl}`,
+  ].join("\n");
+  const html = `<p>Google Places company fetching failed.</p><ul><li><strong>Incident ID:</strong> ${incident.id}</li><li><strong>First failure:</strong> ${firstSeen}</li><li><strong>Provider:</strong> ${escapeHtml(incident.provider)} / ${escapeHtml(incident.integration)}</li><li><strong>Reason:</strong> ${reason}</li><li><strong>Stored-company fallback:</strong> ${escapeHtml(fallback)}</li></ul><p><a href="${notificationUrl}">Open admin notifications</a></p>`;
+  const fromName = process.env.SMTP_FROM_NAME || "CareerLaunch AI";
+  const fromAddress = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+  const mailOptions = { from: `"${fromName}" <${fromAddress}>`, to: recipient, subject, html, text };
+
+  try {
+    return await transporter.sendMail(mailOptions);
+  } catch (error) {
+    if (["ETIMEDOUT", "ESOCKETTIMEDOUT", "ECONNREFUSED"].includes(error?.code) && process.env.BREVO_API_KEY) {
+      const response = await sendViaBrevoApi({
+        to: [{ email: recipient }], subject, htmlContent: html, textContent: text,
+        sender: { name: fromName, email: fromAddress },
+      });
+      return response.data;
+    }
+    throw error;
+  }
+}
