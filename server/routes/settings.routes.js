@@ -2,7 +2,7 @@
  * settings.routes.js
  *
  * GET  /api/settings/keys  — return current key values (masked)
- * PUT  /api/settings/keys  — overwrite OPENAI_API_KEY / GOOGLE_MAPS_API_KEY in .env
+ * PUT  /api/settings/keys  — overwrite configured AI/maps keys in .env
  *
  * Both endpoints are admin-only.
  */
@@ -67,6 +67,7 @@ router.get(
       res.json({
         OPENAI_API_KEY:       { masked: mask(env.OPENAI_API_KEY),       set: !!env.OPENAI_API_KEY       },
         GOOGLE_MAPS_API_KEY:  { masked: mask(env.GOOGLE_MAPS_API_KEY),  set: !!env.GOOGLE_MAPS_API_KEY  },
+        GEMINI_API_KEY:       { masked: mask(env.GEMINI_API_KEY),       set: !!env.GEMINI_API_KEY       },
       });
     } catch (err) {
       console.error("[settings] GET error:", err.message);
@@ -82,9 +83,9 @@ router.put(
   requireRole("admin"),
   (req, res) => {
     try {
-      const { OPENAI_API_KEY, GOOGLE_MAPS_API_KEY } = req.body;
+      const { OPENAI_API_KEY, GOOGLE_MAPS_API_KEY, GEMINI_API_KEY } = req.body;
 
-      if (!OPENAI_API_KEY && !GOOGLE_MAPS_API_KEY) {
+      if (!OPENAI_API_KEY && !GOOGLE_MAPS_API_KEY && !GEMINI_API_KEY) {
         return res.status(400).json({ message: "No keys provided." });
       }
 
@@ -95,6 +96,10 @@ router.put(
       if (GOOGLE_MAPS_API_KEY && typeof GOOGLE_MAPS_API_KEY === "string") {
         updateEnvKey("GOOGLE_MAPS_API_KEY", GOOGLE_MAPS_API_KEY.trim());
         process.env.GOOGLE_MAPS_API_KEY = GOOGLE_MAPS_API_KEY.trim();
+      }
+      if (GEMINI_API_KEY && typeof GEMINI_API_KEY === "string") {
+        updateEnvKey("GEMINI_API_KEY", GEMINI_API_KEY.trim());
+        process.env.GEMINI_API_KEY = GEMINI_API_KEY.trim();
       }
 
       console.log("[settings] API keys updated by admin");

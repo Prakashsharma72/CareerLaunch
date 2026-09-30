@@ -6,6 +6,7 @@ import RoadmapStep from "../models/roadmapStep.model.js";
 import RoadmapResource from "../models/roadmapResource.model.js";
 import RoadmapProgress from "../models/roadmapProgress.model.js";
 import cloudinary from "../config/cloudinary.js";
+import { recordUserActivity } from "../services/notification.service.js";
 
 Roadmap.hasMany(RoadmapStep, { foreignKey: "roadmapId", as: "steps" });
 RoadmapStep.belongsTo(Roadmap, { foreignKey: "roadmapId" });
@@ -193,6 +194,13 @@ const persistRoadmap = async (req, publishing, res) => {
     await roadmap.update({ ...payload, steps: undefined, status: publishing ? "published" : (roadmap.status || "draft"), publishedAt: publishing ? (roadmap.publishedAt || new Date()) : roadmap.publishedAt }, { transaction });
     const filesToClean = await saveSteps(roadmap, steps, transaction); await transaction.commit();
     await cleanUnreferencedFiles(filesToClean);
+    const action = publishing ? "roadmap_publish" : req.params.id ? "roadmap_update" : "roadmap_create";
+    recordUserActivity(req.user, {
+      type: "admin_activity",
+      title: `Roadmap ${publishing ? "published" : req.params.id ? "updated" : "created"}`,
+      message: `An administrator ${publishing ? "published" : req.params.id ? "updated" : "created"} ${roadmap.title}.`,
+      metadata: { action, roadmapId: roadmap.id },
+    }).catch(error => console.error("[roadmap] admin activity notification failed:", error.message));
     return res.status(req.params.id ? 200 : 201).json({ success: true, data: roadmap, message: publishing ? "Roadmap published." : "Draft saved." });
   } catch (error) {
     if (transaction) await transaction.rollback();
@@ -244,6 +252,13 @@ export const getRoadmapResourceContent = async (req, res) => {
       "Content-Disposition": `${req.query.download === "1" ? "attachment" : "inline"}; filename="${filename}"; filename*=UTF-8''${encodedFilename}`,
       "Cache-Control": "private, no-store",
     });
+    const wasDownloaded = req.query.download === "1";
+    recordUserActivity(req.user, {
+      type: "resource_activity",
+      title: wasDownloaded ? "Resource downloaded" : "Resource viewed",
+      message: `${req.user.name || "A user"} ${wasDownloaded ? "downloaded" : "viewed"} ${resource.label}.`,
+      metadata: { action: wasDownloaded ? "resource_download" : "resource_view", resourceId: resource.id },
+    }).catch(error => console.error("[roadmap] resource activity notification failed:", error.message));
     return res.send(body);
   } catch (error) {
     console.error("[roadmap] resource content error", error.message);
@@ -271,6 +286,12 @@ export const getRoadmapPdf = async (req, res) => {
       "Content-Disposition": `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       "Cache-Control": "private, no-store",
     });
+    recordUserActivity(req.user, {
+      type: "resource_activity",
+      title: "Roadmap downloaded",
+      message: `${req.user.name || "A user"} downloaded the ${roadmap.title} roadmap.`,
+      metadata: { action: "roadmap_download", roadmapId: roadmap.id },
+    }).catch(error => console.error("[roadmap] download activity notification failed:", error.message));
     return res.send(body);
   } catch (error) {
     console.error("[roadmap] roadmap pdf error", error.message);
@@ -283,15 +304,61 @@ export const publishRoadmap = async (req, res) => {
   req.body = { ...roadmap.toJSON(), steps: JSON.stringify(roadmap.steps || []) };
   return persistRoadmap(req, true, res);
 };
-export const unpublishRoadmap = async (req, res) => { const roadmap = await Roadmap.findByPk(req.params.id); if (!roadmap) return res.status(404).json({ message: "Roadmap not found." }); await roadmap.update({ status: "draft", publishedAt: null }); return res.json({ success: true, data: roadmap }); };
-export const deleteRoadmap = async (req, res) => { const roadmap = await Roadmap.findByPk(req.params.id); if (!roadmap) return res.status(404).json({ message: "Roadmap not found." }); await roadmap.destroy(); return res.json({ success: true }); };
+export const unpublishRoadmap = async (req, res) => {
+  const roadmap = await Roadmap.findByPk(req.params.id);
+  if (!roadmap) return res.status(404).json({ message: "Roadmap not found." });
+  await roadmap.update({ status: "draft", publishedAt: null });
+  recordUserActivity(req.user, {
+    type: "admin_activity", title: "Roadmap unpublished",
+    message: `An administrator unpublished ${roadmap.title}.`,
+    metadata: { action: "roadmap_unpublish", roadmapId: roadmap.id },
+  }).catch(error => console.error("[roadmap] admin activity notification failed:", error.message));
+  return res.json({ success: true, data: roadmap });
+};
+
+export const deleteRoadmap = async (req, res) => {
+  const roadmap = await Roadmap.findByPk(req.params.id);
+  if (!roadmap) return res.status(404).json({ message: "Roadmap not found." });
+  const title = roadmap.title;
+  await roadmap.destroy();
+  recordUserActivity(req.user, {
+    type: "admin_activity", title: "Roadmap deleted",
+    message: `An administrator deleted ${title}.`,
+    metadata: { action: "roadmap_delete", roadmapId: Number(req.params.id) },
+  }).catch(error => console.error("[roadmap] admin activity notification failed:", error.message));
+  return res.json({ success: true });
+};
 
 export const updateProgress = async (req, res) => {
   const completed = req.body.completed === true || req.body.completed === "true";
   const roadmap = await Roadmap.findOne({ where: { id: req.params.roadmapId, status: "published" } });
   const step = await RoadmapStep.findOne({ where: { id: req.params.stepId, roadmapId: req.params.roadmapId } });
   if (!roadmap || !step) return res.status(404).json({ message: "Roadmap step not found." });
-  if (completed) await RoadmapProgress.upsert({ userId: req.user.id, roadmapId: roadmap.id, stepId: step.id, completedAt: new Date(), updatedAt: new Date() });
-  else await RoadmapProgress.destroy({ where: { userId: req.user.id, roadmapId: roadmap.id, stepId: step.id } });
+  if (completed) {
+    const existing = await RoadmapProgress.findOne({ where: { userId: req.user.id, roadmapId: roadmap.id, stepId: step.id } });
+    if (!existing) {
+      await RoadmapProgress.upsert({ userId: req.user.id, roadmapId: roadmap.id, stepId: step.id, completedAt: new Date(), updatedAt: new Date() });
+      const [completedSteps, totalSteps] = await Promise.all([
+        RoadmapProgress.count({ where: { userId: req.user.id, roadmapId: roadmap.id, completedAt: { [Op.ne]: null } } }),
+        RoadmapStep.count({ where: { roadmapId: roadmap.id } }),
+      ]);
+      const finished = totalSteps > 0 && completedSteps >= totalSteps;
+      recordUserActivity(req.user, {
+        type: finished ? "roadmap_completed" : "roadmap_activity",
+        title: finished ? "Roadmap completed" : "Roadmap progress updated",
+        message: finished ? `${req.user.name || "A user"} completed ${roadmap.title}.` : `${req.user.name || "A user"} completed a step in ${roadmap.title}.`,
+        metadata: { action: finished ? "roadmap_complete" : "roadmap_step_complete", roadmapId: roadmap.id, stepId: step.id },
+      }).catch(error => console.error("[roadmap] activity notification failed:", error.message));
+    }
+  } else {
+    const removed = await RoadmapProgress.destroy({ where: { userId: req.user.id, roadmapId: roadmap.id, stepId: step.id } });
+    if (removed) {
+      recordUserActivity(req.user, {
+        type: "roadmap_activity", title: "Roadmap progress updated",
+        message: `${req.user.name || "A user"} reopened a step in ${roadmap.title}.`,
+        metadata: { action: "roadmap_step_reopened", roadmapId: roadmap.id, stepId: step.id },
+      }).catch(error => console.error("[roadmap] activity notification failed:", error.message));
+    }
+  }
   return res.json({ success: true, completed });
 };

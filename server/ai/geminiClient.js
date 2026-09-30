@@ -51,7 +51,7 @@ function convertMessages(messages) {
  * Accepts the same OpenAI messages array format.
  * Returns the model's text response as a string.
  */
-export async function callGemini(messages) {
+export async function callGemini(messages, { responseSchema } = {}) {
   try {
     const genAI = getClient();
     const { systemInstruction, contents } = convertMessages(messages);
@@ -64,6 +64,7 @@ export async function callGemini(messages) {
         maxOutputTokens: 2048,
         // Force JSON output to avoid markdown fences
         responseMimeType: "application/json",
+        ...(responseSchema ? { responseSchema } : {}),
       },
     });
 
@@ -84,6 +85,16 @@ export async function callGemini(messages) {
     if (status === 429 || message.includes("RESOURCE_EXHAUSTED") || message.includes("quota")) {
       const e = new Error("Gemini rate limit reached. Please wait and try again.");
       e.code = "RATE_LIMIT"; e.status = 429;
+      throw e;
+    }
+    if (status === 408 || ["ETIMEDOUT", "ECONNABORTED", "ESOCKETTIMEDOUT"].includes(err.code) || /timeout|timed out/i.test(message)) {
+      const e = new Error("Gemini request timed out. Please try again.");
+      e.code = "AI_TIMEOUT"; e.status = 504;
+      throw e;
+    }
+    if (message.includes("SAFETY") || message.includes("blocked") || message.includes("BLOCKED")) {
+      const e = new Error("Gemini blocked this response. Please rephrase your answer and try again.");
+      e.code = "AI_BLOCKED"; e.status = 422;
       throw e;
     }
     if (message.includes("PERMISSION_DENIED") || message.includes("billing")) {

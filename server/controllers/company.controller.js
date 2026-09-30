@@ -10,6 +10,7 @@ import { Op }              from "sequelize";
 import { searchCompanies } from "../services/company.service.js";
 import { seedCompaniesIfEmpty } from "../services/companySeeder.service.js";
 import Company             from "../models/company.model.js";
+import { recordUserActivity } from "../services/notification.service.js";
 
 const LOG = "[company.ctrl]";
 const log = (msg, data) =>
@@ -220,6 +221,12 @@ export const createAdminCompany = async (req, res) => {
       fetchedAt: new Date(),
       expiresAt: null,
     });
+    recordUserActivity(req.user, {
+      type: "admin_activity",
+      title: "Company created",
+      message: `An administrator added ${company.companyName}.`,
+      metadata: { action: "company_create", companyId: company.id },
+    }).catch(error => console.error(`${LOG} admin activity notification failed:`, error.message));
     return res.status(201).json({ success: true, company });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
@@ -231,6 +238,12 @@ export const updateAdminCompany = async (req, res) => {
     const company = await Company.findByPk(req.params.id);
     if (!company) return res.status(404).json({ success: false, message: "Company not found" });
     await company.update({ ...companyPayload(req.body), adminManaged: true, source: company.source || "admin" });
+    recordUserActivity(req.user, {
+      type: "admin_activity",
+      title: "Company updated",
+      message: `An administrator updated ${company.companyName}.`,
+      metadata: { action: "company_update", companyId: company.id },
+    }).catch(error => console.error(`${LOG} admin activity notification failed:`, error.message));
     return res.json({ success: true, company });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });

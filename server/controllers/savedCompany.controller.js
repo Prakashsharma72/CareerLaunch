@@ -9,6 +9,7 @@
  * at the time the user clicks bookmark.
  */
 import SavedCompany from "../models/savedCompany.model.js";
+import { recordUserActivity } from "../services/notification.service.js";
 
 const LOG = "[savedCompany.ctrl]";
 const log = (msg, d) =>
@@ -58,6 +59,13 @@ export const saveCompany = async (req, res) => {
     if (!created) {
       return res.status(409).json({ message: "Company already saved", savedId: record.id });
     }
+
+    recordUserActivity(req.user, {
+      type: "company_saved",
+      title: "Company saved",
+      message: `${req.user.name || "A user"} saved ${String(companyName).slice(0, 180)}.`,
+      metadata: { companyId: String(externalCompanyId).slice(0, 160) },
+    }).catch(error => console.error(`${LOG} save activity notification failed:`, error.message));
 
     log(`Saved company "${companyName}" for user ${userId}`);
     return res.status(201).json({

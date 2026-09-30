@@ -171,6 +171,11 @@ export default function Jobs() {
   const isJobResults = source === "database_jobs";
   const resolvedLocation = filters.city?.trim() || activeLocation || location.city || "your area";
   const displayLocation = loading && dataLocation ? dataLocation : resolvedLocation;
+  const fallbackBadgeText = providerSource === "provider_empty"
+    ? "Live search returned no results — showing stored listings"
+    : providerSource
+      ? "Live search unavailable — showing stored listings"
+      : "Stored listings";
 
   useEffect(() => {
     const keyword = searchParams.get("keyword")?.trim();
@@ -271,13 +276,32 @@ export default function Jobs() {
   }, [dispatch, fetchByCity]);
 
   const handleSearch = useCallback((keyword, city) => {
-    if (city) dispatch(setManualCity(city));
-    fetchByCity(city || location.city, keyword);
+    if (city) {
+      dispatch(setManualCity(city));
+      fetchByCity(city, keyword);
+      return;
+    }
+
+    dispatch(setManualCity(""));
+    fetchByCity(location.city || "", keyword);
   }, [dispatch, fetchByCity, location.city]);
 
   const handleFilter = useCallback((update) => {
     dispatch(setFilter(update));
+    if (Object.prototype.hasOwnProperty.call(update, "city")) {
+      dispatch(setManualCity(update.city || ""));
+    }
   }, [dispatch]);
+
+  const clearLocationFilter = useCallback(() => {
+    dispatch(setManualCity(""));
+    dispatch(setFilter({ city: "", minRating: 0, openNow: false, maxRadius: 50, search: "" }));
+    if (location.lat != null && location.lon != null) {
+      fetchByCity("", filters.keyword || "software company");
+      return;
+    }
+    requestLocation();
+  }, [dispatch, fetchByCity, filters.keyword, location.lat, location.lon, requestLocation]);
 
   const handleSave = useCallback(async (company) => {
     if (!isAuthenticated) return;
@@ -371,7 +395,7 @@ export default function Jobs() {
             )}
             {isJobResults && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--cl-primary-soft)] text-[var(--cl-primary)]">
-                Database fallback · Actual jobs{providerSource === "provider_empty" ? " · Live search returned no results" : " · Live search unavailable"}
+                {fallbackBadgeText}
               </span>
             )}
           </p>
@@ -526,9 +550,7 @@ export default function Jobs() {
               </p>
             </div>
             <button
-              onClick={() => dispatch(setFilter(source === "database_jobs"
-                ? { city: "", minRating: 0, openNow: false, maxRadius: 50, search: "" }
-                : { minRating: 0, openNow: false, maxRadius: 50, search: "" }))}
+              onClick={clearLocationFilter}
               className="px-5 py-2.5 text-sm font-semibold bg-[var(--cl-primary)] hover:bg-[var(--cl-primary-strong)]
                 text-[var(--cl-button-text)] rounded-xl transition-colors">
               {source === "database_jobs" ? "Clear location filter" : "Clear Filters"}

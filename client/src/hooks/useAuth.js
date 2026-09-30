@@ -8,7 +8,7 @@ import {
   logout,
 } from "../redux/authSlice";
 
-import { loginUser, googleLoginApi, linkGoogleAccountApi, registerUser, verifyOtpApi, resendOtpApi } from "../services/authService";
+import { loginUser, googleLoginApi, linkGoogleAccountApi, registerUser, verifyOtpApi, resendOtpApi, logoutApi } from "../services/authService";
 
 /**
  * Custom Auth Hook
@@ -111,6 +111,8 @@ const useAuth = () => {
 
   /* ── LOGOUT ────────────────────────────────────────────────────────────── */
   const logoutUser = () => {
+    const token = localStorage.getItem("token");
+    if (token) logoutApi(token).catch(() => undefined);
     localStorage.removeItem("token");
     dispatch(logout());
   };

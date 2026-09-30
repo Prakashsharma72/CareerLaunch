@@ -7,6 +7,8 @@ import User from "../models/user.model.js";
 import Job from "../models/job.model.js";
 import Resource from "../models/resource.model.js";
 import { Op } from "sequelize";
+import { ROLES } from "../constants/roles.js";
+import { recordUserActivity } from "../services/notification.service.js";
 
 const TAG = "[admin]";
 const log = (msg, data) =>
@@ -112,19 +114,96 @@ export const getDashboardStats = async (req, res) => {
  */
 export const getAdminUsers = async (req, res) => {
   try {
+    const requestedPage = Number.parseInt(req.query.page, 10);
+    const requestedLimit = Number.parseInt(req.query.limit, 10);
+    const limit = Number.isInteger(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 20;
+    const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+    const role = typeof req.query.role === "string" ? req.query.role.trim() : "";
+
+    if (role && !Object.values(ROLES).includes(role)) {
+      return res.status(400).json({ message: "Invalid user role filter." });
+    }
+
+    const where = {};
+    if (search) {
+      where[Op.or] = [
+        { name: { [Op.like]: `%${search}%` } },
+        { email: { [Op.like]: `%${search}%` } },
+      ];
+    }
+    if (role) where.role = role;
+
+    const total = await User.count({ where });
+    const totalPages = Math.ceil(total / limit);
+    const page = Math.min(
+      Number.isInteger(requestedPage) ? Math.max(requestedPage, 1) : 1,
+      Math.max(totalPages, 1),
+    );
     const users = await User.findAll({
-      attributes: ["id", "name", "email", "role", "created_at"],
-      order: [["created_at", "DESC"]],
+      attributes: ["id", "name", "email", "role", "createdAt"],
+      where,
+      order: [["createdAt", "DESC"]],
+      limit,
+      offset: (page - 1) * limit,
     });
 
-    return res.status(200).json({ success: true, data: users });
+    return res.status(200).json({
+      users,
+      pagination: { page, limit, total, totalPages },
+    });
   } catch (error) {
     console.error(`${TAG} Error fetching users:`, error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch users",
-      error: error.message,
-    });
+    return res.status(500).json({ message: "Unable to load users right now." });
+  }
+};
+
+export const updateAdminUserRole = async (req, res) => {
+  const { id } = req.params;
+  const { role } = req.body || {};
+  if (!Object.values(ROLES).includes(role)) {
+    return res.status(400).json({ message: "Invalid user role." });
+  }
+  if (String(req.user.id) === String(id) && role !== ROLES.ADMIN) {
+    return res.status(400).json({ message: "You cannot remove your own admin access." });
+  }
+
+  try {
+    const user = await User.findByPk(id);
+    if (!user) return res.status(404).json({ message: "User not found." });
+    await user.update({ role });
+    recordUserActivity(user, {
+      type: "admin_activity",
+      title: "User role changed",
+      message: `An administrator changed ${user.name || user.email}'s role to ${role}.`,
+      metadata: { action: "user_role_changed", changedByAdminId: req.user.id, role },
+    }).catch(error => console.error(`${TAG} role activity notification failed:`, error.message));
+    return res.status(200).json({ user: { id: user.id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt } });
+  } catch (error) {
+    console.error(`${TAG} Error updating user role:`, error);
+    return res.status(500).json({ message: "Unable to update the user role right now." });
+  }
+};
+
+export const deleteAdminUser = async (req, res) => {
+  const { id } = req.params;
+  if (String(req.user.id) === String(id)) {
+    return res.status(400).json({ message: "You cannot delete your own admin account." });
+  }
+
+  try {
+    const user = await User.findByPk(id);
+    if (!user) return res.status(404).json({ message: "User not found." });
+    await user.destroy();
+    recordUserActivity(user, {
+      type: "admin_activity",
+      title: "User deleted",
+      message: `An administrator deleted ${user.name || user.email}'s account.`,
+      metadata: { action: "user_deleted", changedByAdminId: req.user.id },
+    }).catch(error => console.error(`${TAG} deletion activity notification failed:`, error.message));
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error(`${TAG} Error deleting user:`, error);
+    return res.status(500).json({ message: "Unable to delete this user right now." });
   }
 };
 

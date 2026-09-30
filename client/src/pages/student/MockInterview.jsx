@@ -447,9 +447,11 @@ function MockInterview() {
   const [histLoading,      setHistLoading]       = useState(false);
   const [selectedSession,  setSelectedSession]   = useState(null);
   const [error,            setError]             = useState("");
+  const [retryAvailable,   setRetryAvailable]   = useState(false);
 
   const chatEndRef = useRef(null);
   const inputRef   = useRef(null);
+  const lastSubmittedAnswerRef = useRef("");
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -461,8 +463,9 @@ function MockInterview() {
 
   /* START */
   const handleStart = async () => {
+    if (aiLoading) return;
     try {
-      setError(""); setAiLoading(true);
+      setError(""); setRetryAvailable(false); setAiLoading(true);
       setMessages([]); setPendingFeedback(null);
       pushMsg({ type: "system", content: `Starting ${role} interview at ${difficulty} level…` });
       setTyping(true);
@@ -494,14 +497,17 @@ function MockInterview() {
   const handleSend = async () => {
     const text = inputText.trim();
     if (!text || aiLoading || !currentQuestion) return;
-    setInputText(""); setError("");
-    pushMsg({ type: "user", content: text });
+    setError("");
+    if (lastSubmittedAnswerRef.current !== text) {
+      pushMsg({ type: "user", content: text });
+      lastSubmittedAnswerRef.current = text;
+    }
     try {
       setAiLoading(true); setTyping(true);
       const questionId = currentQuestion.dbId ?? currentQuestion.id;
       const res = await submitInterviewAnswer(session.id, questionId, text);
       const { feedback, nextQuestion, sessionProgress } = res.data;
-      setTyping(false); setAnsweredCount(sessionProgress.answered);
+      setTyping(false); setAnsweredCount(sessionProgress.answered); setRetryAvailable(false); setInputText(""); lastSubmittedAnswerRef.current = "";
       if (feedback) {
         setPendingFeedback({ ...feedback, isLast: sessionProgress.isLast });
         pushMsg({ type: "feedback", feedback, isLast: sessionProgress.isLast });
@@ -509,7 +515,16 @@ function MockInterview() {
       if (nextQuestion) setCurrentQuestion({ ...nextQuestion, dbId: nextQuestion.id });
       else setCurrentQuestion(null);
     } catch (err) {
-      setTyping(false); setError(err?.response?.data?.message || "Failed to submit answer.");
+      setTyping(false); setRetryAvailable(true);
+      const code = err?.response?.data?.code;
+      const message = code === "RATE_LIMIT"
+        ? "Gemini rate limit reached. Please wait a moment and retry."
+        : code === "AI_TIMEOUT"
+          ? "The interview AI timed out. Your answer is saved; retry when ready."
+          : code === "AI_BLOCKED"
+            ? "The AI blocked this response. Please rephrase your answer and retry."
+            : err?.response?.data?.message || "The interview AI could not score this answer. Retry without losing your answer.";
+      setError(message);
     } finally { setAiLoading(false); }
   };
 
@@ -557,7 +572,7 @@ function MockInterview() {
   /* RESTART */
   const handleRestart = () => {
     setView("setup"); setSession(null); setCurrentQuestion(null);
-    setMessages([]); setReport(null); setError("");
+    setMessages([]); setReport(null); setError(""); setRetryAvailable(false); setInputText(""); lastSubmittedAnswerRef.current = "";
     setAnsweredCount(0); setPendingFeedback(null);
   };
 
@@ -620,6 +635,16 @@ function MockInterview() {
                     text-red-700 dark:text-red-300 underline hover:no-underline">
                   Get free Gemini API key →
                 </a>
+              )}
+              {retryAvailable && inputText.trim() && (
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={aiLoading}
+                  className="mt-2 inline-flex items-center gap-2 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:opacity-50"
+                >
+                  Retry answer
+                </button>
               )}
             </div>
             <button onClick={() => setError("")} className="text-red-400 hover:text-red-600 transition-colors">

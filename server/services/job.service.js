@@ -133,6 +133,7 @@ export async function getCompaniesForJobsPage({
       lon:     parseFloat(lon),
       radius:  parseFloat(radius) || 15,
       keyword: keyword || "software company",
+      integration: "job_search",
     });
   }
 
@@ -140,6 +141,7 @@ export async function getCompaniesForJobsPage({
     return searchCompaniesByCity({
       keyword: keyword || "software company",
       city:    city.trim(),
+      integration: "job_search",
     });
   }
 
