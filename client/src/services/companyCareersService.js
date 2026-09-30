@@ -9,6 +9,8 @@ import {
   fetchWithCache,
   getCacheKey,
   normalizeCompanyList,
+  readBrowserCache,
+  writeBrowserCache,
 } from "../utils/cache";
 
 const COMPANY_CAREERS_CACHE = {
@@ -16,6 +18,9 @@ const COMPANY_CAREERS_CACHE = {
   staleMs: 2 * 60 * 60 * 1000,
   maxBytes: 180000,
 };
+const LAST_KNOWN_COMPANIES_KEY = getCacheKey(CACHE_KEYS.companies, {
+  endpoint: "company-careers:last-known",
+});
 
 const runCachedRequest = async ({ key, request }) => {
   const result = await fetchWithCache({
@@ -50,6 +55,10 @@ const runCachedRequest = async ({ key, request }) => {
  * @param {string} [params.pageToken]
  */
 export const getCompanyCareers = async ({ lat, lon, radius = 15, keyword = "software company", city, pageToken, page = 1, limit = 12 }) => {
+  const hasLocation = Boolean(city?.trim()) || (lat != null && lon != null);
+  const lastKnown = hasLocation
+    ? null
+    : readBrowserCache(LAST_KNOWN_COMPANIES_KEY, CACHE_KEYS.companies);
   const key = getCacheKey(CACHE_KEYS.companies, {
     endpoint: "company-careers",
     lat,
@@ -62,31 +71,77 @@ export const getCompanyCareers = async ({ lat, lon, radius = 15, keyword = "soft
     limit,
   });
 
-  const response = await runCachedRequest({
-    key,
-    request: () => api.get("/company-careers", {
-      params: {
-        ...(lat != null && { lat }),
-        ...(lon != null && { lon }),
-        radius,
-        keyword,
-        ...(city?.trim() && { city: city.trim() }),
-        ...(pageToken && { pageToken }),
-        page,
-        limit,
+  try {
+    const response = await runCachedRequest({
+      key,
+      request: () => api.get("/company-careers", {
+        params: {
+          ...(lat != null && { lat }),
+          ...(lon != null && { lon }),
+          radius,
+          keyword,
+          ...(city?.trim() && { city: city.trim() }),
+          ...(pageToken && { pageToken }),
+          page,
+          limit,
+        },
+        timeout: 20000,
+      }),
+    });
+
+    const payload = response?.data ?? { companies: [], total: 0, source: "no_location" };
+    const companies = normalizeCompanyList(payload.companies || []);
+
+    if (hasLocation) {
+      const verifiedCompanies = companies.filter(company => company.careerVerified);
+      if (verifiedCompanies.length) {
+        writeBrowserCache(
+          LAST_KNOWN_COMPANIES_KEY,
+          { companies: verifiedCompanies },
+          CACHE_KEYS.companies,
+          COMPANY_CAREERS_CACHE,
+        );
+      }
+    }
+
+    const cachedCompanies = normalizeCompanyList(lastKnown?.data?.companies || []);
+    const combinedCompanies = new Map();
+    [...cachedCompanies, ...companies].forEach(company => {
+      const id = company.placeId || company.careerUrl || company.companyName;
+      if (id && company.careerVerified) combinedCompanies.set(id, company);
+    });
+    const resolvedCompanies = hasLocation ? companies : [...combinedCompanies.values()];
+    const source = !hasLocation && !companies.length && resolvedCompanies.length
+      ? "browser_cache"
+      : payload.source;
+
+    return {
+      ...response,
+      data: {
+        ...payload,
+        companies: resolvedCompanies,
+        total: Math.max(Number(payload.total) || 0, resolvedCompanies.length),
+        verifiedCareerCount: resolvedCompanies.filter(company => company.careerVerified).length,
+        source,
       },
-      timeout: 20000,
-    }),
-  });
+    };
+  } catch (error) {
+    const cachedCompanies = normalizeCompanyList(lastKnown?.data?.companies || []);
+    if (hasLocation || !cachedCompanies.length) throw error;
 
-  const payload = response?.data ?? { companies: [], total: 0, source: "no_location" };
-  const normalized = {
-    ...payload,
-    companies: normalizeCompanyList(payload.companies || []),
-  };
-
-  return {
-    ...response,
-    data: normalized,
-  };
+    return {
+      cacheHit: true,
+      stale: true,
+      data: {
+        companies: cachedCompanies.filter(company => company.careerVerified),
+        total: cachedCompanies.length,
+        verifiedCareerCount: cachedCompanies.length,
+        nextPageToken: null,
+        source: "browser_cache",
+        recordType: "company",
+        location: null,
+        freshness: lastKnown.updatedAt ? new Date(lastKnown.updatedAt).toISOString() : null,
+      },
+    };
+  }
 };

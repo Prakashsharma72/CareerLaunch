@@ -97,6 +97,13 @@ function AdminDashboard() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDashboardData();
+    const refresh = () => fetchDashboardData();
+    window.addEventListener("resources:changed", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("resources:changed", refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, []);
 
   if (loading) return <Loader />;

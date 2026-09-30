@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   FaArrowRight,
   FaBook,
-  FaBookOpen,
   FaBookmark,
   FaCheckCircle,
   FaChevronDown,
@@ -22,10 +21,6 @@ const DIFFICULTY_OPTIONS = ["All", "Beginner", "Intermediate", "Advanced"];
 
 const normalizeCategory = (category) => getResourceCategory(category).id;
 
-const getCategoryMeta = (category) => {
-  return getResourceCategory(normalizeCategory(category));
-};
-
 const getResourceType = (resource = {}) => {
   if (resource.type) return resource.type;
   if (resource.resourceType) return resource.resourceType;
@@ -44,64 +39,6 @@ const getDifficulty = (resource = {}) => {
 };
 
 const formatCount = (count, singular, plural) => `${count} ${count === 1 ? singular : plural}`;
-
-function ResourceHeader({ totalResources, totalCategories }) {
-  return (
-    <header className="relative overflow-hidden rounded-xl border border-[var(--cl-primary)]/20 bg-[var(--cl-primary-soft)] p-5 shadow-[0_12px_30px_-24px_rgba(47,125,246,0.35)] sm:p-6 lg:p-7">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--cl-primary)]/70 to-transparent" />
-
-      <div className="relative">
-        <div className="flex justify-center md:justify-start">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--cl-primary)]/20 bg-[var(--cl-surface)]/70 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--cl-primary)]">
-            <FaBookOpen className="text-[var(--cl-primary)]" size={10} />
-            Learning Center
-          </div>
-        </div>
-
-        <div className="mt-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="max-w-2xl text-sm leading-7 text-[var(--cl-text-muted)] sm:text-base lg:text-lg">
-              Everything you need to learn, prepare, and grow your career with practical, job-ready guidance.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3 text-xs font-medium text-[var(--cl-text)] lg:justify-end">
-            <div className="rounded-full border border-[var(--cl-border)] bg-[var(--cl-surface)] px-3 py-2">
-              {formatCount(totalResources, "resource", "resources")}
-            </div>
-            <div className="rounded-full border border-[var(--cl-border)] bg-[var(--cl-surface)] px-3 py-2">
-              {formatCount(totalCategories, "category", "categories")}
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function CategoryCard({ category, count, isActive, onClick }) {
-  const meta = getCategoryMeta(category);
-
-  return (
-    <button
-      type="button"
-      onClick={() => onClick(category)}
-      className={`group flex min-h-[82px] flex-col items-start justify-between rounded-2xl border p-4 text-left transition-all duration-200 ease-out ${
-        isActive
-          ? "border-[var(--cl-primary)]/40 bg-[var(--cl-primary-soft)] shadow-[0_18px_32px_-24px_rgba(47,125,246,0.45)]"
-          : "border-[var(--cl-border)] bg-[var(--cl-surface)] hover:-translate-y-0.5 hover:border-[var(--cl-primary)]/30 hover:bg-[var(--cl-surface-elevated)]"
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--cl-surface-soft)] text-lg shadow-inner shadow-[var(--cl-primary)]/10 text-[var(--cl-primary)]">
-          {meta.icon}
-        </span>
-        <span className="text-sm font-semibold text-[var(--cl-text)] sm:text-[15px]">{meta.name}</span>
-      </div>
-      <span className="mt-3 text-xs text-[var(--cl-text-muted)]">{formatCount(count, "resource", "resources")}</span>
-    </button>
-  );
-}
 
 function ResourceFilters({
   searchTerm,
@@ -410,13 +347,6 @@ function Resources() {
     };
   }, []);
 
-  const categoryCounts = {};
-
-  resources.forEach((resource) => {
-    const categoryName = normalizeCategory(resource.category || "General");
-    categoryCounts[categoryName] = (categoryCounts[categoryName] || 0) + 1;
-  });
-
   const categoryOptions = (() => {
     return RESOURCE_CATEGORIES.map((category) => category.id);
   })();
@@ -502,21 +432,12 @@ function Resources() {
   if (loading) {
     return (
       <div className="min-h-full p-4 sm:p-6 lg:p-8">
-        <div className="mb-6 rounded-[30px] border border-[var(--cl-border)] bg-[var(--cl-surface)] p-6 sm:p-8">
-          <div className="h-4 w-28 animate-pulse rounded-full bg-[var(--cl-surface-soft)]" />
-          <div className="mt-5 h-10 w-64 animate-pulse rounded-xl bg-[var(--cl-surface-soft)]" />
-          <div className="mt-3 h-4 w-full max-w-2xl animate-pulse rounded bg-[var(--cl-surface-soft)]" />
-          <div className="mt-6 flex gap-3">
-            <div className="h-8 w-28 animate-pulse rounded-full bg-[var(--cl-surface-soft)]" />
-            <div className="h-8 w-28 animate-pulse rounded-full bg-[var(--cl-surface-soft)]" />
-            <div className="h-8 w-28 animate-pulse rounded-full bg-[var(--cl-surface-soft)]" />
+        <div className="mb-6 rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface)] p-4 sm:p-5">
+          <div className="grid gap-4 lg:grid-cols-[1.7fr_1fr_1fr_1fr]">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="h-12 animate-pulse rounded-2xl bg-[var(--cl-surface-soft)]" />
+            ))}
           </div>
-        </div>
-
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className="h-24 animate-pulse rounded-[22px] border border-[var(--cl-border)] bg-[var(--cl-surface)]" />
-          ))}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -539,8 +460,6 @@ function Resources() {
   return (
     <div className="min-h-full p-4 sm:p-6 lg:p-8">
       <div className="space-y-6">
-        <ResourceHeader totalResources={resources.length} totalCategories={Object.keys(categoryCounts).length} />
-
         {refreshing && (
           <div className="flex items-center justify-between rounded-xl border border-[var(--cl-primary)]/20 bg-[var(--cl-primary-soft)] px-4 py-3 text-sm text-[var(--cl-primary)]">
             <span>Updating resources…</span>
@@ -549,23 +468,6 @@ function Resources() {
             </button>
           </div>
         )}
-
-        <section className="rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface)] p-4 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.08)] sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-xl font-bold text-[var(--cl-text)]">Explore Categories</h2>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {categoryOptions.map((category) => (
-              <CategoryCard
-                key={category}
-                category={category}
-                count={categoryCounts[category] || 0}
-                isActive={selectedCategory === category}
-                onClick={(value) => setSelectedCategory((current) => (current === value ? "All" : value))}
-              />
-            ))}
-          </div>
-        </section>
 
         <ResourceFilters
           searchTerm={searchTerm}

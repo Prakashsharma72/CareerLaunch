@@ -190,8 +190,13 @@ export default function Jobs() {
     }
   }, [dispatch, searchParams]);
 
+  const careerPageCompanies = useMemo(
+    () => companies.filter(company => company.careerVerified),
+    [companies],
+  );
+
   const allFiltered = useMemo(() => {
-    let list = companies;
+    let list = isJobResults ? companies : careerPageCompanies;
 
     if (filters.search?.trim()) {
       const q = filters.search.toLowerCase();
@@ -211,11 +216,10 @@ export default function Jobs() {
     }
 
     return list;
-  }, [companies, filters.search, filters.minRating, filters.maxRadius, isJobResults]);
+  }, [companies, careerPageCompanies, filters.search, filters.minRating, filters.maxRadius, isJobResults]);
 
   const total       = allFiltered.length;
-  const loadedTotal = companies.length;
-  const verifiedCareerCount = companies.filter(company => company.careerVerified).length;
+  const loadedTotal = isJobResults ? companies.length : careerPageCompanies.length;
   const totalPages  = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const paged       = allFiltered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -377,7 +381,9 @@ export default function Jobs() {
             Find Jobs
           </h1>
           <p className="text-[var(--cl-text-muted)] mt-1 text-sm flex items-center gap-2 flex-wrap">
-            {isJobResults
+            {source === "database_companies" || source === "browser_cache"
+              ? "Verified companies from saved data"
+              : isJobResults
               ? `Showing stored job listings for ${displayLocation}`
               : `Software companies from Google Places near ${displayLocation}`}
             {isJobResults && (
@@ -406,8 +412,7 @@ export default function Jobs() {
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold
               bg-[var(--cl-success-soft)] text-[var(--cl-success)]
               px-3 py-1.5 rounded-full border border-[var(--cl-success)]/25">
-              {isJobResults ? `${total} job listings loaded` : `${loadedTotal} software companies loaded`}
-              {!isJobResults && <span className="text-[var(--cl-text-muted)] font-normal">({verifiedCareerCount} with verified career pages)</span>}
+              {isJobResults ? `${total} job listings loaded` : `${loadedTotal} companies with verified career pages`}
             </span>
             <button
               onClick={() => navigate("/student/saved-jobs")}
@@ -483,8 +488,8 @@ export default function Jobs() {
           </strong>
           {" "}of{" "}
           <strong className="text-[var(--cl-text)]">{total}</strong>
-          {isJobResults ? " job listings" : " software companies"} near{" "}
-          <strong className="text-[var(--cl-primary)]">{displayLocation}</strong>
+          {isJobResults ? " job listings" : " verified companies"}
+          {source !== "database_companies" && source !== "browser_cache" && <> near{" "}<strong className="text-[var(--cl-primary)]">{displayLocation}</strong></>}
         </p>
       )}
 
@@ -529,7 +534,7 @@ export default function Jobs() {
           </motion.div>
         )}
 
-        {!loading && !error && !showPrompt && total === 0 && ["company_careers", "database_jobs"].includes(source) && (
+        {!loading && !error && !showPrompt && total === 0 && ["company_careers", "database_jobs", "database_companies", "browser_cache"].includes(source) && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="col-span-full flex flex-col items-center justify-center
@@ -541,12 +546,14 @@ export default function Jobs() {
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-bold text-[var(--cl-text)]">
-                {source === "database_jobs" ? "No stored job listings found" : "No software companies found"}
+                {source === "database_jobs" ? "No stored job listings found" : "No companies with verified career pages found"}
               </h3>
               <p className="text-[var(--cl-text-muted)] text-sm mt-1 max-w-md mx-auto">
                 {source === "database_jobs"
                   ? `No published jobs match ${resolvedLocation}. Try another city or view all locations.`
-                  : "No software companies were returned for this search. Try a different city or expand the search radius."}
+                  : source === "database_companies" || source === "browser_cache"
+                    ? "No saved company records with a verified career page are available. Allow location or enter a city to search live companies."
+                    : "No companies with a verified career page matched this search. Try a different city or expand the search radius."}
               </p>
             </div>
             <button
