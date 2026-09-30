@@ -72,10 +72,13 @@ export default function useCompanyCareers() {
           pageToken,
         });
       } else {
-        setCompanies([]);
-        setSource("no_location");
-        setLoading(false);
-        return;
+        res = await getCompanyCareers({
+          radius: radius ?? 15,
+          keyword: keyword ?? "software company",
+          page: pageToken ? Number(pageToken) : 1,
+          pageToken,
+          limit: 100,
+        });
       }
 
       const payload = Array.isArray(res.data) ? { companies: res.data } : res.data;
@@ -109,6 +112,7 @@ export default function useCompanyCareers() {
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
       dispatch(setLocationError("Geolocation is not supported by your browser."));
+      doFetch({ keyword: filters.keyword, radius: filters.maxRadius });
       return;
     }
     const locationRequestVersion = ++requestVersion.current;
@@ -130,10 +134,11 @@ export default function useCompanyCareers() {
       (err) => {
         console.warn("[useCompanyCareers] Geolocation denied:", err.message);
         dispatch(setLocationDenied(err.message));
+        doFetch({ keyword: filters.keyword, radius: filters.maxRadius });
       },
       { timeout: 10000, maximumAge: 5 * 60 * 1000 }
     );
-  }, [dispatch, doFetch, filters.keyword, filters.maxRadius]);
+  }, [dispatch, doFetch, filters.city, filters.keyword, filters.maxRadius]);
 
   const fetchByCity = useCallback((city, keyword) => {
     doFetch({
@@ -143,7 +148,7 @@ export default function useCompanyCareers() {
       keyword: keyword ?? filters.keyword ?? "software company",
       radius:  filters.maxRadius ?? 15,
     });
-  }, [doFetch, location.lat, location.lon, filters.keyword, filters.maxRadius]);
+  }, [doFetch, filters.keyword, filters.maxRadius]);
 
   const refetch = useCallback(() => {
     const effectiveCity = filters.city?.trim() || null;

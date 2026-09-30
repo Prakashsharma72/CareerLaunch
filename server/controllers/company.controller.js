@@ -93,6 +93,7 @@ export const getAllCompanies = async (req, res) => {
       industry,
       minRating,
       keyword,  // keyword used during import
+      careerPageOnly,
       page      = 1,
       limit     = 50,
     } = req.query;
@@ -113,6 +114,10 @@ export const getAllCompanies = async (req, res) => {
     }
     if (keyword?.trim()) {
       where.keyword = { [Op.like]: `%${keyword.trim()}%` };
+    }
+    if (careerPageOnly === "true") {
+      where.careerValid = true;
+      where.careerPage = { [Op.ne]: null };
     }
 
     const offset      = (Number(page) - 1) * Number(limit);

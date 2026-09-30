@@ -6,7 +6,7 @@
  */
 import { useEffect, useState, useCallback } from "react";
 import {
-  FaSearch, FaBuilding, FaStar, FaMapMarkerAlt,
+  FaSearch, FaBuilding, FaBriefcase, FaStar, FaMapMarkerAlt,
   FaGlobe, FaPhone, FaSyncAlt,
 } from "react-icons/fa";
 import api from "../../services/api";
@@ -23,7 +23,7 @@ function ManageJobs() {
     try {
       setLoading(true);
       const { data } = await api.get("/companies", {
-        params: { page: p, limit: LIMIT, q: q || undefined },
+        params: { page: p, limit: LIMIT, q: q || undefined, careerPageOnly: true },
       });
       setCompanies(data.companies || []);
       setTotal(data.total || 0);
@@ -54,7 +54,7 @@ function ManageJobs() {
             Companies Index
           </h1>
           <p className="mt-1 text-sm text-[var(--cl-text-muted)]">
-            Companies cached from Google Places API · {total} total
+            Companies with verified career pages · {total} total
           </p>
         </div>
         <button
@@ -92,9 +92,9 @@ function ManageJobs() {
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--cl-surface-soft)]">
               <FaBuilding className="text-2xl text-[var(--cl-text-soft)]" />
             </div>
-            <h3 className="text-lg font-bold text-[var(--cl-text)]">No companies yet</h3>
+            <h3 className="text-lg font-bold text-[var(--cl-text)]">No companies with career pages found</h3>
             <p className="max-w-xs text-sm text-[var(--cl-text-muted)]">
-              Companies appear here after users search on the Jobs or Companies page.
+              Verified career-page companies appear here after career pages are checked.
             </p>
           </div>
         ) : (
@@ -174,6 +174,17 @@ function ManageJobs() {
                     </td>
                     <td className="px-5 py-4 align-top">
                       <div className="flex items-center gap-2">
+                        {c.careerPage && (
+                          <a
+                            href={c.careerPage}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Verified career page"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--cl-success-soft)] text-[var(--cl-success)] transition-colors hover:bg-[var(--cl-success)] hover:text-[var(--cl-button-text)]"
+                          >
+                            <FaBriefcase className="text-xs" />
+                          </a>
+                        )}
                         {c.website && (
                           <a
                             href={c.website}

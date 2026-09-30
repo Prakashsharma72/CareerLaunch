@@ -23,15 +23,210 @@ const CONCURRENCY     = 10;
 const USER_AGENT      = "CareerLaunchAI/2.0 CareerBot (+https://careerlaunch.ai)";
 
 const CAREER_PATHS = [
+  // ─────────────────────────────
+  // Common career pages
+  // ─────────────────────────────
   "/career",
   "/careers",
-  "/jobs",
-  "/job",
-  "/join-us",
-  "/work-with-us",
-  "/opportunities",
-  "/careers.html",
+  "/career/",
+  "/careers/",
   "/career.html",
+  "/careers.html",
+  "/career/index.html",
+  "/careers/index.html",
+
+  // ─────────────────────────────
+  // Jobs
+  // ─────────────────────────────
+  "/job",
+  "/jobs",
+  "/job/",
+  "/jobs/",
+  "/job.html",
+  "/jobs.html",
+  "/job-openings",
+  "/job-opening",
+  "/job-openings/",
+  "/job-opening/",
+  "/jobs/openings",
+  "/jobs/openings/",
+  "/open-jobs",
+  "/openings",
+  "/openings/",
+  "/vacancies",
+  "/vacancy",
+  "/vacancies/",
+  "/positions",
+  "/positions/",
+  "/available-positions",
+
+  // ─────────────────────────────
+  // Hiring / Recruitment
+  // ─────────────────────────────
+  "/hiring",
+  "/hiring/",
+  "/recruitment",
+  "/recruitment/",
+  "/recruit",
+  "/recruit/",
+  "/join-us",
+  "/join-us/",
+  "/joinus",
+  "/joinus/",
+  "/join",
+  "/join/",
+  "/work-with-us",
+  "/work-with-us/",
+  "/workwithus",
+  "/workwithus/",
+  "/come-work-with-us",
+  "/why-work-with-us",
+
+  // ─────────────────────────────
+  // Opportunities
+  // ─────────────────────────────
+  "/opportunities",
+  "/opportunities/",
+  "/opportunity",
+  "/opportunity/",
+  "/career-opportunities",
+  "/career-opportunities/",
+  "/employment",
+  "/employment/",
+  "/employment-opportunities",
+  "/employment-opportunities/",
+  "/professional-opportunities",
+
+  // ─────────────────────────────
+  // Talent
+  // ─────────────────────────────
+  "/talent",
+  "/talent/",
+  "/talent-network",
+  "/talent-network/",
+  "/join-our-team",
+  "/join-our-team/",
+  "/our-team",
+  "/our-team/",
+  "/team",
+  "/team/",
+
+  // ─────────────────────────────
+  // Work / Jobs pages
+  // ─────────────────────────────
+  "/work",
+  "/work/",
+  "/work-here",
+  "/work-here/",
+  "/working-at",
+  "/working-at/",
+  "/life-at",
+  "/life-at/",
+  "/life-at-company",
+  "/life-at-company/",
+  "/life-at-[company]",
+
+  // ─────────────────────────────
+  // Specific hiring pages
+  // ─────────────────────────────
+  "/hiring-now",
+  "/hiring-now/",
+  "/now-hiring",
+  "/now-hiring/",
+  "/we-are-hiring",
+  "/we-are-hiring/",
+  "/currently-hiring",
+  "/currently-hiring/",
+  "/job-listings",
+  "/job-listings/",
+  "/job-listing",
+  "/job-listing/",
+  "/job-board",
+  "/job-board/",
+  "/jobs-list",
+  "/jobs-list/",
+
+  // ─────────────────────────────
+  // Internships
+  // ─────────────────────────────
+  "/internships",
+  "/internship",
+  "/internships/",
+  "/internship/",
+  "/intern",
+  "/intern/",
+  "/internship-opportunities",
+  "/internship-opportunities/",
+  "/student-opportunities",
+  "/student-opportunities/",
+  "/students",
+  "/students/",
+  "/graduates",
+  "/graduates/",
+  "/early-careers",
+  "/early-careers/",
+  "/early-career",
+  "/early-career/",
+  "/graduate-jobs",
+  "/graduate-jobs/",
+
+  // ─────────────────────────────
+  // University / Campus Hiring
+  // ─────────────────────────────
+  "/campus",
+  "/campus/",
+  "/campus-hiring",
+  "/campus-hiring/",
+  "/campus-recruitment",
+  "/campus-recruitment/",
+  "/university",
+  "/university/",
+  "/university-hiring",
+  "/university-hiring/",
+  "/college-hiring",
+  "/college-hiring/",
+
+  // ─────────────────────────────
+  // Application / Apply
+  // ─────────────────────────────
+  "/apply",
+  "/apply/",
+  "/apply-now",
+  "/apply-now/",
+  "/applications",
+  "/applications/",
+  "/jobs/apply",
+  "/careers/apply",
+  "/career/apply",
+
+  // ─────────────────────────────
+  // HR / People
+  // ─────────────────────────────
+  "/people",
+  "/people/",
+  "/human-resources",
+  "/human-resources/",
+  "/hr",
+  "/hr/",
+  "/people-and-culture",
+  "/people-and-culture/",
+  "/people-culture",
+  "/people-culture/",
+
+  // ─────────────────────────────
+  // Alternative spellings
+  // ─────────────────────────────
+  "/careers-page",
+  "/career-page",
+  "/career-page/",
+  "/jobs-page",
+  "/jobs-page/",
+  "/employment-opportunities",
+  "/employment-opportunities/",
+  "/job-opportunity",
+  "/job-opportunity/",
+  "/job-opportunities",
+  "/job-opportunities/",
 ];
 
 const CAREER_KEYWORDS = [
@@ -260,6 +455,39 @@ function toResponseItem(company) {
   };
 }
 
+async function getStoredCareerCompanies({ page = 1, pageToken = null, limit = 100 } = {}) {
+  const pageNumber = Math.max(1, Number(pageToken) || Number(page) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number(limit) || 100));
+  const { count, rows } = await Company.findAndCountAll({
+    where: {
+      careerValid: true,
+      careerPage: { [Op.ne]: null },
+    },
+    order: [["careerCheckedAt", "DESC"], ["updatedAt", "DESC"]],
+    limit: pageSize,
+    offset: (pageNumber - 1) * pageSize,
+  });
+  const companies = rows.map(row => {
+    const company = row.toJSON();
+    return toResponseItem({ ...company, careerUrl: company.careerPage });
+  });
+  const totalPages = Math.max(1, Math.ceil(count / pageSize));
+
+  return {
+    companies,
+    total: count,
+    verifiedCareerCount: count,
+    nextPageToken: pageNumber < totalPages ? String(pageNumber + 1) : null,
+    source: "database_companies",
+    recordType: "company",
+    location: null,
+    freshness: rows[0]?.careerCheckedAt?.toISOString?.() || null,
+    page: pageNumber,
+    limit: pageSize,
+    totalPages,
+  };
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    PUBLIC
 ═══════════════════════════════════════════════════════════════════════ */
@@ -274,6 +502,10 @@ export async function getCompaniesWithCareers({
   page = 1,
   limit = 12,
 }) {
+  if (!city?.trim() && (lat == null || lon == null)) {
+    return getStoredCareerCompanies({ page, pageToken, limit });
+  }
+
   let payload;
 
   // An explicit city is authoritative. GPS is only a fallback when no city exists.
