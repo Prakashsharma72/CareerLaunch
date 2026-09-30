@@ -53,7 +53,7 @@ function SectionTitle({ children, sub }) {
 
 function Field({ id, label, type = "text", name, value, onChange, readOnly, icon: Icon, multiline, rows = 3 }) {
   const [focused, setFocused] = useState(false);
-  const active = focused || (value && String(value).length > 0);
+  const active = type === "date" || focused || (value && String(value).length > 0);
   const base = `w-full pl-10 pr-4 ${multiline ? "pt-5 pb-2" : "pt-5 pb-1.5"} rounded-xl border text-sm font-medium
     bg-[var(--cl-surface-soft)] text-[var(--cl-text)] placeholder:text-[var(--cl-text-soft)]
     outline-none resize-none transition-all duration-200
@@ -460,7 +460,7 @@ export default function Profile() {
                       <Field id="location" label="Current City"  name="location" value={form.location} onChange={handleChange} icon={FaMapMarkerAlt} />
                     </div>
                     <div className="mt-3 sm:mt-4">
-                      <Field id="bio" label="Bio / About Me" name="bio" value={form.bio} onChange={handleChange} icon={FaUser} multiline rows={3} />
+                      <Field id="bio" label="Bio / About Me" name="bio" value={form.bio} onChange={handleChange} icon={FaUser} multiline rows={2} />
                     </div>
                     <div className="mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-neutral-100 dark:border-white/8">
                       <SectionTitle sub="Academic background">Education</SectionTitle>
@@ -471,7 +471,7 @@ export default function Profile() {
                         <Field id="gradYear" label="Graduation Year"      name="gradYear" value={form.gradYear} onChange={handleChange} icon={FaCalendarAlt}   />
                       </div>
                       <div className="mt-3 sm:mt-4">
-                        <Field id="education" label="Education Summary" name="education" value={form.education} onChange={handleChange} icon={FaGraduationCap} multiline rows={3} />
+                        <Field id="education" label="Education Summary" name="education" value={form.education} onChange={handleChange} icon={FaGraduationCap} multiline rows={2} />
                       </div>
                     </div>
                     <SaveBtn loading={saving} saved={saved} />

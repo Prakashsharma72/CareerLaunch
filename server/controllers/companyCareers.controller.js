@@ -8,10 +8,6 @@ import { getCompaniesWithCareers } from "../services/companyCareers.service.js";
 const TAG = "[companyCareers.ctrl]";
 const log = (msg, d) => console.log(`${new Date().toISOString()} ${TAG} ${msg}`, d ?? "");
 
-function send400(res, reason, hint = "") {
-  return res.status(400).json({ success: false, error: "BAD_REQUEST", reason, hint });
-}
-
 function errorResponse(res, e) {
   log("Error:", e.message);
   if (e.code === "API_KEY_INVALID") {
@@ -47,10 +43,6 @@ export async function listCompanyCareers(req, res) {
   const userLon = lon ? parseFloat(lon) : null;
   const radiusKm = radius ? Math.min(parseFloat(radius) || 15, 50) : 15;
   const searchKw = keyword?.trim() || "software company";
-
-  if ((userLat == null || userLon == null) && !city?.trim()) {
-    return send400(res, "Provide lat/lon or city.", "Add ?lat=...&lon=... or ?city=Pune");
-  }
 
   log(`GET /company-careers lat=${userLat ?? "–"} lon=${userLon ?? "–"} city="${city ?? ""}"`);
 

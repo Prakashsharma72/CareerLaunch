@@ -52,15 +52,9 @@ export const getResources = async () => {
 };
 
 export const getAdminResources = async () => {
-  const key = getCacheKey(CACHE_KEYS.resources, { endpoint: "/resources/admin" });
-  const response = await runCachedRequest({
-    key,
-    request: () => api.get("/resources/admin"),
-  });
-
+  const response = await api.get("/resources/admin");
   return {
-    ...response,
-    data: normalizeResourceList(response?.data ?? []),
+    data: normalizeResourceList(response.data ?? []),
   };
 };
 
