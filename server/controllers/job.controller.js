@@ -14,6 +14,7 @@ import {
   getStoredJobByIdentifier,
   getStoredJobsFallback,
 } from "../services/job.service.js";
+import { recordUserActivity } from "../services/notification.service.js";
 
 const LOG = "[job.ctrl]";
 const log = (msg, d) =>
@@ -77,6 +78,14 @@ export const saveJob = async (req, res) => {
       return res.status(400).json({ message: "externalJobId is required" });
     }
     const result = await saveJobForUser(req.user.id, req.body);
+    if (result.created) {
+      recordUserActivity(req.user, {
+        type: "job_saved",
+        title: "Job saved",
+        message: `${req.user.name || "A user"} saved ${String(req.body.title || "a job").slice(0, 180)}${req.body.company ? ` at ${String(req.body.company).slice(0, 120)}` : ""}.`,
+        metadata: { jobId: String(req.body.externalJobId).slice(0, 160) },
+      }).catch(error => console.error("[job] save activity notification failed:", error.message));
+    }
     return res.status(201).json(result);
   } catch (err) {
     return res.status(err.status || 500).json({ message: err.message });

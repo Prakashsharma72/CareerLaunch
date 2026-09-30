@@ -32,6 +32,8 @@ const initialState = {
   companies:    [],        // full result from Google Places
   total:        0,
   source:       null,      // "google_places" | "cache" | "no_location"
+  resultMode:   null,      // "live" | "cached" | "stored"
+  fallbackReason: null,
 
   /* ── Filters ────────────────────────────────────────────────── */
   filters: {
@@ -104,14 +106,18 @@ const placesSlice = createSlice({
       state.total = state.companies.length;
       state.loading = false;
       state.source = action.payload.source || state.source;
+      state.resultMode = action.payload.resultMode || state.resultMode;
+      state.fallbackReason = action.payload.fallbackReason || state.fallbackReason;
     },
     fetchSuccess(state, action) {
-      const { companies = [], total, source } = action.payload;
+      const { companies = [], total, source, resultMode, fallbackReason } = action.payload;
       state.loading   = false;
       state.error     = null;
       state.companies = companies;
       state.total     = total ?? companies.length;
       state.source    = source ?? null;
+      state.resultMode = resultMode ?? null;
+      state.fallbackReason = fallbackReason ?? null;
       state.page      = 1;
     },
     fetchFailure(state, action) {

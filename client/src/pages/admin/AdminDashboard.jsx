@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import {
   FaUsers, FaBriefcase, FaBook,
   FaArrowUp, FaArrowDown, FaRegClock, FaPlusCircle,
-  FaUsersCog, FaExternalLinkAlt, FaChartLine,
+  FaUsersCog, FaExternalLinkAlt, FaChartLine, FaBell,
   FaHistory,
 } from "react-icons/fa";
 import { motion } from "framer-motion";
@@ -47,6 +47,7 @@ function AdminDashboard() {
     },
   });
   const [recentActivities, setRecentActivities] = useState([]);
+  const [notificationSummary, setNotificationSummary] = useState({ unreadCount: 0, notifications: [] });
   const [error, setError] = useState(null);
 
   const fetchDashboardData = async () => {
@@ -55,9 +56,10 @@ function AdminDashboard() {
       setError(null);
 
       // Fetch stats and activities in parallel
-      const [statsResponse, activitiesResponse] = await Promise.all([
+      const [statsResponse, activitiesResponse, notificationsResponse] = await Promise.all([
         adminService.getDashboardStats(),
         adminService.getRecentActivities(10),
+        adminService.getNotifications({ limit: 20 }).catch(() => ({ unreadCount: 0, notifications: [] })),
       ]);
 
       if (statsResponse.success) {
@@ -67,6 +69,10 @@ function AdminDashboard() {
       if (activitiesResponse.success) {
         setRecentActivities(activitiesResponse.data);
       }
+      setNotificationSummary({
+        unreadCount: notificationsResponse.unreadCount || 0,
+        notifications: notificationsResponse.notifications || [],
+      });
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
       setError(err.response?.data?.message || "Failed to load dashboard data");
@@ -82,6 +88,7 @@ function AdminDashboard() {
         },
       });
       setRecentActivities([]);
+      setNotificationSummary({ unreadCount: 0, notifications: [] });
     } finally {
       setLoading(false);
     }
@@ -294,6 +301,38 @@ function AdminDashboard() {
           </div>
         </div>
       </motion.div>
+
+      <motion.section {...fadeUp(0.28)} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface)] p-5 shadow-[var(--cl-shadow)]">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--cl-text-muted)]"><FaBell className="text-[var(--cl-primary)]" /> Unread notifications</div>
+          <p className="mt-3 text-3xl font-bold text-[var(--cl-text)]">{notificationSummary.unreadCount}</p>
+          <button type="button" onClick={() => navigate("/admin/notifications")} className="mt-3 text-xs font-semibold text-[var(--cl-primary)] hover:underline">Open notification center</button>
+        </div>
+
+        <div className="rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface)] p-5 shadow-[var(--cl-shadow)]">
+          <h2 className="text-sm font-semibold text-[var(--cl-text)]">Recent important activity</h2>
+          <div className="mt-3 space-y-2">
+            {notificationSummary.notifications.slice(0, 3).map(item => <p key={item.id} className="truncate text-xs text-[var(--cl-text-muted)]" title={item.message}>{item.title}</p>)}
+            {notificationSummary.notifications.length === 0 && <p className="text-xs text-[var(--cl-text-soft)]">No recent activity recorded.</p>}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface)] p-5 shadow-[var(--cl-shadow)]">
+          <h2 className="text-sm font-semibold text-[var(--cl-text)]">Recent registrations</h2>
+          <div className="mt-3 space-y-2">
+            {recentActivities.filter(item => item.type === "user").slice(0, 3).map(item => <p key={item.id} className="truncate text-xs text-[var(--cl-text-muted)]" title={item.activity}>{item.activity}</p>)}
+            {!recentActivities.some(item => item.type === "user") && <p className="text-xs text-[var(--cl-text-soft)]">No recent registrations.</p>}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-[var(--cl-border)] bg-[var(--cl-surface)] p-5 shadow-[var(--cl-shadow)]">
+          <h2 className="text-sm font-semibold text-[var(--cl-text)]">Recent system alerts</h2>
+          <div className="mt-3 space-y-2">
+            {notificationSummary.notifications.filter(item => ["critical", "high", "warning"].includes(item.severity)).slice(0, 3).map(item => <p key={item.id} className="truncate text-xs text-[var(--cl-danger)]" title={item.message}>{item.title}</p>)}
+            {!notificationSummary.notifications.some(item => ["critical", "high", "warning"].includes(item.severity)) && <p className="text-xs text-[var(--cl-text-soft)]">No recent system alerts.</p>}
+          </div>
+        </div>
+      </motion.section>
 
       {/* ── Platform summary ── */}
       <motion.div

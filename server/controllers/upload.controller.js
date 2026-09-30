@@ -11,6 +11,7 @@
  */
 
 import { updateUserProfile } from "../services/user.service.js";
+import { recordUserActivity } from "../services/notification.service.js";
 
 /**
  * POST /api/upload/resume
@@ -28,6 +29,12 @@ export const uploadResume = async (req, res) => {
     const resumeUrl = req.file.path; // set by our custom storage engine
 
     const updated = await updateUserProfile(req.user.id, { resumeUrl });
+    recordUserActivity(updated, {
+      type: "resume_uploaded",
+      title: "Resume uploaded",
+      message: `${updated.name || "A user"} uploaded a resume.`,
+      metadata: { action: "resume_upload" },
+    }).catch(error => console.error("[upload] resume activity notification failed:", error.message));
 
     return res.status(200).json({
       message:   "Resume uploaded successfully",

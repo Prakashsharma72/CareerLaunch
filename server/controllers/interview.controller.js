@@ -1,4 +1,6 @@
 import { callGemini }       from "../ai/geminiClient.js";
+import { SchemaType }       from "@google/generative-ai";
+import { recordGeminiInterviewFailure, recordUserActivity } from "../services/notification.service.js";
 import InterviewSession    from "../models/interviewSession.model.js";
 import InterviewQuestion   from "../models/interviewQuestion.model.js";
 import {
@@ -8,16 +10,93 @@ import {
 
 /* ── helpers ── */
 function safeParseJSON(raw) {
+  if (raw && typeof raw === "object") return raw;
+  if (typeof raw !== "string") return null;
+
+  const cleaned = raw
+    .replace(/^\uFEFF/, "")
+    .replace(/```(?:json)?/gi, "")
+    .trim();
+
   try {
-    const clean = raw.replace(/```json|```/g, "").trim();
-    return JSON.parse(clean);
-  } catch {
-    return null;
-  }
+    const parsed = JSON.parse(cleaned);
+    return typeof parsed === "string" ? JSON.parse(parsed) : parsed;
+  } catch { /* Try the JSON object embedded in a short model preamble. */ }
+
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  try {
+    const parsed = JSON.parse(cleaned.slice(start, end + 1));
+    return typeof parsed === "string" ? JSON.parse(parsed) : parsed;
+  } catch { return null; }
 }
 
 // Single alias so all callers stay the same
 const callAI = callGemini;
+
+const feedbackSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    type: { type: SchemaType.STRING, enum: ["feedback"] },
+    score: { type: SchemaType.INTEGER },
+    strengths: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+    weaknesses: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+    idealAnswer: { type: SchemaType.STRING },
+    tip: { type: SchemaType.STRING },
+    nextQuestion: {
+      type: SchemaType.OBJECT,
+      properties: {
+        number: { type: SchemaType.INTEGER },
+        category: { type: SchemaType.STRING, enum: ["technical", "behavioral", "conceptual"] },
+        text: { type: SchemaType.STRING },
+      },
+      required: ["number", "category", "text"],
+    },
+  },
+  required: ["type", "score", "strengths", "weaknesses", "idealAnswer", "tip"],
+};
+
+const questionSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    type: { type: SchemaType.STRING, enum: ["question"] },
+    number: { type: SchemaType.INTEGER },
+    category: { type: SchemaType.STRING, enum: ["technical", "behavioral", "conceptual"] },
+    text: { type: SchemaType.STRING },
+  },
+  required: ["type", "number", "category", "text"],
+};
+
+const finalFeedbackSchema = {
+  type: SchemaType.OBJECT,
+  properties: Object.fromEntries(Object.entries(feedbackSchema.properties).filter(([key]) => key !== "nextQuestion")),
+  required: feedbackSchema.required,
+};
+
+function validString(value) { return typeof value === "string" && value.trim().length > 0; }
+function validStringArray(value) { return Array.isArray(value) && value.every(validString); }
+function validateFeedback(value, { requireNextQuestion = false } = {}) {
+  if (!value || value.type !== "feedback") return { valid: false, reason: "wrong_type" };
+  if (!Number.isInteger(value.score) || value.score < 1 || value.score > 10) return { valid: false, reason: "invalid_score" };
+  if (!validStringArray(value.strengths) || !validStringArray(value.weaknesses)) return { valid: false, reason: "invalid_strengths_or_weaknesses" };
+  if (!validString(value.idealAnswer) || !validString(value.tip)) return { valid: false, reason: "missing_feedback_text" };
+  if (requireNextQuestion && (!value.nextQuestion || !Number.isInteger(value.nextQuestion.number) || !validString(value.nextQuestion.category) || !validString(value.nextQuestion.text))) return { valid: false, reason: "invalid_next_question" };
+  return { valid: true };
+}
+
+function logAIValidation(reason, raw) {
+  const size = typeof raw === "string" ? raw.length : 0;
+  console.warn(`[interview] AI response validation failed: ${reason}; responseLength=${size}`);
+}
+
+function invalidFeedbackResponse(validation, raw) {
+  logAIValidation(validation.reason, raw);
+  const code = validation.reason === "wrong_type" || validation.reason === "invalid_json"
+    ? "AI_INVALID_JSON"
+    : "AI_INVALID_FEEDBACK";
+  return { message: "The interview AI returned an invalid feedback response. Please retry.", code };
+}
 
 /* ════════════════════════════════════════════
    POST /api/interview/start
@@ -33,7 +112,20 @@ export const startInterview = async (req, res) => {
       return res.status(400).json({ message: "role and difficulty are required" });
     }
 
-    // Create session
+    // Ask GPT for question #1
+    const systemMsg = interviewSystemPrompt(role, difficulty);
+    const raw = await callAI([
+      { role: "system", content: systemMsg },
+      { role: "user",   content: "Start the interview. Ask the first question." },
+    ], { responseSchema: questionSchema });
+
+    const parsed = safeParseJSON(raw);
+    if (!parsed || parsed.type !== "question" || !validString(parsed.text)) {
+      logAIValidation("invalid_initial_question", raw);
+      return res.status(502).json({ message: "The interview AI returned an invalid first question. Please try again.", code: "AI_INVALID_QUESTION" });
+    }
+
+    // Only create history after Gemini has produced a usable first question.
     const session = await InterviewSession.create({
       userId,
       role,
@@ -42,25 +134,21 @@ export const startInterview = async (req, res) => {
       totalQuestions: 12,
     });
 
-    // Ask GPT for question #1
-    const systemMsg = interviewSystemPrompt(role, difficulty);
-    const raw = await callAI([
-      { role: "system", content: systemMsg },
-      { role: "user",   content: "Start the interview. Ask the first question." },
-    ]);
-
-    const parsed = safeParseJSON(raw);
-    if (!parsed || parsed.type !== "question") {
-      return res.status(500).json({ message: "AI returned unexpected format", raw });
-    }
-
     // Persist question record
-    await InterviewQuestion.create({
+    const questionRecord = await InterviewQuestion.create({
       sessionId:      session.id,
       questionNumber: 1,
       category:       parsed.category || "technical",
       question:       parsed.text,
     });
+
+    recordUserActivity(req.user, {
+      eventKey: `mock-interview-start:${session.id}`,
+      type: "mock_interview",
+      title: "Mock interview started",
+      message: `${req.user.name || "A user"} started a ${difficulty} interview for ${role}.`,
+      metadata: { action: "interview_start", sessionId: session.id, role, difficulty },
+    }).catch(error => console.error("[interview] activity notification failed:", error.message));
 
     return res.status(201).json({
       session: {
@@ -70,12 +158,14 @@ export const startInterview = async (req, res) => {
         totalQuestions: session.totalQuestions,
       },
       question: {
+        id:       questionRecord.id,
         number:   parsed.number,
         category: parsed.category,
         text:     parsed.text,
       },
     });
   } catch (err) {
+    recordGeminiInterviewFailure(err, { operation: "start" }).catch(notificationError => console.error("[interview] admin alert failed:", notificationError.message));
     console.error("startInterview error:", err.message);
     return res.status(err.status || 500).json({
       message: err.message || "Failed to start interview",
@@ -95,6 +185,10 @@ export const submitAnswer = async (req, res) => {
     const { questionId, answer } = req.body;
     const userId = req.user.id;
 
+    if (!questionId || !String(answer || "").trim()) {
+      return res.status(400).json({ message: "questionId and answer are required" });
+    }
+
     const session = await InterviewSession.findOne({
       where: { id: sessionId, userId },
     });
@@ -107,6 +201,38 @@ export const submitAnswer = async (req, res) => {
       where: { id: questionId, sessionId },
     });
     if (!question) return res.status(404).json({ message: "Question not found" });
+
+    // A retry after an ambiguous network failure must replay the persisted result,
+    // rather than charge Gemini or create a second question.
+    if (question.userAnswer && question.feedback) {
+      const savedFeedback = safeParseJSON(question.feedback);
+      const savedValidation = validateFeedback(savedFeedback);
+      if (savedValidation.valid) {
+        const savedNext = await InterviewQuestion.findOne({
+          where: { sessionId, questionNumber: question.questionNumber + 1 },
+        });
+        return res.status(200).json({
+          feedback: {
+            score: savedFeedback.score,
+            strengths: savedFeedback.strengths,
+            weaknesses: savedFeedback.weaknesses,
+            idealAnswer: savedFeedback.idealAnswer,
+            tip: savedFeedback.tip,
+          },
+          nextQuestion: savedNext ? {
+            id: savedNext.id,
+            number: savedNext.questionNumber,
+            category: savedNext.category,
+            text: savedNext.question,
+          } : null,
+          sessionProgress: {
+            answered: session.answeredQuestions,
+            total: session.totalQuestions,
+            isLast: !savedNext,
+          },
+        });
+      }
+    }
 
     // Fetch all prior Q&A for context
     const prevQs = await InterviewQuestion.findAll({
@@ -136,11 +262,22 @@ export const submitAnswer = async (req, res) => {
       const raw = await callAI([
         { role: "system", content: systemMsg },
         ...history,
-      ]);
+      ], { responseSchema: feedbackSchema });
 
-      const parsed = safeParseJSON(raw);
-      if (!parsed || parsed.type !== "feedback") {
-        return res.status(500).json({ message: "AI returned unexpected format", raw });
+      let parsed = safeParseJSON(raw);
+      let parsedRaw = raw;
+      let validation = validateFeedback(parsed, { requireNextQuestion: true });
+      if (!validation.valid && validation.reason !== "invalid_next_question") {
+        const retryRaw = await callAI([
+          { role: "system", content: `${systemMsg}\nReturn one valid JSON object with type=feedback and a required nextQuestion object. Do not include markdown or commentary.` },
+          ...history,
+        ], { responseSchema: feedbackSchema });
+        parsed = safeParseJSON(retryRaw);
+        parsedRaw = retryRaw;
+        validation = validateFeedback(parsed, { requireNextQuestion: true });
+      }
+      if (!validation.valid && validation.reason !== "invalid_next_question") {
+        return res.status(502).json(invalidFeedbackResponse(validation, parsedRaw));
       }
 
       // Persist answer + feedback
@@ -151,10 +288,16 @@ export const submitAnswer = async (req, res) => {
       });
 
       // Persist next question
-      const nextQ = parsed.nextQuestion;
+      const nextQ = parsed.nextQuestion?.text
+        ? parsed.nextQuestion
+        : {
+            number: question.questionNumber + 1,
+            category: "technical",
+            text: `For the ${session.role} role, how would you approach debugging a difficult production issue?`,
+          };
       const nextRecord = await InterviewQuestion.create({
         sessionId:      session.id,
-        questionNumber: nextQ.number,
+        questionNumber: nextQ.number || question.questionNumber + 1,
         category:       nextQ.category || "technical",
         question:       nextQ.text,
       });
@@ -174,7 +317,7 @@ export const submitAnswer = async (req, res) => {
         },
         nextQuestion: {
           id:       nextRecord.id,
-          number:   nextQ.number,
+          number:   nextQ.number || question.questionNumber + 1,
           category: nextQ.category,
           text:     nextQ.text,
         },
@@ -190,15 +333,18 @@ export const submitAnswer = async (req, res) => {
         { role: "system", content: systemMsg },
         ...history,
         { role: "user", content: "This was the last answer. Provide feedback only (no nextQuestion field)." },
-      ]);
+      ], { responseSchema: finalFeedbackSchema });
 
       const parsed = safeParseJSON(raw);
-      const score  = parsed?.score ?? 5;
+      const validation = parsed ? validateFeedback(parsed) : { valid: false, reason: "invalid_json" };
+      if (!validation.valid) {
+        return res.status(502).json(invalidFeedbackResponse(validation, raw));
+      }
 
       await question.update({
         userAnswer: answer,
-        feedback:   JSON.stringify(parsed || {}),
-        score,
+        feedback:   JSON.stringify(parsed),
+        score:      parsed.score,
       });
       await session.update({ answeredQuestions: session.answeredQuestions + 1 });
 
@@ -219,6 +365,7 @@ export const submitAnswer = async (req, res) => {
       });
     }
   } catch (err) {
+    recordGeminiInterviewFailure(err, { operation: "answer" }).catch(notificationError => console.error("[interview] admin alert failed:", notificationError.message));
     console.error("submitAnswer error:", err.message);
     return res.status(err.status || 500).json({ message: err.message || "Failed to submit answer", code: err.code });
   }
@@ -233,6 +380,10 @@ export const skipQuestion = async (req, res) => {
     const { sessionId } = req.params;
     const { questionId } = req.body;
     const userId = req.user.id;
+
+    if (!questionId) {
+      return res.status(400).json({ message: "questionId is required" });
+    }
 
     const session = await InterviewSession.findOne({ where: { id: sessionId, userId } });
     if (!session) return res.status(404).json({ message: "Session not found" });
@@ -252,7 +403,7 @@ export const skipQuestion = async (req, res) => {
     const raw = await callAI([
       { role: "system", content: systemMsg },
       { role: "user",   content: `Skip question ${question.questionNumber}. Ask question number ${nextNumber}.` },
-    ]);
+    ], { responseSchema: questionSchema });
 
     const parsed = safeParseJSON(raw);
     const text = parsed?.text || parsed?.nextQuestion?.text || `Question ${nextNumber} for ${session.role}`;
@@ -338,8 +489,17 @@ export const endInterview = async (req, res) => {
       answeredQuestions: scored.length,
     });
 
+    recordUserActivity(req.user, {
+      eventKey: `mock-interview-completed:${session.id}`,
+      type: "mock_interview",
+      title: "Mock interview completed",
+      message: `${req.user.name || "A user"} completed an interview for ${session.role}.`,
+      metadata: { action: "interview_complete", sessionId: session.id, role: session.role, score: report.overallScore ?? avgScore },
+    }).catch(error => console.error("[interview] activity notification failed:", error.message));
+
     return res.status(200).json({ report, session: { id: session.id, role: session.role, difficulty: session.difficulty } });
   } catch (err) {
+    recordGeminiInterviewFailure(err, { operation: "end" }).catch(notificationError => console.error("[interview] admin alert failed:", notificationError.message));
     console.error("endInterview error:", err.message);
     return res.status(err.status || 500).json({ message: err.message || "Failed to generate report", code: err.code });
   }
@@ -421,3 +581,5 @@ export const getSessionById = async (req, res) => {
     return res.status(500).json({ message: "Failed to fetch session", error: err.message });
   }
 };
+
+export { safeParseJSON, validateFeedback };

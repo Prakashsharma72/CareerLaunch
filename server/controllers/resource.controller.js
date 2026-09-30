@@ -1,5 +1,6 @@
 import Resource from "../models/resource.model.js";
 import { normalizeResourceCategory } from "../constants/resourceCategories.js";
+import { recordUserActivity } from "../services/notification.service.js";
 
 const RESOURCE_TYPES = ["Video", "Article", "Course", "Documentation", "PDF"];
 const RESOURCE_STATUSES = ["draft", "published"];
@@ -39,6 +40,12 @@ const resourcePayload = (body, file, existingResource = null) => {
 export const addResource = async (req, res) => {
   try {
     const resource = await Resource.create(resourcePayload(req.body, req.file));
+    recordUserActivity(req.user, {
+      type: "admin_activity",
+      title: "Resource created",
+      message: `An administrator created ${resource.title}.`,
+      metadata: { action: "resource_create", resourceId: resource.id },
+    }).catch(error => console.error("[resource] admin activity notification failed:", error.message));
     res.status(201).json(resource);
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
@@ -66,8 +73,15 @@ export const getResources = async (req, res) => {
  */
 export const deleteResource = async (req, res) => {
   try {
-    const deleted = await Resource.destroy({ where: { id: req.params.id } });
-    if (!deleted) return res.status(404).json({ message: "Resource not found" });
+    const resource = await Resource.findByPk(req.params.id);
+    if (!resource) return res.status(404).json({ message: "Resource not found" });
+    await resource.destroy();
+    recordUserActivity(req.user, {
+      type: "admin_activity",
+      title: "Resource deleted",
+      message: `An administrator deleted ${resource.title}.`,
+      metadata: { action: "resource_delete", resourceId: resource.id },
+    }).catch(error => console.error("[resource] admin activity notification failed:", error.message));
     res.status(200).json({ message: "Deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -89,6 +103,12 @@ export const updateResource = async (req, res) => {
     const resource = await Resource.findByPk(req.params.id);
     if (!resource) return res.status(404).json({ message: "Resource not found" });
     await resource.update(resourcePayload(req.body, req.file, resource));
+    recordUserActivity(req.user, {
+      type: "admin_activity",
+      title: "Resource updated",
+      message: `An administrator updated ${resource.title}.`,
+      metadata: { action: "resource_update", resourceId: resource.id },
+    }).catch(error => console.error("[resource] admin activity notification failed:", error.message));
     res.status(200).json(serializeResource(resource));
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });

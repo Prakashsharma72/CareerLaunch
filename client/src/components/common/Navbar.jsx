@@ -13,6 +13,7 @@ import {
   FaUser,
 } from "react-icons/fa";
 import { getThemePreference, applyTheme } from "../../utils/helpers";
+import { logoutApi } from "../../services/authService";
 
 const NAV_LINKS = [
   { to: "/student/jobs", label: "Jobs" },
@@ -71,6 +72,8 @@ function Navbar() {
   };
 
   const handleLogout = () => {
+    const token = localStorage.getItem("token");
+    if (token) logoutApi(token).catch(() => undefined);
     localStorage.removeItem("token");
     dispatch({ type: "auth/logout" });
     navigate("/login");

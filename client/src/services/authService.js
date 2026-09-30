@@ -23,6 +23,11 @@ export const resendOtpApi = (data) => api.post("/auth/resend-otp", data);
  */
 export const loginUser = (data) => api.post("/auth/login", data);
 
+/** POST /api/auth/logout — best-effort server-side activity record. */
+export const logoutApi = (token) => api.post("/auth/logout", {}, {
+  headers: { Authorization: `Bearer ${token}` },
+});
+
 /** POST /api/auth/google */
 export const googleLoginApi = (credential) => api.post("/auth/google", { credential });
 

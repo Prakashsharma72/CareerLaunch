@@ -80,8 +80,8 @@ function KeyField({ id, label, icon: Icon, description, value, masked, isSet, on
 
 /* ── main page ── */
 export default function AdminSettings() {
-  const [keys, setKeys]       = useState({ OPENAI_API_KEY: "", GOOGLE_MAPS_API_KEY: "" });
-  const [meta, setMeta]       = useState({ OPENAI_API_KEY: {}, GOOGLE_MAPS_API_KEY: {} });
+  const [keys, setKeys]       = useState({ OPENAI_API_KEY: "", GOOGLE_MAPS_API_KEY: "", GEMINI_API_KEY: "" });
+  const [meta, setMeta]       = useState({ OPENAI_API_KEY: {}, GOOGLE_MAPS_API_KEY: {}, GEMINI_API_KEY: {} });
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
   const [toast,   setToast]   = useState(null); // { type: "success"|"error", msg }
@@ -107,7 +107,7 @@ export default function AdminSettings() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!keys.OPENAI_API_KEY && !keys.GOOGLE_MAPS_API_KEY) {
+    if (!keys.OPENAI_API_KEY && !keys.GOOGLE_MAPS_API_KEY && !keys.GEMINI_API_KEY) {
       showToast("error", "Enter at least one key to save.");
       return;
     }
@@ -116,13 +116,14 @@ export default function AdminSettings() {
       const payload = {};
       if (keys.OPENAI_API_KEY)      payload.OPENAI_API_KEY      = keys.OPENAI_API_KEY;
       if (keys.GOOGLE_MAPS_API_KEY) payload.GOOGLE_MAPS_API_KEY = keys.GOOGLE_MAPS_API_KEY;
+      if (keys.GEMINI_API_KEY) payload.GEMINI_API_KEY = keys.GEMINI_API_KEY;
 
       const { data } = await api.put("/settings/keys", payload);
 
       // refresh masked display
       const { data: fresh } = await api.get("/settings/keys");
       setMeta(fresh);
-      setKeys({ OPENAI_API_KEY: "", GOOGLE_MAPS_API_KEY: "" });
+      setKeys({ OPENAI_API_KEY: "", GOOGLE_MAPS_API_KEY: "", GEMINI_API_KEY: "" });
       showToast("success", data.message || "Keys saved successfully.");
     } catch (err) {
       showToast("error", err?.response?.data?.message || "Failed to save keys.");
@@ -140,7 +141,7 @@ export default function AdminSettings() {
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
 
       {/* ── Header ── */}
       <div className="flex items-end justify-between gap-4">
@@ -202,6 +203,17 @@ export default function AdminSettings() {
           masked={meta.OPENAI_API_KEY?.masked}
           isSet={meta.OPENAI_API_KEY?.set}
           onChange={(v) => setKeys((k) => ({ ...k, OPENAI_API_KEY: v }))}
+        />
+
+        <KeyField
+          id="gemini"
+          label="Gemini API Key"
+          icon={FaRobot}
+          description="Used for mock interviews, career chat, and AI-generated feedback."
+          value={keys.GEMINI_API_KEY}
+          masked={meta.GEMINI_API_KEY?.masked}
+          isSet={meta.GEMINI_API_KEY?.set}
+          onChange={(v) => setKeys((k) => ({ ...k, GEMINI_API_KEY: v }))}
         />
 
         <KeyField

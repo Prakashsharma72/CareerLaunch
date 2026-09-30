@@ -32,6 +32,7 @@ const MockInterview    = lazy(() => import("./pages/student/MockInterview"));
 const CompanySearch    = lazy(() => import("./pages/student/CompanySearch"));
 const CompanyDetails   = lazy(() => import("./pages/student/CompanyDetails"));
 const SavedCompanies   = lazy(() => import("./pages/student/SavedCompanies"));
+const Notifications    = lazy(() => import("./pages/student/Notifications"));
 
 // ── Admin pages (lazy – role-gated, rarely visited by most users) ─────────────
 const AdminDashboard  = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -41,6 +42,7 @@ const ManageUsers     = lazy(() => import("./pages/admin/ManageUsers"));
 const ManageRoadmaps  = lazy(() => import("./pages/admin/ManageRoadmaps"));
 const ManageCompanies = lazy(() => import("./pages/admin/ManageCompanies"));
 const AdminSettings   = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
 
 // ── Route-level loading fallback ─────────────────────────────────────────────
 // Lightweight spinner — does not import framer-motion or react-icons
@@ -126,6 +128,7 @@ const App = () => (
         <Route path="roadmap-generator"  element={<RoadmapGenerator />} />
         <Route path="roadmaps/:id"       element={<RoadmapDetails />} />
         <Route path="mock-interview"     element={<MockInterview />} />
+        <Route path="notifications"      element={<Notifications />} />
         <Route path="companies"          element={<CompanySearch />} />
         <Route path="companies/:placeId" element={<CompanyDetails />} />
         <Route path="saved-companies"    element={<SavedCompanies />} />
@@ -143,6 +146,7 @@ const App = () => (
         <Route path="roadmaps"  element={<ManageRoadmaps />} />
         <Route path="companies" element={<ManageCompanies />} />
         <Route path="settings"  element={<AdminSettings />} />
+        <Route path="notifications" element={<AdminNotifications />} />
       </Route>
 
       {/* ── Fallback ── */}

@@ -282,6 +282,8 @@ Do not commit secret values. The code reads variables including:
 
 - Frontend: `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`
 - Server: `JWT_SECRET`, `PORT`, `FRONTEND_URL`
+- Admin alerts: `ADMIN_ALERT_EMAIL`, optional `PROVIDER_RECOVERY_THRESHOLD` (default `2`)
+- AI settings: `GEMINI_API_KEY` can be updated by an admin from `/admin/settings`; Gemini interview provider failures create a durable admin alert and email outbox item.
 - Google authentication: `GOOGLE_CLIENT_ID` (the same OAuth 2.0 Web client ID as the frontend)
 - Database: `DB_DIALECT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_STORAGE`
 - Integrations: `GEMINI_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_MAPS_API_KEY`, Cloudinary variables, SMTP variables, and `BREVO_API_KEY`
@@ -292,13 +294,18 @@ The backend defaults to SQLite storage `careerlaunch.sqlite` and port `5000`. Co
 
 1. In Google Cloud Console, create or select a project, configure the OAuth consent screen, and create an OAuth 2.0 **Web application** client ID under **APIs & Services > Credentials**.
 2. Add these exact authorized JavaScript origins to that client:
-  - `http://localhost:5174` (Vite development origin)
+  - `http://localhost:5173` (Vite development origin)
+  - `http://127.0.0.1:5173` (if you open the app through the loopback address)
   - `https://careerlaunchai.in` (production origin)
   - Add `https://www.careerlaunchai.in` only if that hostname serves the frontend.
   No redirect URI is needed for the GIS button flow.
 3. Copy the client ID into `client/.env.development` and `server/.env` as `VITE_GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_ID`. Use the same values in production; the frontend ID is public, but never expose server secrets or `JWT_SECRET`.
 4. In Vercel, add `VITE_API_URL=https://careerlaunch-api.onrender.com/api` and `VITE_GOOGLE_CLIENT_ID` to the project Environment Variables for Preview/Production, then redeploy.
 5. In Render, add `GOOGLE_CLIENT_ID`, `FRONTEND_URL=https://careerlaunchai.in`, `JWT_SECRET`, and the existing database variables to the backend service Environment settings, then redeploy. The server startup migration adds `users.google_sub` automatically.
+
+Admin provider alerts use the existing SMTP/Brevo email service. Set `ADMIN_ALERT_EMAIL` on the server to the recipient configured for operational alerts; it is never hardcoded in the client. Provider incidents, per-admin read state, and the email outbox are persisted in MySQL. The outbox uses an atomic claim and unique incident/email key, but SMTP or HTTP delivery can still be ambiguous after a network failure; those rows are marked `uncertain` in the admin data rather than blindly resent.
+
+User notifications are in-app only. The scheduler scans users every `USER_NOTIFICATION_SCAN_INTERVAL_MS` milliseconds (default 5 minutes); authenticated notification requests also refresh the current user. The supported data-backed types are matching stored jobs, saved-company jobs with matching `google_place_id`, saved-job deadlines when the canonical job has an active `expires_at`, published/revised resources, roadmap updates and completed milestones, completed interview reports, and one-time incomplete-profile reminders. Admin announcements are not generated because no announcement model or publication/expiry workflow exists yet. Existing saved-job rows do not contain their own deadline, so reminders require a matching canonical job record.
 
 Google login creates a verified student account keyed by Google's stable `sub`. If the Google email already belongs to a password account, the login page asks the user to sign in with that password first and then links the Google identity through the authenticated `/api/auth/google/link` endpoint. Cancellation, invalid/expired tokens, missing configuration, and request failures are shown in the login error banner.
 

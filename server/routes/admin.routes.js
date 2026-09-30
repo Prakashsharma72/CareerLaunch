@@ -4,7 +4,7 @@
  * Admin-specific routes for dashboard stats and platform management
  */
 import express from "express";
-import { getDashboardStats, getRecentActivities, getAdminUsers } from "../controllers/admin.controller.js";
+import { getDashboardStats, getRecentActivities, getAdminUsers, updateAdminUserRole, deleteAdminUser } from "../controllers/admin.controller.js";
 import { getAdminCompanies, getAdminCompany, createAdminCompany, updateAdminCompany } from "../controllers/company.controller.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.middleware.js";
 
@@ -25,6 +25,8 @@ router.get("/stats", getDashboardStats);
  * Get all user accounts
  */
 router.get("/users", getAdminUsers);
+router.patch("/users/:id/role", updateAdminUserRole);
+router.delete("/users/:id", deleteAdminUser);
 
 /**
  * GET /api/admin/activities

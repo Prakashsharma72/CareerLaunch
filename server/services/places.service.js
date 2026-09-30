@@ -17,6 +17,7 @@ import axios   from "axios";
 import { Op } from "sequelize";
 import Company from "../models/company.model.js";
 import { invalidatePublicSnapshot } from "./publicSnapshot.service.js";
+import { recordProviderFailure, recordProviderRecovery } from "./notification.service.js";
 
 /* ─── Logging ─────────────────────────────────────────────────────────── */
 const TAG = "[places.service]";
@@ -406,6 +407,11 @@ async function findStoredCompanies({ city, keyword, userLat, userLon, radius }) 
 async function fallbackPayload(options, error) {
   try {
     const companies = await findStoredCompanies(options);
+    recordProviderFailure(error, {
+      fallbackAvailable: companies.length > 0,
+      request: options,
+      integration: options.integration,
+    }).catch(notificationError => log(`Provider incident recording failed: ${notificationError.message}`));
     return {
       companies,
       total: companies.length,
@@ -413,11 +419,15 @@ async function fallbackPayload(options, error) {
       batchIndex: options.batchIndex || 0,
       hasMoreBatches: false,
       source: "database_fallback",
+      resultMode: "stored",
       freshness: companies.length ? "stored" : "none",
       providerError: error?.code || error?.response?.data?.error?.status || "PROVIDER_ERROR",
+      fallbackReason: "live_provider_unavailable",
     };
   } catch (dbError) {
     err("Database fallback failed", dbError);
+    recordProviderFailure(error, { fallbackAvailable: false, request: options, integration: options.integration })
+      .catch(notificationError => log(`Provider incident recording failed: ${notificationError.message}`));
     throw error;
   }
 }
@@ -523,12 +533,12 @@ function filterByRadius(places, userLat, userLon, radiusKm) {
  * Runs the configured query variants for one provider page; the cursor enables
  * subsequent pages without losing the provider's pagination state.
  */
-export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "software company", pageToken = null, batchIndex = 0, skipCareerProbe = false }) {
+export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "software company", pageToken = null, batchIndex = 0, skipCareerProbe = false, integration = "company_search" }) {
   if (lat == null || lon == null) throw new Error("lat/lon required");
 
   const cacheKey = `places-v4:nearby:${Math.round(lat * 100)}:${Math.round(lon * 100)}:${radius}:${keyword}:${batchIndex}:${pageToken || "first"}`;
   const cached   = memGet(cacheKey);
-  if (cached) return cached;
+  if (cached) return { ...cached, resultMode: "cached" };
 
   const radiusM   = Math.min(radius * 1000, 50000);
 
@@ -551,9 +561,10 @@ export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "sof
 
   if (allFetches.every(result => result.status === "rejected")) {
     noteProviderFailure();
-    return fallbackPayload({ userLat: lat, userLon: lon, radius, keyword, batchIndex }, allFetches[0].reason);
+    return fallbackPayload({ userLat: lat, userLon: lon, radius, keyword, batchIndex, integration }, allFetches[0].reason);
   }
   noteProviderSuccess();
+  recordProviderRecovery(integration).catch(notificationError => log(`Provider recovery recording failed: ${notificationError.message}`));
 
   const merged = filterByRadius(mergeAndDedup(allFetches), lat, lon, radius).slice(0, MAX_RESULTS);
   log(`getNearbyCompanies: ${merged.length} unique companies after dedup`);
@@ -562,7 +573,7 @@ export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "sof
   const result = await enrichPlaces(merged, { userLat: lat, userLon: lon, keyword, skipCareerProbe });
 
   const nextPageToken = allFetches.find(r => r.status === "fulfilled")?.value?.nextPageToken || null;
-  const payload = { companies: result, total: result.length, nextPageToken, batchIndex, hasMoreBatches: batchIndex < queryVariants.length - 1, source: "google_places", freshness: "live", attribution: "Google Maps" };
+  const payload = { companies: result, total: result.length, nextPageToken, batchIndex, hasMoreBatches: batchIndex < queryVariants.length - 1, source: "google_places", resultMode: "live", freshness: "live", attribution: "Google Maps" };
   memSet(cacheKey, payload);
   return payload;
 }
@@ -571,7 +582,7 @@ export async function getNearbyCompanies({ lat, lon, radius = 15, keyword = "sof
  * searchCompaniesByCity({ keyword, city, userLat, userLon })
  * Runs multiple parallel queries to maximise result count.
  */
-export async function searchCompaniesByCity({ keyword = "software company", city, userLat, userLon, radius = 50, pageToken = null, batchIndex = 0, skipCareerProbe = false }) {
+export async function searchCompaniesByCity({ keyword = "software company", city, userLat, userLon, radius = 50, pageToken = null, batchIndex = 0, skipCareerProbe = false, integration = "company_search" }) {
   if (!city?.trim()) throw new Error("city is required");
 
   const cacheKey = `places-v4:city:${city.toLowerCase().trim()}:${keyword.toLowerCase().trim()}:${radius}:${batchIndex}:${pageToken || "first"}`;
@@ -583,9 +594,9 @@ export async function searchCompaniesByCity({ keyword = "software company", city
         const km = haversineKm(userLat, userLon, c.latitude, c.longitude);
         return { ...c, distanceKm: km, distanceText: fmtDistance(km) };
       });
-      return { ...cached, companies: withDist };
+      return { ...cached, companies: withDist, resultMode: "cached" };
     }
-    return cached;
+    return { ...cached, resultMode: "cached" };
   }
 
   // Geocode city for locationBias
@@ -611,9 +622,10 @@ export async function searchCompaniesByCity({ keyword = "software company", city
 
   if (allFetches.every(result => result.status === "rejected")) {
     noteProviderFailure();
-    return fallbackPayload({ city, userLat: lat, userLon: lon, radius, keyword, batchIndex }, allFetches[0].reason);
+    return fallbackPayload({ city, userLat: lat, userLon: lon, radius, keyword, batchIndex, integration }, allFetches[0].reason);
   }
   noteProviderSuccess();
+  recordProviderRecovery(integration).catch(notificationError => log(`Provider recovery recording failed: ${notificationError.message}`));
 
   const merged = filterByRadius(mergeAndDedup(allFetches), lat, lon, radius).slice(0, MAX_RESULTS);
   log(`searchCompaniesByCity: ${merged.length} unique companies for "${city}"`);
@@ -622,7 +634,7 @@ export async function searchCompaniesByCity({ keyword = "software company", city
   const result = await enrichPlaces(merged, { userLat: lat, userLon: lon, city, keyword, skipCareerProbe });
 
   const nextPageToken = allFetches.find(r => r.status === "fulfilled")?.value?.nextPageToken || null;
-  const payload = { companies: result, total: result.length, nextPageToken, batchIndex, hasMoreBatches: batchIndex < queryVariants.length - 1, source: "google_places", freshness: "live", attribution: "Google Maps" };
+  const payload = { companies: result, total: result.length, nextPageToken, batchIndex, hasMoreBatches: batchIndex < queryVariants.length - 1, source: "google_places", resultMode: "live", freshness: "live", attribution: "Google Maps" };
   memSet(cacheKey, payload);
   return payload;
 }

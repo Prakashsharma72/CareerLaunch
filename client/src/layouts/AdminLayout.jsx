@@ -6,7 +6,7 @@
  *
  * Full dark-mode support. No light-mode flash.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { getThemePreference, applyTheme } from "../utils/helpers";
@@ -15,7 +15,10 @@ import {
   FaUsers, FaBars, FaTimes, FaSignOutAlt,
   FaUserShield, FaRocket, FaCog,
   FaPencilAlt, FaBuilding,
+  FaBell, FaCheck, FaExclamationTriangle, FaInfoCircle, FaRedoAlt,
 } from "react-icons/fa";
+import adminService from "../services/adminService";
+import { logoutApi } from "../services/authService";
 
 const MENU = [
   { name: "Dashboard",        icon: FaTachometerAlt, path: "/admin/dashboard"  },
@@ -25,9 +28,132 @@ const MENU = [
   { name: "Manage Roadmaps",  icon: FaPencilAlt,     path: "/admin/roadmaps"   },
   { name: "Manage Companies", icon: FaBuilding,     path: "/admin/companies"  },
   { name: "API Settings",     icon: FaCog,           path: "/admin/settings"   },
+  { name: "Notifications",    icon: FaBell,           path: "/admin/notifications" },
 ];
 
 const SIDEBAR_W = 240;
+
+const notificationIcon = (notification) => {
+  if (notification.type === "recovery") return <FaRedoAlt />;
+  if (notification.severity === "critical" || notification.severity === "high") return <FaExclamationTriangle />;
+  return <FaInfoCircle />;
+};
+
+function NotificationBell({ navigate }) {
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const containerRef = useRef(null);
+
+  const load = async () => {
+    try {
+      const list = await adminService.getNotifications({ limit: 5 });
+      setItems(list.notifications || []);
+      setUnreadCount(list.unreadCount || 0);
+    } catch {
+      // The header remains usable when the optional notification poll fails.
+    }
+  };
+
+  useEffect(() => {
+    const initialLoad = setTimeout(load, 0);
+    const timer = setInterval(load, 30000);
+    window.addEventListener("admin-notifications-updated", load);
+    return () => { clearTimeout(initialLoad); clearInterval(timer); window.removeEventListener("admin-notifications-updated", load); };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (event) => {
+      if (!containerRef.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    const refresh = setTimeout(load, 0);
+    return () => { clearTimeout(refresh); document.removeEventListener("mousedown", close); };
+  }, [open]);
+
+  const markAllRead = async () => {
+    try {
+      const result = await adminService.markAllNotificationsRead();
+      setItems(current => current.map(item => ({ ...item, isRead: true })));
+      setUnreadCount(result.unreadCount ?? 0);
+    } catch {
+      // Keep the bell usable if this optional action fails.
+    }
+  };
+
+  const openNotification = async (notification) => {
+    if (!notification.isRead) {
+      try {
+        const result = await adminService.markNotificationRead(notification.id, true);
+        if (Number.isInteger(result.unreadCount)) setUnreadCount(result.unreadCount);
+        else setUnreadCount(current => Math.max(0, current - 1));
+      } catch {
+        // Navigation still works if marking read fails.
+      }
+    }
+    setOpen(false);
+    navigate(notification.link || `/admin/notifications?incident=${notification.incidentId || ""}`);
+  };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        aria-label="Open notifications"
+        aria-expanded={open}
+        onClick={() => setOpen(value => !value)}
+        className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--cl-surface-muted)] text-[var(--cl-text-muted)] transition-colors hover:text-[var(--cl-text)]"
+      >
+        <FaBell className="text-sm" />
+        {unreadCount > 0 && (
+          <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-[var(--cl-danger)] px-1 text-[10px] font-bold leading-4 text-white">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-12 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-[var(--cl-border)] bg-[var(--cl-surface)] shadow-2xl">
+          <div className="flex items-center justify-between border-b border-[var(--cl-border)] px-4 py-3">
+            <div>
+              <h2 className="text-sm font-bold text-[var(--cl-text)]">Notifications</h2>
+              <p className="text-xs text-[var(--cl-text-muted)]">{unreadCount} unread</p>
+            </div>
+            <button type="button" onClick={markAllRead} className="text-xs font-semibold text-[var(--cl-primary)] hover:underline">Mark all as read</button>
+          </div>
+          <div className="max-h-80 overflow-y-auto">
+            {items.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-[var(--cl-text-muted)]">No notifications yet.</p>
+            ) : items.map(notification => (
+              <button
+                type="button"
+                key={notification.id}
+                onClick={() => openNotification(notification)}
+                className={`flex w-full items-start gap-3 border-b border-[var(--cl-border)] px-4 py-3 text-left transition-colors hover:bg-[var(--cl-surface-soft)] ${notification.isRead ? "opacity-70" : ""}`}
+              >
+                <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${notification.type === "recovery" ? "bg-[var(--cl-success-soft)] text-[var(--cl-success)]" : "bg-[var(--cl-danger-soft)] text-[var(--cl-danger)]"}`}>
+                  {notificationIcon(notification)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-[var(--cl-text)]">
+                    <span className="truncate">{notification.title}</span>
+                    {!notification.isRead && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--cl-primary)]" />}
+                  </span>
+                  <span className="mt-1 block line-clamp-2 text-xs text-[var(--cl-text-muted)]">{notification.message}</span>
+                  <span className="mt-1 block text-[10px] text-[var(--cl-text-soft)]">{new Date(notification.createdAt).toLocaleString()}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={() => { setOpen(false); navigate("/admin/notifications"); }} className="flex w-full items-center justify-center gap-2 px-4 py-3 text-xs font-bold text-[var(--cl-primary)] hover:bg-[var(--cl-surface-soft)]">
+            <FaCheck /> View all notifications
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function SidebarContent({ location, setOpen, handleLogout }) {
   return (
@@ -113,6 +239,8 @@ export default function AdminLayout() {
   const pageName = MENU.find(m => location.pathname.startsWith(m.path))?.name ?? "Admin";
 
   const handleLogout = () => {
+    const token = localStorage.getItem("token");
+    if (token) logoutApi(token).catch(() => undefined);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
@@ -213,6 +341,8 @@ export default function AdminLayout() {
                 )}
               </AnimatePresence>
             </motion.button>
+
+            <NotificationBell navigate={navigate} />
 
             <div className="flex items-center gap-2 shrink-0">
               <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
